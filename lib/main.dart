@@ -1,0 +1,173 @@
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_tts/flutter_tts.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:sentry_flutter/sentry_flutter.dart';
+import 'dart:async';
+
+import 'data/repositories/static_regulation_repository.dart';
+import 'data/repositories/data_settings_repository.dart';
+import 'data/repositories/data_tts_repository.dart';
+import 'data/repositories/data_notes_repository.dart';
+import 'data/helpers/database_helper.dart';
+import 'app/theme/theme.dart';
+import 'app/router/app_router.dart';
+import 'domain/entities/settings.dart';
+import 'domain/repositories/regulation_repository.dart';
+
+const String sentryDsn =
+    ''; // Set to empty for development, replace with your actual Sentry DSN
+
+// Theme Manager for Clean Architecture
+class ThemeManager {
+  static final ThemeManager _instance = ThemeManager._internal();
+  factory ThemeManager() => _instance;
+  ThemeManager._internal();
+
+  final StreamController<bool> _themeController =
+      StreamController<bool>.broadcast();
+  Stream<bool> get themeStream => _themeController.stream;
+
+  bool _isDarkMode = false;
+  bool get isDarkMode => _isDarkMode;
+
+  DataSettingsRepository? _settingsRepository;
+
+  void initialize(
+      DataSettingsRepository settingsRepository, bool initialTheme) {
+    _settingsRepository = settingsRepository;
+    _isDarkMode = initialTheme;
+    print('ThemeManager initialized with theme: $initialTheme');
+  }
+
+  void setTheme(bool isDark) async {
+    print('ThemeManager.setTheme called with: $isDark');
+    print('Previous theme state: $_isDarkMode');
+    _isDarkMode = isDark;
+    print('New theme state: $_isDarkMode');
+
+    // Save to settings repository
+    if (_settingsRepository != null) {
+      try {
+        final currentSettings = await _settingsRepository!.getSettings();
+        final newSettings = currentSettings.copyWith(isDarkMode: isDark);
+        await _settingsRepository!.saveSettings(newSettings);
+        print('Theme saved to settings repository');
+      } catch (e) {
+        print('Error saving theme to settings: $e');
+      }
+    }
+
+    print('Adding to stream...');
+    _themeController.add(_isDarkMode);
+    print('Theme added to stream successfully');
+  }
+
+  void dispose() {
+    _themeController.close();
+  }
+}
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  SystemChrome.setSystemUIOverlayStyle(
+    const SystemUiOverlayStyle(statusBarColor: Colors.black),
+  );
+
+  final prefs = await SharedPreferences.getInstance();
+  final settingsRepository = DataSettingsRepository(prefs);
+  final regulationRepository = StaticRegulationRepository();
+  final ttsRepository = DataTTSRepository(FlutterTts());
+  final databaseHelper = DatabaseHelper();
+  final notesRepository = DataNotesRepository(databaseHelper);
+  final settings = await settingsRepository.getSettings();
+
+  // Initialize theme manager with the settings repository and current theme
+  ThemeManager().initialize(settingsRepository, settings.isDarkMode);
+
+  // Only initialize Sentry if a valid DSN is provided
+  if (sentryDsn.isNotEmpty && sentryDsn != 'YOUR_SENTRY_DSN') {
+    await SentryFlutter.init(
+      (options) => options.dsn = sentryDsn,
+      appRunner: () => runApp(PoteuApp(
+        settings: settings,
+        settingsRepository: settingsRepository,
+        regulationRepository: regulationRepository,
+        ttsRepository: ttsRepository,
+        notesRepository: notesRepository,
+      )),
+    );
+  } else {
+    // Run app without Sentry for development
+    runApp(PoteuApp(
+      settings: settings,
+      settingsRepository: settingsRepository,
+      regulationRepository: regulationRepository,
+      ttsRepository: ttsRepository,
+      notesRepository: notesRepository,
+    ));
+  }
+}
+
+class PoteuApp extends StatefulWidget {
+  final Settings settings;
+  final DataSettingsRepository settingsRepository;
+  final RegulationRepository regulationRepository;
+  final DataTTSRepository ttsRepository;
+  final DataNotesRepository notesRepository;
+
+  const PoteuApp({
+    Key? key,
+    required this.settings,
+    required this.settingsRepository,
+    required this.regulationRepository,
+    required this.ttsRepository,
+    required this.notesRepository,
+  }) : super(key: key);
+
+  @override
+  State<PoteuApp> createState() => _PoteuAppState();
+}
+
+class _PoteuAppState extends State<PoteuApp> {
+  late final AppRouter _appRouter;
+
+  @override
+  void initState() {
+    super.initState();
+    _appRouter = AppRouter();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<bool>(
+      stream: ThemeManager().themeStream,
+      initialData: ThemeManager().isDarkMode,
+      builder: (context, snapshot) {
+        final isDarkMode = snapshot.data ?? false;
+        print('StreamBuilder received theme update: $isDarkMode');
+        print(
+            'Snapshot hasData: ${snapshot.hasData}, hasError: ${snapshot.hasError}');
+
+        final theme = isDarkMode
+            ? FlutterRegulationTheme.dark
+            : FlutterRegulationTheme.light;
+        print('Applied theme indicatorColor: ${theme.indicatorColor}');
+
+        return MaterialApp(
+          title: 'POTEU',
+          theme: theme,
+          onGenerateRoute: _appRouter.onGenerateRoute,
+          initialRoute: '/',
+          debugShowCheckedModeBanner: false,
+        );
+      },
+    );
+  }
+
+  @override
+  void dispose() {
+    ThemeManager().dispose();
+    super.dispose();
+  }
+}
