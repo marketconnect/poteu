@@ -39,6 +39,8 @@ dependencies:
   sentry_flutter: ^8.11.0
   rolling_switch: ^0.0.2
   flutter_widget_from_html: ^0.16.0
+  share_plus: ^10.1.0
+  html: ^0.15.0
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.

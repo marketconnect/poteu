@@ -22,7 +22,7 @@ class DatabaseHelper {
     String path = join(await getDatabasesPath(), 'poteu.db');
     return await openDatabase(
       path,
-      version: 4,
+      version: 5,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
@@ -61,7 +61,10 @@ class DatabaseHelper {
         text_to_speech TEXT,
         is_table INTEGER NOT NULL DEFAULT 0,
         is_nft INTEGER NOT NULL DEFAULT 0,
-        paragraph_class TEXT
+        paragraph_class TEXT,
+        note TEXT,
+        highlight_data TEXT,
+        updated_at TEXT
       )
     ''');
 
@@ -183,6 +186,28 @@ class DatabaseHelper {
 
       // Force reload of initial data
       await _insertPoteuData(db);
+    }
+
+    if (oldVersion < 5) {
+      // Add new columns to paragraphs only if they don't exist
+      try {
+        await db.execute('ALTER TABLE paragraphs ADD COLUMN note TEXT');
+      } catch (e) {
+        // Column might already exist
+      }
+
+      try {
+        await db
+            .execute('ALTER TABLE paragraphs ADD COLUMN highlight_data TEXT');
+      } catch (e) {
+        // Column might already exist
+      }
+
+      try {
+        await db.execute('ALTER TABLE paragraphs ADD COLUMN updated_at TEXT');
+      } catch (e) {
+        // Column might already exist
+      }
     }
   }
 
@@ -776,5 +801,57 @@ class DatabaseHelper {
           'SELECT COUNT(*) FROM paragraphs WHERE chapter_id = ?', [chapterId]),
     );
     return count ?? 0;
+  }
+
+  // Add methods for updating paragraphs and managing edits
+  Future<void> updateParagraph(
+      int paragraphId, Map<String, dynamic> data) async {
+    final db = await database;
+    await db.update(
+      'paragraphs',
+      data,
+      where: 'id = ?',
+      whereArgs: [paragraphId],
+    );
+  }
+
+  Future<void> saveParagraphEdit(int paragraphId, String editedContent) async {
+    final db = await database;
+    await db.update(
+      'paragraphs',
+      {
+        'content': editedContent,
+        'updated_at': DateTime.now().toIso8601String(),
+      },
+      where: 'id = ?',
+      whereArgs: [paragraphId],
+    );
+  }
+
+  Future<void> saveParagraphNote(int paragraphId, String note) async {
+    final db = await database;
+    await db.update(
+      'paragraphs',
+      {
+        'note': note,
+        'updated_at': DateTime.now().toIso8601String(),
+      },
+      where: 'id = ?',
+      whereArgs: [paragraphId],
+    );
+  }
+
+  Future<void> updateParagraphHighlight(
+      int paragraphId, String highlightData) async {
+    final db = await database;
+    await db.update(
+      'paragraphs',
+      {
+        'highlight_data': highlightData,
+        'updated_at': DateTime.now().toIso8601String(),
+      },
+      where: 'id = ?',
+      whereArgs: [paragraphId],
+    );
   }
 }

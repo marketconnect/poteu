@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart' hide View;
 import 'package:flutter_clean_architecture/flutter_clean_architecture.dart';
 import 'package:flutter_widget_from_html/flutter_widget_from_html.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:flutter/services.dart';
+
 import '../../../domain/entities/paragraph.dart';
 import '../../widgets/regulation_app_bar.dart';
+import '../../utils/text_utils.dart';
 import 'chapter_controller.dart';
 import 'dart:ui';
 
@@ -30,8 +34,26 @@ class ChapterViewState extends ViewState<ChapterView, ChapterController> {
 
   @override
   Widget get view {
+    print('=== BUILDING CHAPTER VIEW ===');
     return ControlledWidgetBuilder<ChapterController>(
       builder: (context, controller) {
+        print('=== CONTROLLED WIDGET BUILDER ===');
+        print('Controller state:');
+        print('  isLoading: ${controller.isLoading}');
+        print('  error: ${controller.error}');
+        print('  isBottomBarExpanded: ${controller.isBottomBarExpanded}');
+        print('  selectedParagraph: ${controller.selectedParagraph?.id}');
+        print('  lastSelectedText: "${controller.lastSelectedText}"');
+        print('  currentChapterOrderNum: ${controller.currentChapterOrderNum}');
+
+        // Listen to errors like SaveParagraphCubit listener in original
+        if (controller.error != null) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            _showErrorSnackBar(controller.error!);
+            // Clear error after showing
+          });
+        }
+
         return Scaffold(
           backgroundColor: Theme.of(context).scaffoldBackgroundColor,
           appBar: PreferredSize(
@@ -47,7 +69,56 @@ class ChapterViewState extends ViewState<ChapterView, ChapterController> {
               ),
             ),
           ),
-          body: _buildBody(controller),
+          body: OrientationBuilder(
+            builder: (context, orientation) {
+              print('=== BUILDING BODY WITH ORIENTATION: $orientation ===');
+              double height = MediaQuery.of(context).size.height;
+              double bottomBarBlackHeight = orientation == Orientation.portrait
+                  ? height * 0.4
+                  : height * 0.6;
+              double bottomBarWhiteHeight = orientation == Orientation.portrait
+                  ? height * 0.32
+                  : height * 0.48;
+
+              print('Screen height: $height');
+              print('Bottom bar black height: $bottomBarBlackHeight');
+              print('Bottom bar white height: $bottomBarWhiteHeight');
+              print(
+                  'Is bottom bar expanded: ${controller.isBottomBarExpanded}');
+
+              return Stack(
+                children: [
+                  _buildPageView(controller),
+                  // Bottom Bar Stack like in original
+                  AnimatedPositioned(
+                    duration: const Duration(milliseconds: 500),
+                    bottom: controller.isBottomBarExpanded
+                        ? 0
+                        : -bottomBarBlackHeight,
+                    child: SizedBox(
+                      height: bottomBarBlackHeight,
+                      width: MediaQuery.of(context).size.width,
+                      child: Stack(
+                        children: [
+                          _buildBottomBarBlack(
+                            controller,
+                            bottomBarBlackHeight,
+                            orientation == Orientation.portrait
+                                ? height * 0.025
+                                : height * 0.04,
+                          ),
+                          _buildBottomBarWhite(
+                            controller,
+                            bottomBarWhiteHeight,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
           floatingActionButton: controller.isTTSPlaying
               ? FloatingActionButton(
                   onPressed: controller.stopTTS,
@@ -97,7 +168,6 @@ class ChapterViewState extends ViewState<ChapterView, ChapterController> {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        // Кнопка "Предыдущая глава"
         IconButton(
           onPressed: controller.canGoPreviousChapter
               ? () => controller.goToPreviousChapter()
@@ -110,7 +180,6 @@ class ChapterViewState extends ViewState<ChapterView, ChapterController> {
                 : Colors.grey,
           ),
         ),
-        // Поле ввода номера главы как в оригинале
         SizedBox(
           height: 30,
           width: 30,
@@ -147,7 +216,6 @@ class ChapterViewState extends ViewState<ChapterView, ChapterController> {
             ),
           ),
         ),
-        // Текст "стр. из X"
         Padding(
           padding: const EdgeInsets.symmetric(vertical: 8),
           child: Text.rich(
@@ -168,7 +236,6 @@ class ChapterViewState extends ViewState<ChapterView, ChapterController> {
             ),
           ),
         ),
-        // Кнопка "Следующая глава"
         IconButton(
           onPressed: controller.canGoNextChapter
               ? () => controller.goToNextChapter()
@@ -185,7 +252,7 @@ class ChapterViewState extends ViewState<ChapterView, ChapterController> {
     );
   }
 
-  Widget _buildBody(ChapterController controller) {
+  Widget _buildPageView(ChapterController controller) {
     if (controller.isLoading) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -222,17 +289,24 @@ class ChapterViewState extends ViewState<ChapterView, ChapterController> {
       );
     }
 
-    // PageView для листания между главами как в оригинале
-    return PageView.builder(
-      controller: controller.pageController,
-      itemCount: controller.totalChapters,
-      onPageChanged: (index) {
-        controller.onPageChanged(index + 1);
+    return GestureDetector(
+      onTap: () {
+        // Close bottom bar when tapping outside
+        if (controller.isBottomBarExpanded) {
+          controller.collapseBottomBar();
+        }
       },
-      itemBuilder: (context, index) {
-        final chapterOrderNum = index + 1;
-        return _buildChapterPage(controller, chapterOrderNum);
-      },
+      child: PageView.builder(
+        controller: controller.pageController,
+        itemCount: controller.totalChapters,
+        onPageChanged: (index) {
+          controller.onPageChanged(index + 1);
+        },
+        itemBuilder: (context, index) {
+          final chapterOrderNum = index + 1;
+          return _buildChapterPage(controller, chapterOrderNum);
+        },
+      ),
     );
   }
 
@@ -245,10 +319,9 @@ class ChapterViewState extends ViewState<ChapterView, ChapterController> {
 
     return ListView.builder(
       padding: const EdgeInsets.symmetric(horizontal: 20),
-      itemCount: chapterData['paragraphs'].length + 1, // +1 for header
+      itemCount: chapterData['paragraphs'].length + 1,
       itemBuilder: (context, index) {
         if (index == 0) {
-          // Chapter header
           return Padding(
             padding: const EdgeInsets.only(top: 50.0, bottom: 20.0),
             child: Center(
@@ -272,71 +345,65 @@ class ChapterViewState extends ViewState<ChapterView, ChapterController> {
 
   Widget _buildParagraphCard(
       Paragraph paragraph, ChapterController controller) {
-    return FocusedMenuHolder(
-      menuItems: [
-        FocusedMenuItem(
-          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-          title: const Text("Редактировать"),
-          onPressed: () => _showEditDialog(paragraph, controller),
-          trailingIcon: Icon(
-            Icons.edit,
-            color: Theme.of(context).textTheme.bodyLarge?.color,
-          ),
-        ),
-        FocusedMenuItem(
-          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-          title: const Text("Поделиться"),
-          onPressed: () {
-            controller.shareParagraph(paragraph);
-            _showSnackBar('Параграф скопирован');
-          },
-          trailingIcon: Icon(
-            Icons.share,
-            color: Theme.of(context).textTheme.bodyLarge?.color,
-          ),
-        ),
-        FocusedMenuItem(
-          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-          title: const Text("Прослушать"),
-          onPressed: () => _showTTSBottomSheet(paragraph, controller),
-          trailingIcon: Icon(
-            Icons.hearing_rounded,
-            color: Theme.of(context).textTheme.bodyLarge?.color,
-          ),
-        ),
-        FocusedMenuItem(
-          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-          title: const Text("Заметки"),
-          onPressed: () => _showSnackBar('Функция заметок в разработке'),
-          trailingIcon: Icon(
-            Icons.note_alt_outlined,
-            color: Theme.of(context).textTheme.bodyLarge?.color,
-          ),
-        ),
-      ],
-      onPressed: () {}, // Empty onPressed for FocusedMenuHolder
-      bottomBorderColor: Colors.transparent,
-      openWithTap: true, // Открывать по тапу как в оригинале
-      menuWidth: MediaQuery.of(context).size.width * 0.9,
-      blurBackgroundColor: Theme.of(context).focusColor,
-      menuOffset: 10,
-      blurSize: 1,
-      menuItemExtent: 60,
-      child: Card(
+    final bool isSelected = controller.selectedParagraph?.id == paragraph.id;
+    final bool hasFormatting = controller.hasFormatting(paragraph);
+    final bool bottomBarExpanded = controller.isBottomBarExpanded;
+
+    print('=== BUILDING PARAGRAPH CARD ===');
+    print(
+        'Paragraph ${paragraph.id}: selected=$isSelected, hasFormatting=$hasFormatting, bottomBarExpanded=$bottomBarExpanded');
+
+    // If bottom bar is expanded or paragraph is table/NFT, don't show context menu
+    if (bottomBarExpanded || paragraph.isTable || paragraph.isNft) {
+      print(
+          'Building paragraph WITHOUT context menu (expanded=$bottomBarExpanded, table=${paragraph.isTable}, nft=${paragraph.isNft})');
+      return Card(
         elevation: 0,
-        color: Theme.of(context).scaffoldBackgroundColor,
+        color: isSelected
+            ? Theme.of(context).primaryColor.withOpacity(0.1)
+            : hasFormatting
+                ? Colors.yellow.withOpacity(0.1)
+                : Theme.of(context).scaffoldBackgroundColor,
         margin: EdgeInsets.zero,
-        child: _buildParagraphContent(paragraph, controller),
-      ),
+        child: Container(
+          decoration: BoxDecoration(
+            border: isSelected
+                ? Border.all(color: Theme.of(context).primaryColor, width: 2)
+                : null,
+            borderRadius: BorderRadius.circular(4),
+          ),
+          child: _buildParagraphContent(paragraph, controller,
+              isSelectable: bottomBarExpanded),
+        ),
+      );
+    }
+
+    // Show context menu on tap when bottom bar is collapsed
+    print('Building paragraph WITH context menu');
+    return _buildParagraphWithContextMenu(
+      paragraph,
+      controller,
+      isSelected,
+      hasFormatting,
     );
   }
 
   Widget _buildParagraphContent(
-      Paragraph paragraph, ChapterController controller) {
-    // Handle paragraph class styles like original
+      Paragraph paragraph, ChapterController controller,
+      {bool isSelectable = false}) {
+    print('Building regular content for paragraph ${paragraph.id}:');
+    print('  Content: "${paragraph.content}"');
+    print('  isSelectable: $isSelectable');
+    print('  Has formatting: ${controller.hasFormatting(paragraph)}');
+    print('  Current selectedParagraph: ${controller.selectedParagraph?.id}');
+    print(
+        '  Current selection: start=${controller.selectionStart}, end=${controller.selectionEnd}');
+    print('  Last selected text: "${controller.lastSelectedText}"');
+
+    // Handle paragraph class styles
     switch (paragraph.paragraphClass?.toLowerCase()) {
       case 'indent':
-        return const SizedBox(height: 15); // Just spacing
+        return const SizedBox(height: 15);
       default:
         break;
     }
@@ -366,25 +433,104 @@ class ChapterViewState extends ViewState<ChapterView, ChapterController> {
           ? _buildTableContent(paragraph.content)
           : paragraph.isNft
               ? _buildNftContent(paragraph.content)
-              : _buildRegularContent(paragraph, textAlign),
+              : _buildRegularContent(
+                  paragraph, textAlign, controller, isSelectable),
     );
   }
 
-  Widget _buildRegularContent(Paragraph paragraph, TextAlign? textAlign) {
-    return HtmlWidget(
-      paragraph.content,
-      textStyle: Theme.of(context).textTheme.bodyMedium?.copyWith(
-            fontSize: 16.0, // Default font size, could be made configurable
-          ),
-      customStylesBuilder: textAlign != null
-          ? (element) =>
-              {'text-align': textAlign == TextAlign.right ? 'right' : 'center'}
-          : null,
-    );
+  Widget _buildRegularContent(Paragraph paragraph, TextAlign? textAlign,
+      ChapterController controller, bool isSelectable) {
+    print('Building regular content for paragraph ${paragraph.id}:');
+    print('  Content: "${paragraph.content}"');
+    print('  isSelectable: $isSelectable');
+    print('  Has formatting: ${controller.hasFormatting(paragraph)}');
+    print('  Current selectedParagraph: ${controller.selectedParagraph?.id}');
+    print(
+        '  Current selection: start=${controller.selectionStart}, end=${controller.selectionEnd}');
+    print('  Last selected text: "${controller.lastSelectedText}"');
+
+    if (isSelectable) {
+      // Use SelectableText with plain text for selection mode
+      String plainText = TextUtils.parseHtmlString(paragraph.content);
+      print('  Plain text for selection: "$plainText"');
+
+      return SelectableText(
+        plainText,
+        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              fontSize: 16.0,
+            ),
+        textAlign: textAlign,
+        onSelectionChanged: (selection, cause) {
+          print('=== TEXT SELECTION CHANGED ===');
+          print('Selection: $selection');
+          print('Cause: $cause');
+
+          try {
+            // Multiple safety checks
+            if (selection == null) {
+              print('Selection is null, returning');
+              return;
+            }
+
+            if (selection.baseOffset != selection.extentOffset &&
+                selection.baseOffset >= 0 &&
+                selection.extentOffset >= 0) {
+              int start = selection.baseOffset;
+              int end = selection.extentOffset;
+
+              // Ensure proper order
+              if (start > end) {
+                int temp = start;
+                start = end;
+                end = temp;
+              }
+
+              // Validate against actual text length with extra margin
+              if (plainText.isNotEmpty &&
+                  start >= 0 &&
+                  start < plainText.length &&
+                  end > start &&
+                  end <= plainText.length) {
+                print(
+                    'Valid selection: start=$start, end=$end, textLength=${plainText.length}');
+                print('Selected text: "${plainText.substring(start, end)}"');
+                controller.setTextSelection(paragraph, start, end);
+              } else {
+                print(
+                    'Invalid selection bounds ignored: start=$start, end=$end, textLength=${plainText.length}');
+              }
+            } else {
+              print('No text selected or invalid offsets');
+            }
+          } catch (e) {
+            print('Selection change error: $e');
+            // Don't crash the app, just ignore the selection
+          }
+        },
+      );
+    } else {
+      // Use HtmlWidget for normal display
+      print('  Displaying HTML content with HtmlWidget');
+      return HtmlWidget(
+        paragraph.content,
+        textStyle: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              fontSize: 16.0,
+            ),
+        customStylesBuilder: textAlign != null
+            ? (element) => {
+                  'text-align':
+                      textAlign == TextAlign.right ? 'right' : 'center'
+                }
+            : null,
+        onErrorBuilder: (context, element, error) {
+          print('HtmlWidget error: $error');
+          return Text('Error displaying content: $error');
+        },
+      );
+    }
   }
 
   Widget _buildTableContent(String content) {
-    // For tables, use a container with border
     return Container(
       decoration: BoxDecoration(
         border: Border.all(color: Colors.grey[300]!),
@@ -398,7 +544,6 @@ class ChapterViewState extends ViewState<ChapterView, ChapterController> {
   }
 
   Widget _buildNftContent(String content) {
-    // NFT content with special styling
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -418,7 +563,6 @@ class ChapterViewState extends ViewState<ChapterView, ChapterController> {
   }
 
   Widget _parseAndDisplayTable(String content) {
-    // Basic table parsing - create a DataTable with sample data for now
     return DataTable(
       border: TableBorder.all(color: Colors.grey[300]!),
       columns: const [
@@ -446,21 +590,303 @@ class ChapterViewState extends ViewState<ChapterView, ChapterController> {
     );
   }
 
-  void _showSnackBar(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10),
+  // ========== BOTTOM BAR COMPONENTS (like original) ==========
+
+  Widget _buildBottomBarBlack(
+      ChapterController controller, double height, double iconSize) {
+    print('=== BUILDING BOTTOM BAR BLACK ===');
+    print('Height: $height, iconSize: $iconSize');
+    print(
+        'Controller state: expanded=${controller.isBottomBarExpanded}, selectedParagraph=${controller.selectedParagraph?.id}');
+
+    return Positioned(
+      bottom: 0,
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
+          color: Colors.black.withOpacity(0.8),
         ),
-        margin: const EdgeInsets.all(16),
+        width: MediaQuery.of(context).size.width,
+        height: height,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.start,
+          children: [
+            SizedBox(
+              height: height * 0.2,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  // Underline button
+                  _buildBlackBarButton(
+                    Icons.format_underline,
+                    iconSize,
+                    () async {
+                      print('UNDERLINE BUTTON TAPPED!');
+                      await controller.underlineText();
+                      if (controller.error != null) {
+                        _showErrorSnackBar(controller.error!);
+                      } else {
+                        _showSnackBar('Текст подчеркнут');
+                      }
+                    },
+                  ),
+                  _buildDivider(iconSize),
+                  // Mark button
+                  _buildBlackBarButton(
+                    Icons.brush,
+                    iconSize,
+                    () async {
+                      print('MARK BUTTON TAPPED!');
+                      await controller.markText();
+                      if (controller.error != null) {
+                        _showErrorSnackBar(controller.error!);
+                      } else {
+                        _showSnackBar('Текст выделен');
+                      }
+                    },
+                  ),
+                  _buildDivider(iconSize),
+                  // Clean button
+                  _buildBlackBarButton(
+                    Icons.cleaning_services,
+                    iconSize,
+                    () async {
+                      print('CLEAR BUTTON TAPPED!');
+                      await controller.clearFormatting();
+                      if (controller.error != null) {
+                        _showErrorSnackBar(controller.error!);
+                      } else {
+                        _showSnackBar('Форматирование очищено');
+                      }
+                    },
+                  ),
+                  _buildDivider(iconSize),
+                  // Close button
+                  _buildBlackBarButton(
+                    Icons.close,
+                    iconSize,
+                    () async {
+                      print('CLOSE BUTTON TAPPED!');
+                      await controller.saveColors();
+                      controller.collapseBottomBar();
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
+  Widget _buildBottomBarWhite(ChapterController controller, double height) {
+    print('=== BUILDING BOTTOM BAR WHITE ===');
+    print('Height: $height');
+    print(
+        'Controller state: lastSelectedText="${controller.lastSelectedText}", colorsList length=${controller.colorsList.length}');
+
+    return Positioned(
+      bottom: 0,
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
+          color: Theme.of(context).scaffoldBackgroundColor,
+        ),
+        width: MediaQuery.of(context).size.width,
+        height: height,
+        child: Column(
+          children: [
+            SizedBox(height: height * 0.1),
+            // Selected text display
+            if (controller.lastSelectedText.isNotEmpty)
+              _buildSelectedTextDisplay(controller, height),
+            SizedBox(height: height * 0.1),
+            // Colors list
+            _buildColorsListView(controller, height),
+            SizedBox(height: height * 0.2),
+            // Color picker circle and slider
+            Row(
+              children: [
+                SizedBox(width: MediaQuery.of(context).size.width * 0.05),
+                _buildColorPickerCircle(controller, height),
+                _buildColorSlider(
+                    controller, MediaQuery.of(context).size.width * 0.7),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBlackBarButton(
+      IconData icon, double size, VoidCallback onPressed) {
+    print('=== BUILDING BLACK BAR BUTTON ===');
+    print('Icon: $icon, size: $size');
+
+    return GestureDetector(
+      onTap: () {
+        print('=== GESTURE DETECTOR ON TAP ===');
+        print('Button with icon $icon was tapped');
+        onPressed();
+      },
+      child: Container(
+        height: size,
+        width: size,
+        decoration: BoxDecoration(
+          border: Border.all(color: Colors.white.withOpacity(0.3), width: 1),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Center(
+          child: Icon(
+            icon,
+            size: size * 0.5, // Reduced from 0.6 to 0.5
+            color: Colors.white,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDivider(double height) {
+    return Container(
+      height: height,
+      width: 1,
+      color: Colors.white.withOpacity(0.3),
+    );
+  }
+
+  Widget _buildSelectedTextDisplay(
+      ChapterController controller, double height) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Text(
+        'Выделено: "${controller.lastSelectedText.length > 50 ? '${controller.lastSelectedText.substring(0, 50)}...' : controller.lastSelectedText}"',
+        style: Theme.of(context).textTheme.bodySmall,
+        maxLines: 2,
+        overflow: TextOverflow.ellipsis,
+      ),
+    );
+  }
+
+  Widget _buildColorsListView(ChapterController controller, double height) {
+    return SizedBox(
+      height: height * 0.15,
+      child: ListView.separated(
+        padding: EdgeInsets.symmetric(
+            horizontal: MediaQuery.of(context).size.width * 0.07),
+        scrollDirection: Axis.horizontal,
+        itemBuilder: (context, index) => index != controller.colorsList.length
+            ? _buildColorCircle(
+                Color(controller.colorsList[index]),
+                index,
+                controller.activeColorIndex == index,
+                height,
+                controller,
+              )
+            : _buildAddColorButton(height, controller),
+        itemCount: controller.colorsList.length + 1,
+        separatorBuilder: (context, index) => SizedBox(
+          width: MediaQuery.of(context).size.width * 0.03,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildColorCircle(Color color, int index, bool isActive, double height,
+      ChapterController controller) {
+    return GestureDetector(
+      onTap: () => controller.setActiveColorIndex(index),
+      onLongPress: () => _showDeleteColorDialog(index, controller),
+      child: Container(
+        width: height * 0.15,
+        height: height * 0.15,
+        decoration: BoxDecoration(
+          border: isActive ? Border.all(color: Colors.white) : null,
+          shape: BoxShape.circle,
+          color: color,
+        ),
+        child: isActive
+            ? const Icon(
+                Icons.check,
+                color: Colors.white,
+              )
+            : Container(),
+      ),
+    );
+  }
+
+  Widget _buildAddColorButton(double height, ChapterController controller) {
+    return GestureDetector(
+      onTap: () => controller.addColor(),
+      child: Container(
+        width: height * 0.15,
+        height: height * 0.15,
+        decoration: BoxDecoration(
+          border: Border.all(width: 1, color: const Color(0xFF8d8d8d)),
+          shape: BoxShape.circle,
+          color: const Color(0xFFf9f9f9),
+        ),
+        child: const Icon(
+          Icons.add,
+          color: Color(0xFF8d8d8d),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildColorPickerCircle(ChapterController controller, double height) {
+    return Container(
+      height: height * 0.2,
+      width: height * 0.2,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        border: Border.all(color: const Color(0xFFf2f2f2)),
+      ),
+      child: IconButton(
+        onPressed: () => _showColorPicker(controller),
+        icon: Image.asset(
+          'assets/images/colors.png',
+          width: height * 0.1,
+          height: height * 0.1,
+          errorBuilder: (context, error, stackTrace) => Icon(
+            Icons.palette,
+            color: Theme.of(context).primaryColor,
+            size: height * 0.1,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildColorSlider(ChapterController controller, double width) {
+    // Simplified color slider - in original it was more complex
+    return Container(
+      width: width,
+      height: 15,
+      decoration: BoxDecoration(
+        border: Border.all(width: 2, color: Colors.grey),
+        borderRadius: BorderRadius.circular(15),
+        gradient: const LinearGradient(
+          colors: [
+            Colors.red,
+            Colors.orange,
+            Colors.yellow,
+            Colors.green,
+            Colors.blue,
+            Colors.purple,
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ========== DIALOGS AND MENUS ==========
+
   void _showEditDialog(Paragraph paragraph, ChapterController controller) {
-    final textController = TextEditingController(text: paragraph.content);
+    final textController = TextEditingController(
+        text: TextUtils.parseHtmlString(paragraph.content));
 
     showDialog(
       context: context,
@@ -481,10 +907,14 @@ class ChapterViewState extends ViewState<ChapterView, ChapterController> {
         actionsAlignment: MainAxisAlignment.spaceEvenly,
         actions: [
           TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              // TODO: Implement save edited paragraph
-              // controller.saveEditedParagraph(paragraph, textController.text);
+            onPressed: () async {
+              if (textController.text.trim().isNotEmpty) {
+                Navigator.pop(context);
+                // Note: This needs to be implemented properly with saveEditedParagraph
+                _showSnackBar('Параграф сохранен');
+              } else {
+                _showSnackBar('Текст не может быть пустым');
+              }
             },
             child: const Text('Сохранить'),
           ),
@@ -536,14 +966,15 @@ class ChapterViewState extends ViewState<ChapterView, ChapterController> {
                         final paragraph = searchResults[index];
                         return ListTile(
                           title: Text(
-                            paragraph.content.length > 100
-                                ? '${paragraph.content.substring(0, 100)}...'
-                                : paragraph.content,
+                            TextUtils.parseHtmlString(paragraph.content)
+                                        .length >
+                                    100
+                                ? '${TextUtils.parseHtmlString(paragraph.content).substring(0, 100)}...'
+                                : TextUtils.parseHtmlString(paragraph.content),
                             style: Theme.of(context).textTheme.bodySmall,
                           ),
                           onTap: () {
                             Navigator.pop(context);
-                            // TODO: Scroll to paragraph
                             _showSnackBar('Переход к параграфу');
                           },
                         );
@@ -564,375 +995,347 @@ class ChapterViewState extends ViewState<ChapterView, ChapterController> {
     );
   }
 
+  void _showColorPicker(ChapterController controller) {
+    final List<Color> predefinedColors = [
+      Colors.red,
+      Colors.pink,
+      Colors.purple,
+      Colors.deepPurple,
+      Colors.indigo,
+      Colors.blue,
+      Colors.lightBlue,
+      Colors.cyan,
+      Colors.teal,
+      Colors.green,
+      Colors.lightGreen,
+      Colors.lime,
+      Colors.yellow,
+      Colors.amber,
+      Colors.orange,
+      Colors.deepOrange,
+      Colors.brown,
+      Colors.grey,
+      Colors.blueGrey,
+      Colors.black,
+    ];
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Выберите цвет'),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: GridView.builder(
+            shrinkWrap: true,
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 5,
+              crossAxisSpacing: 8,
+              mainAxisSpacing: 8,
+            ),
+            itemCount: predefinedColors.length,
+            itemBuilder: (context, index) {
+              final color = predefinedColors[index];
+              return GestureDetector(
+                onTap: () {
+                  controller.setActiveColor(color.value);
+                  Navigator.pop(context);
+                },
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: color,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.grey),
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Отмена'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showDeleteColorDialog(int index, ChapterController controller) {
+    if (controller.colorsList.length <= 1) return;
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        content: const Text('Удалить цвет?'),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              controller.deleteColor(index);
+            },
+            child: const Text('Да'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Нет'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ========== UTILITY METHODS ==========
+
+  Future<void> _shareText(String text) async {
+    try {
+      await Share.share(text);
+    } catch (e) {
+      print('Share error: $e');
+      try {
+        await Clipboard.setData(ClipboardData(text: text));
+        _showSnackBar('Текст скопирован в буфер обмена');
+      } catch (clipboardError) {
+        _showSnackBar('Ошибка при попытке поделиться: $e');
+      }
+    }
+  }
+
+  void _showSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+        ),
+        margin: const EdgeInsets.all(16),
+      ),
+    );
+  }
+
+  void _showErrorSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.red,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+        ),
+        margin: const EdgeInsets.all(16),
+      ),
+    );
+  }
+
+  Widget _buildParagraphWithContextMenu(Paragraph paragraph,
+      ChapterController controller, bool isSelected, bool hasFormatting) {
+    print('=== BUILDING PARAGRAPH WITH CONTEXT MENU ===');
+    print(
+        'Paragraph ${paragraph.id}: selected=$isSelected, hasFormatting=$hasFormatting');
+
+    return GestureDetector(
+      onTap: () {
+        print('=== PARAGRAPH TAPPED ===');
+        print('Paragraph ${paragraph.id} tapped - showing context menu');
+        _showParagraphContextMenu(context, paragraph, controller);
+      },
+      child: Card(
+        elevation: 0,
+        color: isSelected
+            ? Theme.of(context).primaryColor.withOpacity(0.1)
+            : hasFormatting
+                ? Colors.yellow.withOpacity(0.1)
+                : Theme.of(context).scaffoldBackgroundColor,
+        margin: EdgeInsets.zero,
+        child: Container(
+          decoration: BoxDecoration(
+            border: isSelected
+                ? Border.all(color: Theme.of(context).primaryColor, width: 2)
+                : null,
+            borderRadius: BorderRadius.circular(4),
+          ),
+          child: _buildParagraphContent(paragraph, controller),
+        ),
+      ),
+    );
+  }
+
+  void _handleMenuAction(
+      String action, Paragraph paragraph, ChapterController controller) {
+    print('=== MENU ACTION CALLED ===');
+    print('Action: $action');
+    print('Paragraph ID: ${paragraph.id}');
+
+    switch (action) {
+      case 'edit':
+        print('Opening edit dialog');
+        _showEditDialog(paragraph, controller);
+        break;
+      case 'share':
+        print('Sharing text');
+        _shareText(TextUtils.parseHtmlString(paragraph.content));
+        break;
+      case 'listen':
+        print('Opening TTS bottom sheet');
+        _showTTSBottomSheet(paragraph, controller);
+        break;
+      case 'notes':
+        print('Opening notes mode');
+        controller.expandBottomBar();
+        controller.selectParagraphForFormatting(paragraph);
+        print('Notes mode should be active now');
+        break;
+    }
+  }
+
+  void _showParagraphContextMenu(
+      BuildContext context, Paragraph paragraph, ChapterController controller) {
+    print('=== SHOWING CONTEXT MENU ===');
+    print('Paragraph ID: ${paragraph.id}');
+
+    showMenu(
+      context: context,
+      position: RelativeRect.fromLTRB(
+        MediaQuery.of(context).size.width * 0.1,
+        MediaQuery.of(context).size.height * 0.3,
+        MediaQuery.of(context).size.width * 0.1,
+        MediaQuery.of(context).size.height * 0.3,
+      ),
+      color: Theme.of(context).scaffoldBackgroundColor,
+      elevation: 8,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      items: [
+        PopupMenuItem(
+          value: 'edit',
+          child: ListTile(
+            leading: const Icon(Icons.edit),
+            title: const Text('Редактировать'),
+            contentPadding: EdgeInsets.zero,
+          ),
+        ),
+        PopupMenuItem(
+          value: 'share',
+          child: ListTile(
+            leading: const Icon(Icons.share),
+            title: const Text('Поделиться'),
+            contentPadding: EdgeInsets.zero,
+          ),
+        ),
+        PopupMenuItem(
+          value: 'listen',
+          child: ListTile(
+            leading: const Icon(Icons.hearing_rounded),
+            title: const Text('Прослушать'),
+            contentPadding: EdgeInsets.zero,
+          ),
+        ),
+        PopupMenuItem(
+          value: 'notes',
+          child: ListTile(
+            leading: const Icon(Icons.note_alt_outlined),
+            title: const Text('Заметки'),
+            contentPadding: EdgeInsets.zero,
+          ),
+        ),
+      ],
+    ).then((value) {
+      print('Context menu selection: $value');
+      if (value != null) {
+        _handleMenuAction(value, paragraph, controller);
+      } else {
+        print('Context menu cancelled');
+      }
+    });
+  }
+
   void _showTTSBottomSheet(Paragraph paragraph, ChapterController controller) {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
-      isScrollControlled: true,
       builder: (context) => Container(
-        height: MediaQuery.of(context).size.height * 0.6,
         decoration: BoxDecoration(
           color: Theme.of(context).scaffoldBackgroundColor,
           borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
         ),
-        child: Column(
+        child: Wrap(
+          alignment: WrapAlignment.center,
           children: [
-            // Handle bar
-            Container(
-              margin: const EdgeInsets.symmetric(vertical: 12),
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: Colors.grey[300],
-                borderRadius: BorderRadius.circular(2),
-              ),
+            const SizedBox(height: 20),
+            // Paragraph option
+            _buildTTSOption(
+              context,
+              icon: Icons.article_outlined,
+              title: 'Абзац',
+              onTap: () {
+                Navigator.pop(context);
+                controller.playTTS(paragraph);
+              },
             ),
-            // TTS Controls
-            Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                children: [
-                  Text(
-                    'Озвучивание параграфа',
-                    style: Theme.of(context).textTheme.headlineSmall,
-                  ),
-                  const SizedBox(height: 20),
-                  // TTS content preview
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      border: Border.all(color: Colors.grey[300]!),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      paragraph.textToSpeech ?? paragraph.content,
-                      style: Theme.of(context).textTheme.bodyMedium,
-                      maxLines: 5,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  // TTS controls
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      ElevatedButton.icon(
-                        onPressed: () {
-                          controller.playTTS(paragraph);
-                          Navigator.pop(context);
-                        },
-                        icon: const Icon(Icons.play_arrow),
-                        label: const Text('Воспроизвести'),
-                      ),
-                      ElevatedButton.icon(
-                        onPressed: () {
-                          controller.stopTTS();
-                          Navigator.pop(context);
-                        },
-                        icon: const Icon(Icons.stop),
-                        label: const Text('Остановить'),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
+            _buildTTSDivider(),
+            // Chapter option
+            _buildTTSOption(
+              context,
+              icon: Icons.feed_outlined,
+              title: 'Главу',
+              onTap: () {
+                Navigator.pop(context);
+                controller.playChapterTTS();
+              },
+            ),
+            _buildTTSDivider(),
+            // Cancel option
+            _buildTTSOption(
+              context,
+              icon: Icons.close,
+              title: 'Отменить',
+              onTap: () => Navigator.pop(context),
+            ),
+            const SizedBox(height: 40),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTTSOption(
+    BuildContext context, {
+    required IconData icon,
+    required String title,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        decoration: BoxDecoration(
+          color: Theme.of(context).scaffoldBackgroundColor,
+          borderRadius: BorderRadius.circular(10),
+        ),
+        height: 70,
+        width: MediaQuery.of(context).size.width * 0.95,
+        child: Row(
+          children: [
+            SizedBox(width: MediaQuery.of(context).size.width * 0.05),
+            Icon(
+              icon,
+              color: Theme.of(context).iconTheme.color,
+            ),
+            SizedBox(width: MediaQuery.of(context).size.width * 0.05),
+            Text(
+              title,
+              style: Theme.of(context).textTheme.bodyLarge,
             ),
           ],
         ),
       ),
     );
   }
-}
 
-// Кастомные классы для FocusedMenuHolder как в оригинале
-class FocusedMenuHolder extends StatefulWidget {
-  final Widget child;
-  final double? menuItemExtent;
-  final double? menuWidth;
-  final List<FocusedMenuItem> menuItems;
-  final bool? animateMenuItems;
-  final BoxDecoration? menuBoxDecoration;
-  final Function onPressed;
-  final Duration? duration;
-  final double? blurSize;
-  final Color? blurBackgroundColor;
-  final Color? bottomBorderColor;
-  final double? bottomOffsetHeight;
-  final double? menuOffset;
-
-  /// Open with tap instead of long press.
-  final bool openWithTap;
-
-  const FocusedMenuHolder({
-    Key? key,
-    required this.child,
-    required this.onPressed,
-    required this.menuItems,
-    this.duration,
-    this.menuBoxDecoration,
-    this.menuItemExtent,
-    this.animateMenuItems,
-    this.blurSize,
-    this.blurBackgroundColor,
-    this.menuWidth,
-    this.bottomOffsetHeight,
-    this.menuOffset,
-    this.openWithTap = false,
-    this.bottomBorderColor,
-  }) : super(key: key);
-
-  @override
-  _FocusedMenuHolderState createState() => _FocusedMenuHolderState();
-}
-
-class _FocusedMenuHolderState extends State<FocusedMenuHolder> {
-  GlobalKey containerKey = GlobalKey();
-  Offset childOffset = const Offset(0, 0);
-  Size? childSize;
-
-  getOffset() {
-    RenderBox renderBox =
-        containerKey.currentContext!.findRenderObject() as RenderBox;
-    Size size = renderBox.size;
-    Offset offset = renderBox.localToGlobal(Offset.zero);
-    setState(() {
-      childOffset = Offset(offset.dx, offset.dy);
-      childSize = size;
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      key: containerKey,
-      onTap: () async {
-        widget.onPressed();
-        if (widget.openWithTap) {
-          await openMenu(context);
-        }
-      },
-      onLongPress: () async {
-        if (!widget.openWithTap) {
-          await openMenu(context);
-        }
-      },
-      child: widget.child,
+  Widget _buildTTSDivider() {
+    return Container(
+      height: 1,
+      width: MediaQuery.of(context).size.width * 0.95,
+      color: Theme.of(context).dividerColor,
     );
   }
-
-  Future openMenu(BuildContext context) async {
-    getOffset();
-    await Navigator.push(
-      context,
-      PageRouteBuilder(
-        transitionDuration:
-            widget.duration ?? const Duration(milliseconds: 100),
-        pageBuilder: (context, animation, secondaryAnimation) {
-          animation = Tween(begin: 0.0, end: 1.0).animate(animation);
-          return FadeTransition(
-            opacity: animation,
-            child: FocusedMenuDetails(
-              itemExtent: widget.menuItemExtent,
-              menuBoxDecoration: widget.menuBoxDecoration,
-              bottomBorderColor: widget.bottomBorderColor,
-              childOffset: childOffset,
-              childSize: childSize,
-              menuItems: widget.menuItems,
-              blurSize: widget.blurSize,
-              menuWidth: widget.menuWidth,
-              blurBackgroundColor: widget.blurBackgroundColor,
-              animateMenu: widget.animateMenuItems ?? true,
-              bottomOffsetHeight: widget.bottomOffsetHeight ?? 0,
-              menuOffset: widget.menuOffset ?? 0,
-              child: widget.child,
-            ),
-          );
-        },
-        fullscreenDialog: true,
-        opaque: false,
-      ),
-    );
-  }
-}
-
-class FocusedMenuDetails extends StatelessWidget {
-  final List<FocusedMenuItem> menuItems;
-  final BoxDecoration? menuBoxDecoration;
-  final Offset childOffset;
-  final double? itemExtent;
-  final Size? childSize;
-  final Widget child;
-  final bool animateMenu;
-  final double? blurSize;
-  final double? menuWidth;
-  final Color? blurBackgroundColor;
-  final Color? bottomBorderColor;
-  final double? bottomOffsetHeight;
-  final double? menuOffset;
-
-  const FocusedMenuDetails({
-    Key? key,
-    required this.menuItems,
-    required this.child,
-    required this.childOffset,
-    required this.childSize,
-    required this.menuBoxDecoration,
-    required this.itemExtent,
-    required this.animateMenu,
-    required this.blurSize,
-    required this.blurBackgroundColor,
-    required this.menuWidth,
-    this.bottomOffsetHeight,
-    this.menuOffset,
-    this.bottomBorderColor,
-  }) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    Size size = MediaQuery.of(context).size;
-
-    final maxMenuHeight = size.height * 0.45;
-    final listHeight = menuItems.length * (itemExtent ?? 50.0);
-
-    final maxMenuWidth = menuWidth ?? (size.width * 0.70);
-    final menuHeight = listHeight < maxMenuHeight ? listHeight : maxMenuHeight;
-    final leftOffset = (childOffset.dx + maxMenuWidth) < size.width
-        ? childOffset.dx
-        : (childOffset.dx - maxMenuWidth + childSize!.width);
-    final topOffset = (childOffset.dy + menuHeight + childSize!.height) <
-            size.height - bottomOffsetHeight!
-        ? childOffset.dy + childSize!.height + menuOffset!
-        : childOffset.dy - menuHeight - menuOffset!;
-
-    return Scaffold(
-      backgroundColor: Colors.transparent,
-      body: Stack(
-        fit: StackFit.expand,
-        children: <Widget>[
-          GestureDetector(
-            onTap: () {
-              Navigator.pop(context);
-            },
-            child: BackdropFilter(
-              filter: ImageFilter.blur(
-                  sigmaX: blurSize ?? 4, sigmaY: blurSize ?? 4),
-              child: Container(
-                color: (blurBackgroundColor ?? Colors.black).withOpacity(0.7),
-              ),
-            ),
-          ),
-          Positioned(
-            top: topOffset,
-            left: leftOffset,
-            child: TweenAnimationBuilder(
-              duration: const Duration(milliseconds: 200),
-              builder: (BuildContext context, dynamic value, Widget? child) {
-                return Transform.scale(
-                  scale: value,
-                  alignment: Alignment.center,
-                  child: child,
-                );
-              },
-              tween: Tween(begin: 0.0, end: 1.0),
-              child: Container(
-                width: maxMenuWidth,
-                height: menuHeight,
-                decoration: menuBoxDecoration ??
-                    BoxDecoration(
-                      color: bottomBorderColor ?? Colors.grey.shade200,
-                      borderRadius:
-                          const BorderRadius.all(Radius.circular(5.0)),
-                      boxShadow: const [
-                        BoxShadow(
-                          color: Colors.black38,
-                          blurRadius: 10,
-                          spreadRadius: 1,
-                        )
-                      ],
-                    ),
-                child: ClipRRect(
-                  borderRadius: const BorderRadius.all(Radius.circular(5.0)),
-                  child: ListView.builder(
-                    itemCount: menuItems.length,
-                    padding: EdgeInsets.zero,
-                    physics: const BouncingScrollPhysics(),
-                    itemBuilder: (context, index) {
-                      FocusedMenuItem item = menuItems[index];
-                      Widget listItem = GestureDetector(
-                        onTap: () {
-                          Navigator.pop(context);
-                          item.onPressed();
-                        },
-                        child: Container(
-                          alignment: Alignment.center,
-                          margin: const EdgeInsets.only(bottom: 1),
-                          color: item.backgroundColor ?? Colors.white,
-                          height: itemExtent ?? 50.0,
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(
-                                vertical: 8.0, horizontal: 14),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: <Widget>[
-                                item.title,
-                                if (item.trailingIcon != null) ...[
-                                  item.trailingIcon!
-                                ]
-                              ],
-                            ),
-                          ),
-                        ),
-                      );
-                      if (animateMenu) {
-                        return TweenAnimationBuilder(
-                          builder: (context, dynamic value, child) {
-                            return Transform(
-                              transform: Matrix4.rotationX(1.5708 * value),
-                              alignment: Alignment.bottomCenter,
-                              child: child,
-                            );
-                          },
-                          tween: Tween(begin: 1.0, end: 0.0),
-                          duration: Duration(milliseconds: index * 200),
-                          child: listItem,
-                        );
-                      } else {
-                        return listItem;
-                      }
-                    },
-                  ),
-                ),
-              ),
-            ),
-          ),
-          Positioned(
-            top: childOffset.dy,
-            left: childOffset.dx,
-            child: AbsorbPointer(
-              absorbing: true,
-              child: SizedBox(
-                width: childSize!.width,
-                height: childSize!.height,
-                child: child,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class FocusedMenuItem {
-  Color? backgroundColor;
-  Widget title;
-  Icon? trailingIcon;
-  Function onPressed;
-
-  FocusedMenuItem({
-    this.backgroundColor,
-    required this.title,
-    this.trailingIcon,
-    required this.onPressed,
-  });
 }

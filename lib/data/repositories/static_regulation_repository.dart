@@ -164,4 +164,57 @@ class StaticRegulationRepository implements RegulationRepository {
     }
     return null;
   }
+
+  @override
+  Future<void> updateParagraph(
+      int paragraphId, Map<String, dynamic> data) async {
+    // Static repository - editing not supported
+    throw UnsupportedError('Editing not supported in static repository');
+  }
+
+  @override
+  Future<void> saveParagraphEdit(int paragraphId, String editedContent) async {
+    // Static repository - editing not supported
+    throw UnsupportedError('Editing not supported in static repository');
+  }
+
+  @override
+  Future<void> saveParagraphNote(int paragraphId, String note) async {
+    // Static repository - editing not supported
+    throw UnsupportedError('Editing not supported in static repository');
+  }
+
+  @override
+  Future<void> updateParagraphHighlight(
+      int paragraphId, String highlightData) async {
+    // Static repository - editing not supported
+    throw UnsupportedError('Editing not supported in static repository');
+  }
+
+  @override
+  Future<List<domain.Paragraph>> applyParagraphEdits(
+      List<domain.Paragraph> originalParagraphs) async {
+    // Static repository - just return original paragraphs unchanged
+    return originalParagraphs;
+  }
+
+  @override
+  Future<bool> hasParagraphEdits(int originalParagraphId) async {
+    // Static repository - no edits stored
+    return false;
+  }
+
+  @override
+  Future<Map<String, dynamic>?> getParagraphEdit(
+      int originalParagraphId) async {
+    // Static repository - no edits stored
+    return null;
+  }
+
+  @override
+  Future<void> saveParagraphEditByOriginalId(int originalId, String content,
+      domain.Paragraph originalParagraph) async {
+    // Static repository - editing not supported
+    throw UnsupportedError('Editing not supported in static repository');
+  }
 }

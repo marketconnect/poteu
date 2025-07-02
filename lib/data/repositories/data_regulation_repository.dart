@@ -233,4 +233,124 @@ class DataRegulationRepository implements RegulationRepository {
   Future<void> deleteNote(int noteId) async {
     await _db.delete('notes', where: 'id = ?', whereArgs: [noteId]);
   }
+
+  @override
+  Future<void> updateParagraph(
+      int paragraphId, Map<String, dynamic> data) async {
+    await _db.updateParagraph(paragraphId, data);
+  }
+
+  @override
+  Future<void> saveParagraphEdit(int paragraphId, String editedContent) async {
+    await _db.saveParagraphEdit(paragraphId, editedContent);
+  }
+
+  @override
+  Future<void> saveParagraphNote(int paragraphId, String note) async {
+    await _db.saveParagraphNote(paragraphId, note);
+  }
+
+  @override
+  Future<void> updateParagraphHighlight(
+      int paragraphId, String highlightData) async {
+    await _db.updateParagraphHighlight(paragraphId, highlightData);
+  }
+
+  // Method to get saved paragraph edits and apply them to original paragraphs
+  Future<List<Paragraph>> applyParagraphEdits(
+      List<Paragraph> originalParagraphs) async {
+    final db = await _db.database;
+
+    final List<Paragraph> updatedParagraphs = [];
+
+    for (final paragraph in originalParagraphs) {
+      // Check if there's a saved edit for this paragraph
+      final List<Map<String, dynamic>> savedEdits = await db.query(
+        'paragraphs',
+        where: 'original_id = ? AND updated_at IS NOT NULL',
+        whereArgs: [paragraph.originalId],
+      );
+
+      if (savedEdits.isNotEmpty) {
+        final savedEdit = savedEdits.first;
+        // Apply the saved formatting/content
+        updatedParagraphs.add(paragraph.copyWith(
+          content: savedEdit['content'],
+          note: savedEdit['note'],
+        ));
+        print(
+            'Applied saved formatting to paragraph ${paragraph.id}: "${savedEdit['content']}"');
+      } else {
+        // No saved edits, use original
+        updatedParagraphs.add(paragraph);
+      }
+    }
+
+    return updatedParagraphs;
+  }
+
+  // Method to check if a paragraph has saved edits
+  Future<bool> hasParagraphEdits(int originalParagraphId) async {
+    final db = await _db.database;
+    final List<Map<String, dynamic>> savedEdits = await db.query(
+      'paragraphs',
+      where: 'original_id = ? AND updated_at IS NOT NULL',
+      whereArgs: [originalParagraphId],
+    );
+    return savedEdits.isNotEmpty;
+  }
+
+  // Method to get saved edit for a specific paragraph
+  Future<Map<String, dynamic>?> getParagraphEdit(
+      int originalParagraphId) async {
+    final db = await _db.database;
+    final List<Map<String, dynamic>> savedEdits = await db.query(
+      'paragraphs',
+      where: 'original_id = ? AND updated_at IS NOT NULL',
+      whereArgs: [originalParagraphId],
+    );
+    return savedEdits.isNotEmpty ? savedEdits.first : null;
+  }
+
+  // Save paragraph edit by originalId, handling both create and update cases
+  Future<void> saveParagraphEditByOriginalId(
+      int originalId, String content, Paragraph originalParagraph) async {
+    final db = await _db.database;
+
+    // Check if entry exists
+    final existing = await db.query(
+      'paragraphs',
+      where: 'original_id = ?',
+      whereArgs: [originalId],
+    );
+
+    if (existing.isNotEmpty) {
+      // Update existing entry
+      await db.update(
+        'paragraphs',
+        {
+          'content': content,
+          'updated_at': DateTime.now().toIso8601String(),
+        },
+        where: 'original_id = ?',
+        whereArgs: [originalId],
+      );
+      print('Updated existing paragraph edit for originalId: $originalId');
+    } else {
+      // Create new entry
+      await db.insert('paragraphs', {
+        'original_id': originalId,
+        'chapter_id': originalParagraph.chapterId,
+        'num': originalParagraph.num,
+        'content': content,
+        'text_to_speech': originalParagraph.textToSpeech,
+        'is_table': originalParagraph.isTable ? 1 : 0,
+        'is_nft': originalParagraph.isNft ? 1 : 0,
+        'paragraph_class': originalParagraph.paragraphClass ?? '',
+        'note': originalParagraph.note,
+        'updated_at': DateTime.now().toIso8601String(),
+      });
+      print('Created new paragraph edit for originalId: $originalId');
+    }
+  }
 }
