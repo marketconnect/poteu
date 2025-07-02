@@ -3,6 +3,7 @@ import 'package:flutter_clean_architecture/flutter_clean_architecture.dart';
 import 'package:flutter_widget_from_html/flutter_widget_from_html.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:flutter/services.dart';
+import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 
 import '../../../domain/entities/paragraph.dart';
 import '../../widgets/regulation_app_bar.dart';
@@ -13,11 +14,13 @@ import 'dart:ui';
 class ChapterView extends View {
   final int regulationId;
   final int initialChapterOrderNum;
+  final int? scrollToParagraphId;
 
   const ChapterView({
     Key? key,
     required this.regulationId,
     required this.initialChapterOrderNum,
+    this.scrollToParagraphId,
   }) : super(key: key);
 
   @override
@@ -25,6 +28,7 @@ class ChapterView extends View {
         ChapterController(
           regulationId: regulationId,
           initialChapterOrderNum: initialChapterOrderNum,
+          scrollToParagraphId: scrollToParagraphId,
         ),
       );
 }
@@ -317,13 +321,27 @@ class ChapterViewState extends ViewState<ChapterView, ChapterController> {
       return const Center(child: CircularProgressIndicator());
     }
 
-    return ListView.builder(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
+    // Get the item scroll controller for this chapter (for precise scrolling)
+    final itemScrollController =
+        controller.getItemScrollControllerForChapter(chapterOrderNum);
+
+    // Calculate bottom padding based on bottom bar state
+    double bottomPadding = 20.0; // Default padding
+    if (controller.isBottomBarExpanded) {
+      // Add extra padding when bottom bar is expanded to prevent content from being hidden
+      final screenHeight = MediaQuery.of(context).size.height;
+      final expandedBottomBarHeight =
+          screenHeight * 0.45; // Same as in main widget
+      bottomPadding += expandedBottomBarHeight;
+    }
+
+    return ScrollablePositionedList.builder(
       itemCount: chapterData['paragraphs'].length + 1,
       itemBuilder: (context, index) {
         if (index == 0) {
           return Padding(
-            padding: const EdgeInsets.only(top: 50.0, bottom: 20.0),
+            padding: const EdgeInsets.only(
+                top: 50.0, bottom: 20.0, left: 20.0, right: 20.0),
             child: Center(
               child: Text(
                 chapterData['title'],
@@ -338,8 +356,15 @@ class ChapterViewState extends ViewState<ChapterView, ChapterController> {
         }
 
         final paragraph = chapterData['paragraphs'][index - 1] as Paragraph;
-        return _buildParagraphCard(paragraph, controller);
+
+        return Padding(
+          padding: const EdgeInsets.only(left: 20.0, right: 20.0),
+          child: _buildParagraphCard(paragraph, controller),
+        );
       },
+      scrollDirection: Axis.vertical,
+      itemScrollController: itemScrollController,
+      padding: EdgeInsets.only(bottom: bottomPadding),
     );
   }
 
@@ -373,7 +398,7 @@ class ChapterViewState extends ViewState<ChapterView, ChapterController> {
             borderRadius: BorderRadius.circular(4),
           ),
           child: _buildParagraphContent(paragraph, controller,
-              isSelectable: bottomBarExpanded),
+              isSelectable: controller.isBottomBarExpanded),
         ),
       );
     }
@@ -432,7 +457,7 @@ class ChapterViewState extends ViewState<ChapterView, ChapterController> {
       child: paragraph.isTable
           ? _buildTableContent(paragraph.content)
           : paragraph.isNft
-              ? _buildNftContent(paragraph.content)
+              ? _buildNftContent(paragraph.content, controller)
               : _buildRegularContent(
                   paragraph, textAlign, controller, isSelectable),
     );
@@ -522,6 +547,7 @@ class ChapterViewState extends ViewState<ChapterView, ChapterController> {
                       textAlign == TextAlign.right ? 'right' : 'center'
                 }
             : null,
+        onTapUrl: (url) => _handleInternalLink(url, controller),
         onErrorBuilder: (context, element, error) {
           print('HtmlWidget error: $error');
           return Text('Error displaying content: $error');
@@ -543,7 +569,7 @@ class ChapterViewState extends ViewState<ChapterView, ChapterController> {
     );
   }
 
-  Widget _buildNftContent(String content) {
+  Widget _buildNftContent(String content, ChapterController controller) {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -558,6 +584,7 @@ class ChapterViewState extends ViewState<ChapterView, ChapterController> {
         textStyle: Theme.of(context).textTheme.bodyMedium?.copyWith(
               fontWeight: FontWeight.w500,
             ),
+        onTapUrl: (url) => _handleInternalLink(url, controller),
       ),
     );
   }
@@ -1155,7 +1182,8 @@ class ChapterViewState extends ViewState<ChapterView, ChapterController> {
                 : null,
             borderRadius: BorderRadius.circular(4),
           ),
-          child: _buildParagraphContent(paragraph, controller),
+          child: _buildParagraphContent(paragraph, controller,
+              isSelectable: controller.isBottomBarExpanded),
         ),
       ),
     );
@@ -1337,5 +1365,154 @@ class ChapterViewState extends ViewState<ChapterView, ChapterController> {
       width: MediaQuery.of(context).size.width * 0.95,
       color: Theme.of(context).dividerColor,
     );
+  }
+
+  Future<bool> _handleInternalLink(
+      String url, ChapterController controller) async {
+    print('=== INTERNAL LINK TAPPED ===');
+    print('URL: $url');
+
+    try {
+      // Check for chapter#paragraphId format (like "76#340571")
+      if (url.contains('#') && !url.startsWith('#')) {
+        final parts = url.split('#');
+        if (parts.length == 2) {
+          final chapterStr = parts[0];
+          final paragraphIdStr = parts[1];
+
+          print(
+              'Split URL: chapter="$chapterStr", paragraphId="$paragraphIdStr"');
+
+          final chapterNum = int.tryParse(chapterStr);
+          final paragraphId = int.tryParse(paragraphIdStr);
+
+          if (chapterNum != null && paragraphId != null) {
+            print(
+                'Navigating to chapter $chapterNum, paragraph ID $paragraphId');
+
+            // First navigate to the chapter
+            controller.goToChapter(chapterNum);
+
+            // Then scroll to the paragraph after a delay
+            Future.delayed(const Duration(milliseconds: 1500), () {
+              controller.goToParagraph(paragraphId);
+            });
+
+            return true; // Prevent default behavior
+          }
+        }
+      }
+
+      // Check if it's a simple numeric chapter reference (like "56")
+      if (!url.contains('#') &&
+          !url.contains('.') &&
+          !url.startsWith('http') &&
+          !url.startsWith('mailto:') &&
+          !url.startsWith('tel:')) {
+        final chapterNum = int.tryParse(url.trim());
+        if (chapterNum != null &&
+            chapterNum > 0 &&
+            chapterNum <= controller.totalChapters) {
+          print('Navigating to chapter: $chapterNum');
+          controller.goToChapter(chapterNum);
+          return true; // Prevent default behavior
+        }
+      }
+
+      // Check if it's an anchor link (like #paragraph_123)
+      if (url.startsWith('#')) {
+        final anchorId = url.substring(1);
+        print('Anchor link detected: $anchorId');
+
+        // Try to extract paragraph ID from anchor
+        if (anchorId.startsWith('paragraph_')) {
+          final paragraphIdStr = anchorId.substring('paragraph_'.length);
+          final paragraphId = int.tryParse(paragraphIdStr);
+          if (paragraphId != null) {
+            print('Navigating to paragraph ID: $paragraphId');
+            controller.goToParagraph(paragraphId);
+            return true; // Prevent default behavior
+          }
+        }
+
+        // Try to handle other anchor formats
+        final paragraphId = int.tryParse(anchorId);
+        if (paragraphId != null) {
+          print('Navigating to numeric anchor ID: $paragraphId');
+          controller.goToParagraph(paragraphId);
+          return true;
+        }
+      }
+
+      // Handle paragraph references in various formats
+      if (url.contains('п.') || url.contains('пункт') || url.contains('p.')) {
+        print('Paragraph reference detected in URL: $url');
+
+        // Try multiple regex patterns for paragraph references
+        final patterns = [
+          RegExp(r'п\.?\s*(\d+)\.(\d+)'), // п.1.2, п. 1.2
+          RegExp(r'пункт\s*(\d+)\.(\d+)'), // пункт 1.2
+          RegExp(r'p\.?\s*(\d+)\.(\d+)'), // p.1.2, p. 1.2
+          RegExp(r'(\d+)\.(\d+)'), // Simple 1.2 format
+        ];
+
+        for (final regex in patterns) {
+          final match = regex.firstMatch(url);
+          if (match != null) {
+            final chapter = int.tryParse(match.group(1) ?? '');
+            final paragraph = int.tryParse(match.group(2) ?? '');
+            print('Pattern matched: chapter $chapter, paragraph $paragraph');
+
+            if (chapter != null && paragraph != null) {
+              // Navigate to specific chapter
+              print('Navigating to chapter $chapter');
+              controller.goToChapter(chapter);
+              return true;
+            }
+          }
+        }
+      }
+
+      // Handle chapter references with text
+      if (url.contains('глав') || url.contains('chapter')) {
+        final chapterRegex = RegExp(r'(\d+)');
+        final match = chapterRegex.firstMatch(url);
+        if (match != null) {
+          final chapter = int.tryParse(match.group(1) ?? '');
+          if (chapter != null) {
+            print('Navigating to chapter: $chapter');
+            controller.goToChapter(chapter);
+            return true;
+          }
+        }
+      }
+
+      // As a last resort, try to find paragraph by ID (for complex cases)
+      final numericRegex = RegExp(r'\d+');
+      final numericMatches = numericRegex.allMatches(url);
+      if (numericMatches.isNotEmpty) {
+        final firstNumber = int.tryParse(numericMatches.first.group(0) ?? '');
+        if (firstNumber != null) {
+          print('Trying numeric ID as paragraph ID: $firstNumber');
+          controller.goToParagraph(firstNumber);
+          return true;
+        }
+      }
+
+      // For any other internal-looking links, try to handle them
+      if (!url.startsWith('http') &&
+          !url.startsWith('mailto:') &&
+          !url.startsWith('tel:')) {
+        print('Internal-looking link: $url (unhandled format)');
+        return true; // Prevent default behavior
+      }
+
+      // For external links, return false to allow default handling
+      print('External link, allowing default handling');
+      return false;
+    } catch (e) {
+      print('Error handling link: $e');
+      return false;
+    }
   }
 }

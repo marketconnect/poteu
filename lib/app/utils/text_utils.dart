@@ -4,16 +4,26 @@ class TextUtils {
   /// Creates opening HTML tag based on Tag type and color
   static String createOpenTag(Tag tag, int color) {
     String colorHex =
-        color.toRadixString(16).padLeft(6, '0').toUpperCase().substring(2);
+        color.toRadixString(16).padLeft(8, '0').toUpperCase().substring(2);
 
+    String result;
     switch (tag) {
       case Tag.m:
-        return '<span style="background-color:#$colorHex;">';
+        result = '<span style="background-color:#$colorHex;">';
+        break;
       case Tag.u:
-        return '<u style="text-decoration-color:#$colorHex;">';
+        result = '<u style="text-decoration-color:#$colorHex;">';
+        break;
       case Tag.c:
-        return '';
+        result = '';
+        break;
     }
+
+    print('=== CREATE OPEN TAG ===');
+    print('Tag: $tag, Color: $color, ColorHex: $colorHex');
+    print('Result: $result');
+
+    return result;
   }
 
   /// Creates closing HTML tag based on Tag type
@@ -31,7 +41,12 @@ class TextUtils {
   /// Adds formatting tags to text at specified positions
   static String addFormatting(
       String originalText, Tag tag, int color, int start, int end) {
+    print('=== ADD FORMATTING ===');
+    print('Original: "$originalText"');
+    print('Tag: $tag, Color: $color, Start: $start, End: $end');
+
     if (start >= end || start < 0 || end > originalText.length) {
+      print('Invalid parameters, returning original text');
       return originalText;
     }
 
@@ -40,14 +55,18 @@ class TextUtils {
 
     if (tag == Tag.c) {
       // For clear tag, remove all formatting
-      return removeAllFormatting(originalText);
+      String result = removeAllFormatting(originalText);
+      print('Clear formatting result: "$result"');
+      return result;
     }
 
     String before = originalText.substring(0, start);
     String selected = originalText.substring(start, end);
     String after = originalText.substring(end);
 
-    return before + openTag + selected + closeTag + after;
+    String result = before + openTag + selected + closeTag + after;
+    print('Formatted result: "$result"');
+    return result;
   }
 
   /// Removes all formatting tags except links

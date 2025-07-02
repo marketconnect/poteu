@@ -1,69 +1,119 @@
-class Note {
-  final int id;
-  final int chapterId;
-  final int? paragraphId;
-  final String title;
-  final String content;
-  final DateTime createdAt;
-  final DateTime? updatedAt;
+import 'package:flutter/material.dart';
 
-  const Note({
-    required this.id,
-    required this.chapterId,
-    this.paragraphId,
-    required this.title,
-    required this.content,
-    required this.createdAt,
-    this.updatedAt,
+class EditedParagraphLink {
+  final Color color;
+  final String text;
+
+  const EditedParagraphLink({
+    required this.color,
+    required this.text,
   });
 
-  Note copyWith({
-    int? id,
-    int? chapterId,
-    int? paragraphId,
-    String? title,
-    String? content,
-    DateTime? createdAt,
-    DateTime? updatedAt,
+  EditedParagraphLink copyWith({
+    Color? color,
+    String? text,
   }) {
-    return Note(
-      id: id ?? this.id,
-      chapterId: chapterId ?? this.chapterId,
-      paragraphId: paragraphId ?? this.paragraphId,
-      title: title ?? this.title,
-      content: content ?? this.content,
-      createdAt: createdAt ?? this.createdAt,
-      updatedAt: updatedAt ?? this.updatedAt,
+    return EditedParagraphLink(
+      color: color ?? this.color,
+      text: text ?? this.text,
     );
   }
 
   @override
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
+    return other is EditedParagraphLink &&
+        other.color == color &&
+        other.text == text;
+  }
 
+  @override
+  int get hashCode => color.hashCode ^ text.hashCode;
+}
+
+class Note {
+  final int paragraphId;
+  final int originalParagraphId;
+  final int chapterId;
+  final int chapterOrderNum;
+  final String regulationTitle;
+  final String chapterName;
+  final String content;
+  final DateTime lastTouched;
+  final bool isEdited;
+  final EditedParagraphLink link;
+
+  const Note({
+    required this.paragraphId,
+    required this.originalParagraphId,
+    required this.chapterId,
+    required this.chapterOrderNum,
+    required this.regulationTitle,
+    required this.chapterName,
+    required this.content,
+    required this.lastTouched,
+    required this.isEdited,
+    required this.link,
+  });
+
+  Note copyWith({
+    int? paragraphId,
+    int? originalParagraphId,
+    int? chapterId,
+    int? chapterOrderNum,
+    String? regulationTitle,
+    String? chapterName,
+    String? content,
+    DateTime? lastTouched,
+    bool? isEdited,
+    EditedParagraphLink? link,
+  }) {
+    return Note(
+      paragraphId: paragraphId ?? this.paragraphId,
+      originalParagraphId: originalParagraphId ?? this.originalParagraphId,
+      chapterId: chapterId ?? this.chapterId,
+      chapterOrderNum: chapterOrderNum ?? this.chapterOrderNum,
+      regulationTitle: regulationTitle ?? this.regulationTitle,
+      chapterName: chapterName ?? this.chapterName,
+      content: content ?? this.content,
+      lastTouched: lastTouched ?? this.lastTouched,
+      isEdited: isEdited ?? this.isEdited,
+      link: link ?? this.link,
+    );
+  }
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
     return other is Note &&
-        other.id == id &&
-        other.chapterId == chapterId &&
         other.paragraphId == paragraphId &&
-        other.title == title &&
+        other.originalParagraphId == originalParagraphId &&
+        other.chapterId == chapterId &&
+        other.chapterOrderNum == chapterOrderNum &&
+        other.regulationTitle == regulationTitle &&
+        other.chapterName == chapterName &&
         other.content == content &&
-        other.createdAt == createdAt &&
-        other.updatedAt == updatedAt;
+        other.lastTouched == lastTouched &&
+        other.isEdited == isEdited &&
+        other.link == link;
   }
 
   @override
   int get hashCode {
-    return id.hashCode ^
+    return paragraphId.hashCode ^
+        originalParagraphId.hashCode ^
         chapterId.hashCode ^
-        paragraphId.hashCode ^
-        title.hashCode ^
+        chapterOrderNum.hashCode ^
+        regulationTitle.hashCode ^
+        chapterName.hashCode ^
         content.hashCode ^
-        createdAt.hashCode ^
-        updatedAt.hashCode;
+        lastTouched.hashCode ^
+        isEdited.hashCode ^
+        link.hashCode;
   }
 
   @override
   String toString() {
-    return 'Note(id: $id, chapterId: $chapterId, paragraphId: $paragraphId, title: $title, content: $content, createdAt: $createdAt, updatedAt: $updatedAt)';
+    return 'Note(paragraphId: $paragraphId, originalParagraphId: $originalParagraphId, chapterId: $chapterId, chapterOrderNum: $chapterOrderNum, regulationTitle: $regulationTitle, chapterName: $chapterName, content: $content, lastTouched: $lastTouched, isEdited: $isEdited, link: $link)';
   }
 }

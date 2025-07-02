@@ -6,7 +6,7 @@ import '../../domain/repositories/notes_repository.dart';
 import '../pages/search/search_page.dart';
 import '../pages/chapter/chapter_view.dart';
 import '../pages/table_of_contents/table_of_contents_page.dart';
-import '../pages/notes_list/notes_list_page.dart';
+import '../pages/notes/notes_view.dart';
 
 class AppNavigator {
   static void navigateToSearch(
@@ -74,7 +74,7 @@ class AppNavigator {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => const NotesListPage(),
+        builder: (context) => const NotesView(),
       ),
     );
   }

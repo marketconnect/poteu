@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:poteu/app/pages/chapter/model/chapter_arguments.dart';
 import 'package:poteu/app/pages/chapter/chapter_view.dart';
-import 'package:poteu/app/pages/notes_list/notes_list_page.dart';
+import 'package:poteu/app/pages/notes/notes_view.dart';
 import 'package:poteu/app/pages/search/search_page.dart';
 import 'package:poteu/app/pages/table_of_contents/table_of_contents_page.dart';
 import 'package:poteu/data/repositories/static_regulation_repository.dart';
@@ -108,7 +108,7 @@ class AppRouter {
           ),
         );
       case AppRouteNames.notesList:
-        return MaterialPageRoute(builder: (_) => const NotesListPage());
+        return MaterialPageRoute(builder: (_) => const NotesView());
       case AppRouteNames.chapter:
         final arguments = routeSettings.arguments;
         final chapterArguments = arguments is ChapterArguments
@@ -120,6 +120,9 @@ class AppRouter {
           builder: (_) => ChapterView(
             regulationId: 1, // POTEU regulation ID
             initialChapterOrderNum: chapterArguments.chapterOrderNum,
+            scrollToParagraphId: chapterArguments.scrollTo > 0
+                ? chapterArguments.scrollTo
+                : null, // Pass scrollTo as scrollToParagraphId if > 0
           ),
         );
       case AppRouteNames.searchScreen:

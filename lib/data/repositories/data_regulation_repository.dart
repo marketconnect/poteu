@@ -315,6 +315,11 @@ class DataRegulationRepository implements RegulationRepository {
   // Save paragraph edit by originalId, handling both create and update cases
   Future<void> saveParagraphEditByOriginalId(
       int originalId, String content, Paragraph originalParagraph) async {
+    print('=== SAVE PARAGRAPH EDIT BY ORIGINAL ID ===');
+    print('Original ID: $originalId');
+    print('New content: "$content"');
+    print('Chapter ID: ${originalParagraph.chapterId}');
+
     final db = await _db.database;
 
     // Check if entry exists
@@ -324,9 +329,13 @@ class DataRegulationRepository implements RegulationRepository {
       whereArgs: [originalId],
     );
 
+    print(
+        'Found ${existing.length} existing entries for originalId $originalId');
+
     if (existing.isNotEmpty) {
       // Update existing entry
-      await db.update(
+      print('Updating existing entry...');
+      final updateResult = await db.update(
         'paragraphs',
         {
           'content': content,
@@ -335,10 +344,11 @@ class DataRegulationRepository implements RegulationRepository {
         where: 'original_id = ?',
         whereArgs: [originalId],
       );
-      print('Updated existing paragraph edit for originalId: $originalId');
+      print('✅ Updated $updateResult rows for originalId: $originalId');
     } else {
       // Create new entry
-      await db.insert('paragraphs', {
+      print('Creating new entry...');
+      final insertResult = await db.insert('paragraphs', {
         'original_id': originalId,
         'chapter_id': originalParagraph.chapterId,
         'num': originalParagraph.num,
@@ -350,7 +360,20 @@ class DataRegulationRepository implements RegulationRepository {
         'note': originalParagraph.note,
         'updated_at': DateTime.now().toIso8601String(),
       });
-      print('Created new paragraph edit for originalId: $originalId');
+      print(
+          '✅ Created new paragraph edit with ID: $insertResult for originalId: $originalId');
+    }
+
+    // Verify the save
+    final verification = await db.query(
+      'paragraphs',
+      where: 'original_id = ? AND updated_at IS NOT NULL',
+      whereArgs: [originalId],
+    );
+    print(
+        'Verification: Found ${verification.length} entries with formatting for originalId $originalId');
+    if (verification.isNotEmpty) {
+      print('Saved content: "${verification.first['content']}"');
     }
   }
 }
