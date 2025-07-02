@@ -1002,6 +1002,8 @@ class ChapterViewState extends ViewState<ChapterView, ChapterController> {
                           ),
                           onTap: () {
                             Navigator.pop(context);
+                            // Navigate to the paragraph using its ID
+                            controller.goToParagraph(paragraph.id);
                             _showSnackBar('Переход к параграфу');
                           },
                         );
@@ -1388,15 +1390,18 @@ class ChapterViewState extends ViewState<ChapterView, ChapterController> {
 
           if (chapterNum != null && paragraphId != null) {
             print(
-                'Navigating to chapter $chapterNum, paragraph ID $paragraphId');
+                'Opening new chapter page: chapter $chapterNum, paragraph ID $paragraphId');
 
-            // First navigate to the chapter
-            controller.goToChapter(chapterNum);
-
-            // Then scroll to the paragraph after a delay
-            Future.delayed(const Duration(milliseconds: 1500), () {
-              controller.goToParagraph(paragraphId);
-            });
+            // Open new chapter page on top of current one
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (context) => ChapterView(
+                  regulationId: widget.regulationId,
+                  initialChapterOrderNum: chapterNum,
+                  scrollToParagraphId: paragraphId,
+                ),
+              ),
+            );
 
             return true; // Prevent default behavior
           }
@@ -1413,8 +1418,19 @@ class ChapterViewState extends ViewState<ChapterView, ChapterController> {
         if (chapterNum != null &&
             chapterNum > 0 &&
             chapterNum <= controller.totalChapters) {
-          print('Navigating to chapter: $chapterNum');
-          controller.goToChapter(chapterNum);
+          print('Opening new chapter page: $chapterNum');
+
+          // Open new chapter page on top of current one
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (context) => ChapterView(
+                regulationId: widget.regulationId,
+                initialChapterOrderNum: chapterNum,
+                scrollToParagraphId: null,
+              ),
+            ),
+          );
+
           return true; // Prevent default behavior
         }
       }
@@ -1429,7 +1445,7 @@ class ChapterViewState extends ViewState<ChapterView, ChapterController> {
           final paragraphIdStr = anchorId.substring('paragraph_'.length);
           final paragraphId = int.tryParse(paragraphIdStr);
           if (paragraphId != null) {
-            print('Navigating to paragraph ID: $paragraphId');
+            print('Scrolling to paragraph ID in current chapter: $paragraphId');
             controller.goToParagraph(paragraphId);
             return true; // Prevent default behavior
           }
@@ -1438,13 +1454,14 @@ class ChapterViewState extends ViewState<ChapterView, ChapterController> {
         // Try to handle other anchor formats
         final paragraphId = int.tryParse(anchorId);
         if (paragraphId != null) {
-          print('Navigating to numeric anchor ID: $paragraphId');
+          print(
+              'Scrolling to numeric anchor ID in current chapter: $paragraphId');
           controller.goToParagraph(paragraphId);
           return true;
         }
       }
 
-      // Handle paragraph references in various formats
+      // Handle paragraph references in various formats that might lead to other chapters
       if (url.contains('п.') || url.contains('пункт') || url.contains('p.')) {
         print('Paragraph reference detected in URL: $url');
 
@@ -1464,9 +1481,24 @@ class ChapterViewState extends ViewState<ChapterView, ChapterController> {
             print('Pattern matched: chapter $chapter, paragraph $paragraph');
 
             if (chapter != null && paragraph != null) {
-              // Navigate to specific chapter
-              print('Navigating to chapter $chapter');
-              controller.goToChapter(chapter);
+              // Check if it's the same chapter as current
+              if (chapter == controller.currentChapterOrderNum) {
+                print('Scrolling to paragraph in current chapter');
+                // Try to find paragraph by the number pattern
+                controller.goToParagraph(int.parse('$chapter$paragraph'));
+              } else {
+                print('Opening new chapter page: chapter $chapter');
+                // Open new chapter page
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => ChapterView(
+                      regulationId: widget.regulationId,
+                      initialChapterOrderNum: chapter,
+                      scrollToParagraphId: int.parse('$chapter$paragraph'),
+                    ),
+                  ),
+                );
+              }
               return true;
             }
           }
@@ -1480,20 +1512,32 @@ class ChapterViewState extends ViewState<ChapterView, ChapterController> {
         if (match != null) {
           final chapter = int.tryParse(match.group(1) ?? '');
           if (chapter != null) {
-            print('Navigating to chapter: $chapter');
-            controller.goToChapter(chapter);
+            print('Opening new chapter page: $chapter');
+
+            // Open new chapter page on top of current one
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (context) => ChapterView(
+                  regulationId: widget.regulationId,
+                  initialChapterOrderNum: chapter,
+                  scrollToParagraphId: null,
+                ),
+              ),
+            );
+
             return true;
           }
         }
       }
 
-      // As a last resort, try to find paragraph by ID (for complex cases)
+      // As a last resort, try to find paragraph by ID in current chapter first
       final numericRegex = RegExp(r'\d+');
       final numericMatches = numericRegex.allMatches(url);
       if (numericMatches.isNotEmpty) {
         final firstNumber = int.tryParse(numericMatches.first.group(0) ?? '');
         if (firstNumber != null) {
-          print('Trying numeric ID as paragraph ID: $firstNumber');
+          print(
+              'Trying numeric ID as paragraph ID in current chapter: $firstNumber');
           controller.goToParagraph(firstNumber);
           return true;
         }
