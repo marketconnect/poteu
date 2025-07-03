@@ -4,8 +4,11 @@ import 'package:flutter_clean_architecture/flutter_clean_architecture.dart';
 import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 import '../../../domain/entities/paragraph.dart';
 import '../../../domain/entities/formatting.dart';
+import '../../../domain/entities/tts_state.dart';
+import '../../../domain/usecases/tts_usecase.dart';
 import '../../../data/repositories/static_regulation_repository.dart';
 import '../../../data/repositories/data_regulation_repository.dart';
+import '../../../data/repositories/data_tts_repository.dart';
 import '../../../data/helpers/database_helper.dart';
 import '../../utils/text_utils.dart';
 
@@ -17,6 +20,7 @@ class ChapterController extends Controller {
   final DataRegulationRepository _dataRepository = DataRegulationRepository(
     DatabaseHelper(),
   );
+  final TTSUseCase _ttsUseCase;
 
   // PageView управление как в оригинале
   late PageController pageController;
@@ -140,7 +144,8 @@ class ChapterController extends Controller {
   })  : _regulationId = regulationId,
         _initialChapterOrderNum = initialChapterOrderNum,
         _scrollToParagraphId = scrollToParagraphId,
-        _currentChapterOrderNum = initialChapterOrderNum {
+        _currentChapterOrderNum = initialChapterOrderNum,
+        _ttsUseCase = TTSUseCase(DataTTSRepository()) {
     print('=== CHAPTER CONTROLLER CONSTRUCTOR ===');
     print('regulationId: $regulationId');
     print('initialChapterOrderNum: $initialChapterOrderNum');
@@ -154,6 +159,12 @@ class ChapterController extends Controller {
     print('PageController and TextController initialized');
     print('Calling loadAllChapters...');
     loadAllChapters();
+
+    // Subscribe to TTS state changes
+    _ttsUseCase.stateStream.listen((state) {
+      _isTTSPlaying = state == TtsState.playing;
+      refreshUI();
+    });
   }
 
   Future<void> loadAllChapters() async {
@@ -1097,15 +1108,9 @@ class ChapterController extends Controller {
 
   Future<void> playTTS(Paragraph paragraph) async {
     try {
-      final textToSpeak = paragraph.textToSpeech ??
-          TextUtils.parseHtmlString(paragraph.content);
-      print('TTS: Playing - $textToSpeak');
-      _isTTSPlaying = true;
-      refreshUI();
-
-      await Future.delayed(const Duration(seconds: 3));
-      _isTTSPlaying = false;
-      refreshUI();
+      final textToSpeak = TextUtils.parseHtmlString(paragraph.content);
+      _ttsUseCase.execute(
+          _TTSUseCaseObserver(this), TTSUseCaseParams.speak(textToSpeak));
     } catch (e) {
       _error = e.toString();
       refreshUI();
@@ -1117,16 +1122,11 @@ class ChapterController extends Controller {
       final chapterData = getChapterData(_currentChapterOrderNum);
       if (chapterData != null) {
         final paragraphs = chapterData['paragraphs'] as List<Paragraph>;
-        final textToSpeak = paragraphs
-            .map((p) => p.textToSpeech ?? TextUtils.parseHtmlString(p.content))
-            .join(' ');
-        print('TTS: Playing chapter - $textToSpeak');
-        _isTTSPlaying = true;
-        refreshUI();
-
-        await Future.delayed(const Duration(seconds: 10));
-        _isTTSPlaying = false;
-        refreshUI();
+        final fullText = paragraphs
+            .map((p) => TextUtils.parseHtmlString(p.content))
+            .join('. ');
+        _ttsUseCase.execute(
+            _TTSUseCaseObserver(this), TTSUseCaseParams.speak(fullText));
       }
     } catch (e) {
       _error = e.toString();
@@ -1134,11 +1134,9 @@ class ChapterController extends Controller {
     }
   }
 
-  void stopTTS() async {
+  Future<void> stopTTS() async {
     try {
-      print('TTS: Stopped');
-      _isTTSPlaying = false;
-      refreshUI();
+      _ttsUseCase.execute(_TTSUseCaseObserver(this), TTSUseCaseParams.stop());
     } catch (e) {
       _error = e.toString();
       refreshUI();
@@ -1185,4 +1183,22 @@ class ChapterController extends Controller {
 
     super.onDisposed();
   }
+}
+
+class _TTSUseCaseObserver extends Observer<void> {
+  final ChapterController _controller;
+
+  _TTSUseCaseObserver(this._controller);
+
+  @override
+  void onComplete() {}
+
+  @override
+  void onError(e) {
+    _controller._error = e.toString();
+    _controller.refreshUI();
+  }
+
+  @override
+  void onNext(_) {}
 }

@@ -12,6 +12,8 @@ import '../../domain/repositories/settings_repository.dart';
 import '../../domain/repositories/tts_repository.dart';
 import '../../domain/repositories/notes_repository.dart';
 import '../../domain/entities/settings.dart';
+import 'dart:async';
+import '../../domain/entities/tts_state.dart';
 
 // Simple mock repositories for router
 class _MockSettingsRepository implements SettingsRepository {
@@ -53,36 +55,39 @@ class _MockSettingsRepository implements SettingsRepository {
 }
 
 class _MockTTSRepository implements TTSRepository {
+  final _stateController = StreamController<TtsState>.broadcast();
+
   @override
   Future<void> speak(String text) async {}
+
   @override
   Future<void> stop() async {}
-  @override
-  Future<void> pause() async {}
-  @override
-  Future<void> resume() async {}
+
   @override
   Future<void> setLanguage(String language) async {}
-  @override
-  Future<void> setSpeechRate(double rate) async {}
-  @override
-  Future<void> setRate(double rate) async {}
+
   @override
   Future<void> setVolume(double volume) async {}
+
   @override
   Future<void> setPitch(double pitch) async {}
+
   @override
-  Future<List<String>> getLanguages() async => ['ru-RU'];
+  Future<void> setRate(double rate) async {}
+
   @override
-  Future<List<String>> getVoices() async => [];
+  Future<List<String>> getLanguages() async => [];
+
   @override
-  Future<bool> isLanguageAvailable(String language) async => true;
+  Future<bool> isLanguageAvailable(String language) async => false;
+
   @override
-  Future<void> setVoice(String voiceId) async {}
+  Stream<TtsState> get stateStream => _stateController.stream;
+
   @override
-  Future<bool> get isPlaying async => false;
-  @override
-  Future<void> dispose() async {}
+  Future<void> dispose() async {
+    await _stateController.close();
+  }
 }
 
 abstract class AppRouteNames {

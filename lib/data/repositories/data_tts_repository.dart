@@ -1,76 +1,52 @@
+import 'dart:async';
 import "package:flutter_tts/flutter_tts.dart";
 import "../../domain/repositories/tts_repository.dart";
+import '../../domain/entities/tts_state.dart';
 
 class DataTTSRepository implements TTSRepository {
   final FlutterTts _flutterTts;
-  bool _isPlaying = false;
+  final _stateController = StreamController<TtsState>.broadcast();
 
-  DataTTSRepository(this._flutterTts) {
+  DataTTSRepository([FlutterTts? tts]) : _flutterTts = tts ?? FlutterTts() {
     _initTts();
   }
 
   Future<void> _initTts() async {
     await _flutterTts.setLanguage("ru-RU");
-    await _flutterTts.setSpeechRate(1.0);
+    await _flutterTts.setSpeechRate(0.5);
     await _flutterTts.setVolume(1.0);
     await _flutterTts.setPitch(1.0);
 
     _flutterTts.setStartHandler(() {
-      _isPlaying = true;
+      _stateController.add(TtsState.playing);
     });
 
     _flutterTts.setCompletionHandler(() {
-      _isPlaying = false;
+      _stateController.add(TtsState.stopped);
     });
 
     _flutterTts.setErrorHandler((msg) {
-      _isPlaying = false;
+      _stateController.add(TtsState.error);
+    });
+
+    _flutterTts.setCancelHandler(() {
+      _stateController.add(TtsState.stopped);
     });
   }
 
   @override
   Future<void> speak(String text) async {
-    if (_isPlaying) {
-      await stop();
-    }
     await _flutterTts.speak(text);
   }
 
   @override
   Future<void> stop() async {
     await _flutterTts.stop();
-    _isPlaying = false;
-  }
-
-  @override
-  Future<void> pause() async {
-    if (_isPlaying) {
-      await _flutterTts.pause();
-      _isPlaying = false;
-    }
-  }
-
-  @override
-  Future<void> resume() async {
-    if (!_isPlaying) {
-      await _flutterTts.speak("");
-      _isPlaying = true;
-    }
   }
 
   @override
   Future<void> setLanguage(String language) async {
     await _flutterTts.setLanguage(language);
-  }
-
-  @override
-  Future<void> setSpeechRate(double rate) async {
-    await _flutterTts.setSpeechRate(rate);
-  }
-
-  @override
-  Future<void> setRate(double rate) async {
-    await setSpeechRate(rate);
   }
 
   @override
@@ -84,33 +60,27 @@ class DataTTSRepository implements TTSRepository {
   }
 
   @override
+  Future<void> setRate(double rate) async {
+    await _flutterTts.setSpeechRate(rate);
+  }
+
+  @override
   Future<List<String>> getLanguages() async {
     final languages = await _flutterTts.getLanguages;
     return languages.cast<String>();
   }
 
   @override
-  Future<List<String>> getVoices() async {
-    final voices = await _flutterTts.getVoices;
-    return voices.map((voice) => voice.toString()).toList();
-  }
-
-  @override
   Future<bool> isLanguageAvailable(String language) async {
-    final languages = await getLanguages();
-    return languages.contains(language);
+    final available = await _flutterTts.isLanguageAvailable(language);
+    return available ?? false;
   }
 
   @override
-  Future<void> setVoice(String voiceId) async {
-    await _flutterTts.setVoice({'name': voiceId});
-  }
+  Stream<TtsState> get stateStream => _stateController.stream;
 
-  @override
-  Future<bool> get isPlaying async => _isPlaying;
-
-  @override
   Future<void> dispose() async {
-    await stop();
+    await _flutterTts.stop();
+    await _stateController.close();
   }
 }
