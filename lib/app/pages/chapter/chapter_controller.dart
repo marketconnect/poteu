@@ -10,6 +10,7 @@ import '../../../data/repositories/static_regulation_repository.dart';
 import '../../../data/repositories/data_regulation_repository.dart';
 import '../../../data/repositories/data_tts_repository.dart';
 import '../../../data/helpers/database_helper.dart';
+import '../../../domain/repositories/settings_repository.dart';
 import '../../utils/text_utils.dart';
 
 class ChapterController extends Controller {
@@ -140,12 +141,13 @@ class ChapterController extends Controller {
   ChapterController({
     required int regulationId,
     required int initialChapterOrderNum,
+    required SettingsRepository settingsRepository,
     int? scrollToParagraphId,
   })  : _regulationId = regulationId,
         _initialChapterOrderNum = initialChapterOrderNum,
         _scrollToParagraphId = scrollToParagraphId,
         _currentChapterOrderNum = initialChapterOrderNum,
-        _ttsUseCase = TTSUseCase(DataTTSRepository()) {
+        _ttsUseCase = TTSUseCase(DataTTSRepository(settingsRepository)) {
     print('=== CHAPTER CONTROLLER CONSTRUCTOR ===');
     print('regulationId: $regulationId');
     print('initialChapterOrderNum: $initialChapterOrderNum');

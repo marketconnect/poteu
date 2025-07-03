@@ -9,6 +9,8 @@ abstract class TTSRepository {
   Future<void> setRate(double rate);
   Future<List<String>> getLanguages();
   Future<bool> isLanguageAvailable(String language);
+  Future<List<dynamic>> getVoices();
+  Future<void> setVoice(String voice);
   Stream<TtsState> get stateStream;
   Future<void> dispose();
 }

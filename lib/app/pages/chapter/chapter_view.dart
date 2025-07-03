@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 
 import '../../../domain/entities/paragraph.dart';
+import '../../../domain/repositories/settings_repository.dart';
 import '../../widgets/regulation_app_bar.dart';
 import '../../utils/text_utils.dart';
 import 'chapter_controller.dart';
@@ -15,11 +16,13 @@ class ChapterView extends View {
   final int regulationId;
   final int initialChapterOrderNum;
   final int? scrollToParagraphId;
+  final SettingsRepository settingsRepository;
 
   const ChapterView({
     Key? key,
     required this.regulationId,
     required this.initialChapterOrderNum,
+    required this.settingsRepository,
     this.scrollToParagraphId,
   }) : super(key: key);
 
@@ -28,6 +31,7 @@ class ChapterView extends View {
         ChapterController(
           regulationId: regulationId,
           initialChapterOrderNum: initialChapterOrderNum,
+          settingsRepository: settingsRepository,
           scrollToParagraphId: scrollToParagraphId,
         ),
       );
@@ -1413,6 +1417,7 @@ class ChapterViewState extends ViewState<ChapterView, ChapterController> {
                   regulationId: widget.regulationId,
                   initialChapterOrderNum: chapterNum,
                   scrollToParagraphId: paragraphId,
+                  settingsRepository: widget.settingsRepository,
                 ),
               ),
             );
@@ -1441,6 +1446,7 @@ class ChapterViewState extends ViewState<ChapterView, ChapterController> {
                 regulationId: widget.regulationId,
                 initialChapterOrderNum: chapterNum,
                 scrollToParagraphId: null,
+                settingsRepository: widget.settingsRepository,
               ),
             ),
           );
@@ -1509,6 +1515,7 @@ class ChapterViewState extends ViewState<ChapterView, ChapterController> {
                       regulationId: widget.regulationId,
                       initialChapterOrderNum: chapter,
                       scrollToParagraphId: int.parse('$chapter$paragraph'),
+                      settingsRepository: widget.settingsRepository,
                     ),
                   ),
                 );
@@ -1535,6 +1542,7 @@ class ChapterViewState extends ViewState<ChapterView, ChapterController> {
                   regulationId: widget.regulationId,
                   initialChapterOrderNum: chapter,
                   scrollToParagraphId: null,
+                  settingsRepository: widget.settingsRepository,
                 ),
               ),
             );

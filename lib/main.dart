@@ -127,7 +127,7 @@ void main() async {
   final prefs = await SharedPreferences.getInstance();
   final settingsRepository = DataSettingsRepository(prefs);
   final regulationRepository = StaticRegulationRepository();
-  final ttsRepository = DataTTSRepository(FlutterTts());
+  final ttsRepository = DataTTSRepository(settingsRepository, FlutterTts());
   final databaseHelper = DatabaseHelper();
   final notesRepository = DataNotesRepository(databaseHelper);
   final settings = await settingsRepository.getSettings();
@@ -186,7 +186,11 @@ class _PoteuAppState extends State<PoteuApp> {
   @override
   void initState() {
     super.initState();
-    _appRouter = AppRouter();
+    _appRouter = AppRouter(
+      settingsRepository: widget.settingsRepository,
+      ttsRepository: widget.ttsRepository,
+      notesRepository: widget.notesRepository,
+    );
   }
 
   @override

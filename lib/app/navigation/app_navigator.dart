@@ -45,6 +45,7 @@ class AppNavigator {
         builder: (context) => ChapterView(
           regulationId: regulationId,
           initialChapterOrderNum: chapterOrderNum,
+          settingsRepository: settingsRepository,
         ),
       ),
     );

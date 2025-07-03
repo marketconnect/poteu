@@ -6,7 +6,10 @@ import 'package:poteu/app/pages/search/search_page.dart';
 import 'package:poteu/app/pages/table_of_contents/table_of_contents_page.dart';
 import 'package:poteu/data/repositories/static_regulation_repository.dart';
 import 'package:poteu/data/repositories/data_notes_repository.dart';
+import 'package:poteu/data/repositories/data_settings_repository.dart';
+import 'package:poteu/data/repositories/data_tts_repository.dart';
 import 'package:poteu/data/helpers/database_helper.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../domain/entities/chapter.dart';
 import '../../domain/repositories/settings_repository.dart';
 import '../../domain/repositories/tts_repository.dart';
@@ -52,6 +55,8 @@ class _MockSettingsRepository implements SettingsRepository {
   Future<void> setPitch(double pitch) async {}
   @override
   Future<void> setVoiceId(String voiceId) async {}
+  @override
+  Future<void> setVolume(double volume) async {}
 }
 
 class _MockTTSRepository implements TTSRepository {
@@ -82,6 +87,12 @@ class _MockTTSRepository implements TTSRepository {
   Future<bool> isLanguageAvailable(String language) async => false;
 
   @override
+  Future<List<dynamic>> getVoices() async => [];
+
+  @override
+  Future<void> setVoice(String voice) async {}
+
+  @override
   Stream<TtsState> get stateStream => _stateController.stream;
 
   @override
@@ -99,12 +110,17 @@ abstract class AppRouteNames {
 
 class AppRouter {
   final StaticRegulationRepository _repository = StaticRegulationRepository();
-  final _MockSettingsRepository _settingsRepository = _MockSettingsRepository();
-  final _MockTTSRepository _ttsRepository = _MockTTSRepository();
-  final NotesRepository _notesRepository =
-      DataNotesRepository(DatabaseHelper());
+  final SettingsRepository _settingsRepository;
+  final TTSRepository _ttsRepository;
+  final NotesRepository _notesRepository;
 
-  AppRouter();
+  AppRouter({
+    required SettingsRepository settingsRepository,
+    required TTSRepository ttsRepository,
+    required NotesRepository notesRepository,
+  })  : _settingsRepository = settingsRepository,
+        _ttsRepository = ttsRepository,
+        _notesRepository = notesRepository;
 
   Route? onGenerateRoute(RouteSettings routeSettings) {
     switch (routeSettings.name) {
@@ -113,6 +129,7 @@ class AppRouter {
           builder: (BuildContext context) => TableOfContentsPage(
             regulationRepository: _repository,
             settingsRepository: _settingsRepository,
+            ttsRepository: _ttsRepository,
           ),
         );
       case AppRouteNames.notesList:
@@ -132,9 +149,10 @@ class AppRouter {
           builder: (_) => ChapterView(
             regulationId: 1, // POTEU regulation ID
             initialChapterOrderNum: chapterArguments.chapterOrderNum,
+            settingsRepository: _settingsRepository,
             scrollToParagraphId: chapterArguments.scrollTo > 0
                 ? chapterArguments.scrollTo
-                : null, // Pass scrollTo as scrollToParagraphId if > 0
+                : null,
           ),
         );
       case AppRouteNames.searchScreen:
