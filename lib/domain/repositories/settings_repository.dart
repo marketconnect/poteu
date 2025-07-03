@@ -7,7 +7,6 @@ abstract class SettingsRepository {
   Future<void> setTheme(bool isDarkMode);
   Future<void> setFontSize(double size);
   Future<void> setSoundEnabled(bool enabled);
-  Future<void> setFontFamily(String fontFamily);
   Future<void> setHighlightColors(List<int> colors);
   Future<void> setLanguage(String language);
   Future<void> setColors(Map<String, String> colors);

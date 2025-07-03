@@ -5,7 +5,6 @@ class Settings {
   final double volume;
   final String voiceId;
   final bool isSoundEnabled;
-  final String fontFamily;
   final List<int> highlightColors;
   final String language;
   final double pitch;
@@ -17,7 +16,6 @@ class Settings {
     required this.volume,
     required this.voiceId,
     required this.isSoundEnabled,
-    required this.fontFamily,
     required this.highlightColors,
     required this.language,
     required this.pitch,
@@ -30,7 +28,6 @@ class Settings {
     double? volume,
     String? voiceId,
     bool? isSoundEnabled,
-    String? fontFamily,
     List<int>? highlightColors,
     String? language,
     double? pitch,
@@ -42,7 +39,6 @@ class Settings {
       volume: volume ?? this.volume,
       voiceId: voiceId ?? this.voiceId,
       isSoundEnabled: isSoundEnabled ?? this.isSoundEnabled,
-      fontFamily: fontFamily ?? this.fontFamily,
       highlightColors: highlightColors ?? this.highlightColors,
       language: language ?? this.language,
       pitch: pitch ?? this.pitch,
@@ -57,7 +53,6 @@ class Settings {
       volume: 1.0,
       voiceId: '',
       isSoundEnabled: true,
-      fontFamily: 'Roboto',
       highlightColors: [0xFF1976D2],
       language: 'ru-RU',
       pitch: 1.0,
@@ -75,7 +70,6 @@ class Settings {
         other.volume == volume &&
         other.voiceId == voiceId &&
         other.isSoundEnabled == isSoundEnabled &&
-        other.fontFamily == fontFamily &&
         other.language == language &&
         other.pitch == pitch;
   }
@@ -88,13 +82,12 @@ class Settings {
         volume.hashCode ^
         voiceId.hashCode ^
         isSoundEnabled.hashCode ^
-        fontFamily.hashCode ^
         language.hashCode ^
         pitch.hashCode;
   }
 
   @override
   String toString() {
-    return 'Settings(isDarkMode: $isDarkMode, fontSize: $fontSize, speechRate: $speechRate, volume: $volume, voiceId: $voiceId, isSoundEnabled: $isSoundEnabled, fontFamily: $fontFamily, highlightColors: $highlightColors, language: $language, pitch: $pitch)';
+    return 'Settings(isDarkMode: $isDarkMode, fontSize: $fontSize, speechRate: $speechRate, volume: $volume, voiceId: $voiceId, isSoundEnabled: $isSoundEnabled, highlightColors: $highlightColors, language: $language, pitch: $pitch)';
   }
 }

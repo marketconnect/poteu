@@ -1,18 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:rolling_switch/rolling_switch.dart';
 import '../../../domain/repositories/regulation_repository.dart';
+import '../../../domain/repositories/settings_repository.dart';
 import '../chapter/model/chapter_arguments.dart';
 import '../../widgets/regulation_app_bar.dart';
 import '../../widgets/table_of_contents_app_bar.dart';
 import '../../widgets/chapter_card.dart';
+import '../../widgets/simple_font_settings_widget.dart';
 import '../../../main.dart';
 
 class TableOfContentsPage extends StatefulWidget {
   final RegulationRepository regulationRepository;
+  final SettingsRepository settingsRepository;
 
   const TableOfContentsPage({
     super.key,
     required this.regulationRepository,
+    required this.settingsRepository,
   });
 
   @override
@@ -191,14 +195,8 @@ class _TableOfContentsPageState extends State<TableOfContentsPage> {
                               ),
                               leading: const Icon(Icons.font_download_outlined),
                               children: [
-                                Container(
-                                  color: Theme.of(context)
-                                      .navigationRailTheme
-                                      .backgroundColor,
-                                  child: const Padding(
-                                    padding: EdgeInsets.all(16.0),
-                                    child: Text('Настройки шрифта'),
-                                  ),
+                                SimpleFontSettingsWidget(
+                                  settingsRepository: widget.settingsRepository,
                                 ),
                               ],
                             ),

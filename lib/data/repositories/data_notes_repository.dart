@@ -13,26 +13,22 @@ class DataNotesRepository implements NotesRepository {
   Future<List<Note>> getAllNotes() async {
     final db = await _db.database;
 
-    // Get all edited paragraphs that have formatting (both span and u tags)
+    // Get all paragraphs that have been updated (either formatted or with notes)
     final List<Map<String, dynamic>> paragraphMaps = await db.query(
       'paragraphs',
-      where: 'updated_at IS NOT NULL AND (content LIKE ? OR content LIKE ?)',
-      whereArgs: ['%<span%', '%<u%'], // Look for both span and u tags
+      where:
+          'updated_at IS NOT NULL AND (content LIKE ? OR content LIKE ? OR note IS NOT NULL)',
+      whereArgs: ['%<span%', '%<u%'],
     );
 
     print('=== SEARCHING FOR NOTES ===');
-    print('Found ${paragraphMaps.length} formatted paragraphs');
+    print('Found ${paragraphMaps.length} paragraphs with notes or formatting');
 
     final List<Note> notes = [];
 
     for (final paragraphMap in paragraphMaps) {
       print(
           'Processing paragraph ${paragraphMap['id']}: ${paragraphMap['content']}');
-
-      // Extract formatted links from content
-      final links =
-          _extractEditedParagraphLinks(paragraphMap['content'] as String);
-      print('Extracted ${links.length} links from content');
 
       // Get chapter info
       final chapterMaps = await db.query(
@@ -41,12 +37,18 @@ class DataNotesRepository implements NotesRepository {
         whereArgs: [paragraphMap['chapter_id']],
       );
 
-      if (chapterMaps.isNotEmpty && links.isNotEmpty) {
+      if (chapterMaps.isNotEmpty) {
         final chapterMap = chapterMaps.first;
 
+        // First check for formatted links
+        final links =
+            _extractEditedParagraphLinks(paragraphMap['content'] as String);
+        print('Extracted ${links.length} formatted links from content');
+
+        // Add formatted links as notes
         for (final link in links) {
           try {
-            print('=== CREATING NOTE ===');
+            print('=== CREATING FORMATTED NOTE ===');
             print('Paragraph ID: ${paragraphMap['id']}');
             print('Original ID: ${paragraphMap['original_id']}');
             print('Chapter ID: ${paragraphMap['chapter_id']}');
@@ -82,12 +84,60 @@ class DataNotesRepository implements NotesRepository {
             );
             notes.add(note);
             print(
-                'Created note successfully: ${note.link.text} with color ${note.link.color}');
+                'Created formatted note successfully: ${note.link.text} with color ${note.link.color}');
           } catch (e) {
-            print('ERROR creating note: $e');
+            print('ERROR creating formatted note: $e');
             print('Paragraph data: $paragraphMap');
             print('Chapter data: $chapterMap');
             print('Link data: $link');
+          }
+        }
+
+        // Then check for plain text note
+        final plainNote = paragraphMap['note'] as String?;
+        if (plainNote != null && plainNote.isNotEmpty) {
+          try {
+            print('=== CREATING PLAIN NOTE ===');
+            print('Paragraph ID: ${paragraphMap['id']}');
+            print('Note text: "$plainNote"');
+
+            // Create a default link for plain text note
+            final link = EditedParagraphLink(
+              text: plainNote,
+              color: Colors.yellow, // Default color for plain notes
+            );
+
+            // Check for duplicates
+            bool isDuplicate = notes.any((existingNote) =>
+                existingNote.link.text == plainNote &&
+                existingNote.chapterId == paragraphMap['chapter_id']);
+
+            if (isDuplicate) {
+              print('⚠️ Skipping duplicate plain note: "$plainNote"');
+              continue;
+            }
+
+            final note = Note(
+              paragraphId: paragraphMap['id'] as int,
+              originalParagraphId: paragraphMap['original_id'] as int,
+              chapterId: paragraphMap['chapter_id'] as int,
+              chapterOrderNum: chapterMap['order_num'] as int,
+              regulationTitle: 'Правила по охране труда',
+              chapterName: chapterMap['title'] as String? ??
+                  'Глава ${chapterMap['order_num']}',
+              content: paragraphMap['content'] as String,
+              lastTouched: DateTime.tryParse(
+                      paragraphMap['updated_at'] as String? ?? '') ??
+                  DateTime.now(),
+              isEdited: false,
+              link: link,
+            );
+            notes.add(note);
+            print('Created plain note successfully: ${note.link.text}');
+          } catch (e) {
+            print('ERROR creating plain note: $e');
+            print('Paragraph data: $paragraphMap');
+            print('Chapter data: $chapterMap');
           }
         }
       }
@@ -115,25 +165,33 @@ class DataNotesRepository implements NotesRepository {
     );
 
     if (paragraphMaps.isNotEmpty) {
-      final currentContent = paragraphMaps.first['content'] as String;
+      final paragraphMap = paragraphMaps.first;
+      final currentContent = paragraphMap['content'] as String;
+      final currentNote = paragraphMap['note'] as String?;
 
       // Remove the specific formatting for this note's link
       final cleanedContent =
           _removeSpecificFormatting(currentContent, note.link);
 
-      if (_hasAnyFormatting(cleanedContent)) {
-        // Still has other formatting, just update
+      // Check if this is a plain text note that needs to be removed
+      final isPlainTextNote =
+          currentNote != null && currentNote == note.link.text;
+
+      if (_hasAnyFormatting(cleanedContent) ||
+          (currentNote != null && !isPlainTextNote)) {
+        // Still has other formatting or other notes, just update
         await db.update(
           'paragraphs',
           {
             'content': cleanedContent,
+            'note': isPlainTextNote ? null : currentNote,
             'updated_at': DateTime.now().toIso8601String(),
           },
           where: 'id = ?',
           whereArgs: [note.paragraphId],
         );
       } else {
-        // No formatting left, remove the edit entry entirely
+        // No formatting or notes left, remove the edit entry entirely
         await db.delete(
           'paragraphs',
           where: 'id = ?',

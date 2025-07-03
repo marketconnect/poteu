@@ -3,13 +3,11 @@ import 'package:flutter_clean_architecture/flutter_clean_architecture.dart';
 import '../../../domain/entities/note.dart';
 import '../../../domain/usecases/get_notes_usecase.dart';
 import '../../../domain/usecases/delete_note_usecase.dart';
-import '../../../data/repositories/data_notes_repository.dart';
+import '../../../domain/repositories/notes_repository.dart';
 import '../../../data/helpers/database_helper.dart';
 
 class NotesController extends Controller {
-  final DataNotesRepository _notesRepository = DataNotesRepository(
-    DatabaseHelper(),
-  );
+  final NotesRepository _notesRepository;
 
   late GetNotesUseCase _getNotesUseCase;
   late DeleteNoteUseCase _deleteNoteUseCase;
@@ -26,10 +24,12 @@ class NotesController extends Controller {
   bool get sortByColor => _sortByColor;
   bool get hasNotes => _notes.isNotEmpty;
 
-  NotesController() {
+  NotesController(this._notesRepository) {
     _getNotesUseCase = GetNotesUseCase(_notesRepository);
     _deleteNoteUseCase = DeleteNoteUseCase(_notesRepository);
     print('NotesController initialized - ready to load notes');
+    // Load notes immediately
+    refreshNotes();
   }
 
   Future<void> _loadNotes() async {

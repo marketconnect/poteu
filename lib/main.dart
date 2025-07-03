@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:sentry_flutter/sentry_flutter.dart';
+// import 'package:sentry_flutter/sentry_flutter.dart';
 import 'dart:async';
 
 import 'data/repositories/static_regulation_repository.dart';
@@ -11,12 +11,59 @@ import 'data/repositories/data_tts_repository.dart';
 import 'data/repositories/data_notes_repository.dart';
 import 'data/helpers/database_helper.dart';
 import 'app/theme/theme.dart';
+import 'app/theme/dynamic_theme.dart';
 import 'app/router/app_router.dart';
 import 'domain/entities/settings.dart';
 import 'domain/repositories/regulation_repository.dart';
 
 const String sentryDsn =
     ''; // Set to empty for development, replace with your actual Sentry DSN
+
+// Font Manager for Clean Architecture
+class FontManager {
+  static final FontManager _instance = FontManager._internal();
+  factory FontManager() => _instance;
+  FontManager._internal();
+
+  final StreamController<Settings> _fontController =
+      StreamController<Settings>.broadcast();
+  Stream<Settings> get fontStream => _fontController.stream;
+
+  Settings _currentSettings = Settings.defaultSettings();
+  Settings get currentSettings => _currentSettings;
+
+  DataSettingsRepository? _settingsRepository;
+
+  void initialize(
+      DataSettingsRepository settingsRepository, Settings initialSettings) {
+    _settingsRepository = settingsRepository;
+    _currentSettings = initialSettings;
+    print('FontManager initialized with fontSize: ${initialSettings.fontSize}');
+  }
+
+  void updateSettings(Settings newSettings) async {
+    print('FontManager.updateSettings called');
+    _currentSettings = newSettings;
+
+    // Save to settings repository
+    if (_settingsRepository != null) {
+      try {
+        await _settingsRepository!.saveSettings(newSettings);
+        print('Font settings saved to repository');
+      } catch (e) {
+        print('Error saving font settings: $e');
+      }
+    }
+
+    print('Adding settings to stream...');
+    _fontController.add(_currentSettings);
+    print('Font settings added to stream successfully');
+  }
+
+  void dispose() {
+    _fontController.close();
+  }
+}
 
 // Theme Manager for Clean Architecture
 class ThemeManager {
@@ -53,6 +100,9 @@ class ThemeManager {
         final newSettings = currentSettings.copyWith(isDarkMode: isDark);
         await _settingsRepository!.saveSettings(newSettings);
         print('Theme saved to settings repository');
+
+        // Update FontManager with new settings
+        FontManager().updateSettings(newSettings);
       } catch (e) {
         print('Error saving theme to settings: $e');
       }
@@ -82,21 +132,22 @@ void main() async {
   final notesRepository = DataNotesRepository(databaseHelper);
   final settings = await settingsRepository.getSettings();
 
-  // Initialize theme manager with the settings repository and current theme
+  // Initialize managers with the settings repository and current settings
   ThemeManager().initialize(settingsRepository, settings.isDarkMode);
+  FontManager().initialize(settingsRepository, settings);
 
   // Only initialize Sentry if a valid DSN is provided
   if (sentryDsn.isNotEmpty && sentryDsn != 'YOUR_SENTRY_DSN') {
-    await SentryFlutter.init(
-      (options) => options.dsn = sentryDsn,
-      appRunner: () => runApp(PoteuApp(
-        settings: settings,
-        settingsRepository: settingsRepository,
-        regulationRepository: regulationRepository,
-        ttsRepository: ttsRepository,
-        notesRepository: notesRepository,
-      )),
-    );
+    // await SentryFlutter.init(
+    //   (options) => options.dsn = sentryDsn,
+    //   appRunner: () => runApp(PoteuApp(
+    //     settings: settings,
+    //     settingsRepository: settingsRepository,
+    //     regulationRepository: regulationRepository,
+    //     ttsRepository: ttsRepository,
+    //     notesRepository: notesRepository,
+    //   )),
+    // );
   } else {
     // Run app without Sentry for development
     runApp(PoteuApp(
@@ -143,23 +194,31 @@ class _PoteuAppState extends State<PoteuApp> {
     return StreamBuilder<bool>(
       stream: ThemeManager().themeStream,
       initialData: ThemeManager().isDarkMode,
-      builder: (context, snapshot) {
-        final isDarkMode = snapshot.data ?? false;
-        print('StreamBuilder received theme update: $isDarkMode');
-        print(
-            'Snapshot hasData: ${snapshot.hasData}, hasError: ${snapshot.hasError}');
+      builder: (context, themeSnapshot) {
+        return StreamBuilder<Settings>(
+          stream: FontManager().fontStream,
+          initialData: FontManager().currentSettings,
+          builder: (context, fontSnapshot) {
+            final isDarkMode = themeSnapshot.data ?? false;
+            final settings = fontSnapshot.data ?? Settings.defaultSettings();
 
-        final theme = isDarkMode
-            ? FlutterRegulationTheme.dark
-            : FlutterRegulationTheme.light;
-        print('Applied theme indicatorColor: ${theme.indicatorColor}');
+            print('App rebuild - isDarkMode: $isDarkMode');
+            print('App rebuild - fontSize: ${settings.fontSize}');
 
-        return MaterialApp(
-          title: 'POTEU',
-          theme: theme,
-          onGenerateRoute: _appRouter.onGenerateRoute,
-          initialRoute: '/',
-          debugShowCheckedModeBanner: false,
+            final theme = isDarkMode
+                ? DynamicTheme.getDark(settings)
+                : DynamicTheme.getLight(settings);
+
+            print('Applied theme');
+
+            return MaterialApp(
+              title: 'POTEU',
+              theme: theme,
+              onGenerateRoute: _appRouter.onGenerateRoute,
+              initialRoute: '/',
+              debugShowCheckedModeBanner: false,
+            );
+          },
         );
       },
     );
@@ -168,6 +227,7 @@ class _PoteuAppState extends State<PoteuApp> {
   @override
   void dispose() {
     ThemeManager().dispose();
+    FontManager().dispose();
     super.dispose();
   }
 }

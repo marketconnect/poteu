@@ -5,9 +5,12 @@ import 'package:poteu/app/pages/notes/notes_view.dart';
 import 'package:poteu/app/pages/search/search_page.dart';
 import 'package:poteu/app/pages/table_of_contents/table_of_contents_page.dart';
 import 'package:poteu/data/repositories/static_regulation_repository.dart';
+import 'package:poteu/data/repositories/data_notes_repository.dart';
+import 'package:poteu/data/helpers/database_helper.dart';
 import '../../domain/entities/chapter.dart';
 import '../../domain/repositories/settings_repository.dart';
 import '../../domain/repositories/tts_repository.dart';
+import '../../domain/repositories/notes_repository.dart';
 import '../../domain/entities/settings.dart';
 
 // Simple mock repositories for router
@@ -17,7 +20,6 @@ class _MockSettingsRepository implements SettingsRepository {
         isDarkMode: false,
         fontSize: 16.0,
         isSoundEnabled: true,
-        fontFamily: 'Roboto',
         highlightColors: [0xFF1976D2],
         language: "ru-RU",
         speechRate: 1.0,
@@ -34,8 +36,6 @@ class _MockSettingsRepository implements SettingsRepository {
   Future<void> setFontSize(double fontSize) async {}
   @override
   Future<void> setSoundEnabled(bool enabled) async {}
-  @override
-  Future<void> setFontFamily(String fontFamily) async {}
   @override
   Future<void> setHighlightColors(List<int> colors) async {}
   @override
@@ -96,6 +96,8 @@ class AppRouter {
   final StaticRegulationRepository _repository = StaticRegulationRepository();
   final _MockSettingsRepository _settingsRepository = _MockSettingsRepository();
   final _MockTTSRepository _ttsRepository = _MockTTSRepository();
+  final NotesRepository _notesRepository =
+      DataNotesRepository(DatabaseHelper());
 
   AppRouter();
 
@@ -105,10 +107,15 @@ class AppRouter {
         return MaterialPageRoute(
           builder: (BuildContext context) => TableOfContentsPage(
             regulationRepository: _repository,
+            settingsRepository: _settingsRepository,
           ),
         );
       case AppRouteNames.notesList:
-        return MaterialPageRoute(builder: (_) => const NotesView());
+        return MaterialPageRoute(
+          builder: (_) => NotesView(
+            notesRepository: _notesRepository,
+          ),
+        );
       case AppRouteNames.chapter:
         final arguments = routeSettings.arguments;
         final chapterArguments = arguments is ChapterArguments

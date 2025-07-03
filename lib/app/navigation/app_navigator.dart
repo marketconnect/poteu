@@ -62,6 +62,7 @@ class AppNavigator {
       MaterialPageRoute(
         builder: (context) => TableOfContentsPage(
           regulationRepository: regulationRepository,
+          settingsRepository: settingsRepository,
         ),
       ),
     );
@@ -74,7 +75,9 @@ class AppNavigator {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => const NotesView(),
+        builder: (context) => NotesView(
+          notesRepository: notesRepository,
+        ),
       ),
     );
   }

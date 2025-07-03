@@ -348,7 +348,7 @@ class ChapterViewState extends ViewState<ChapterView, ChapterController> {
                 style: Theme.of(context)
                     .textTheme
                     .headlineSmall
-                    ?.copyWith(fontSize: 22),
+                    ?.copyWith(fontWeight: FontWeight.bold),
                 textAlign: TextAlign.center,
               ),
             ),
@@ -481,9 +481,7 @@ class ChapterViewState extends ViewState<ChapterView, ChapterController> {
 
       return SelectableText(
         plainText,
-        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              fontSize: 16.0,
-            ),
+        style: Theme.of(context).textTheme.bodyMedium,
         textAlign: textAlign,
         onSelectionChanged: (selection, cause) {
           print('=== TEXT SELECTION CHANGED ===');
@@ -538,9 +536,7 @@ class ChapterViewState extends ViewState<ChapterView, ChapterController> {
       print('  Displaying HTML content with HtmlWidget');
       return HtmlWidget(
         paragraph.content,
-        textStyle: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              fontSize: 16.0,
-            ),
+        textStyle: Theme.of(context).textTheme.bodyMedium,
         customStylesBuilder: textAlign != null
             ? (element) => {
                   'text-align':
@@ -592,26 +588,35 @@ class ChapterViewState extends ViewState<ChapterView, ChapterController> {
   Widget _parseAndDisplayTable(String content) {
     return DataTable(
       border: TableBorder.all(color: Colors.grey[300]!),
-      columns: const [
-        DataColumn(label: Text('Напряжение, кВ')),
-        DataColumn(label: Text('Расстояние от работников, м')),
-        DataColumn(label: Text('Расстояния от механизмов, м')),
+      columns: [
+        DataColumn(
+            label: Text('Напряжение, кВ',
+                style: Theme.of(context).textTheme.bodyMedium)),
+        DataColumn(
+            label: Text('Расстояние от работников, м',
+                style: Theme.of(context).textTheme.bodyMedium)),
+        DataColumn(
+            label: Text('Расстояния от механизмов, м',
+                style: Theme.of(context).textTheme.bodyMedium)),
       ],
       rows: [
-        const DataRow(cells: [
-          DataCell(Text('ВЛ до 1')),
-          DataCell(Text('0,6')),
-          DataCell(Text('1,0')),
+        DataRow(cells: [
+          DataCell(
+              Text('ВЛ до 1', style: Theme.of(context).textTheme.bodyMedium)),
+          DataCell(Text('0,6', style: Theme.of(context).textTheme.bodyMedium)),
+          DataCell(Text('1,0', style: Theme.of(context).textTheme.bodyMedium)),
         ]),
-        const DataRow(cells: [
-          DataCell(Text('до 1')),
-          DataCell(Text('не нормируется')),
-          DataCell(Text('1,0')),
+        DataRow(cells: [
+          DataCell(Text('до 1', style: Theme.of(context).textTheme.bodyMedium)),
+          DataCell(Text('не нормируется',
+              style: Theme.of(context).textTheme.bodyMedium)),
+          DataCell(Text('1,0', style: Theme.of(context).textTheme.bodyMedium)),
         ]),
-        const DataRow(cells: [
-          DataCell(Text('1 - 35')),
-          DataCell(Text('0,6')),
-          DataCell(Text('1,0')),
+        DataRow(cells: [
+          DataCell(
+              Text('1 - 35', style: Theme.of(context).textTheme.bodyMedium)),
+          DataCell(Text('0,6', style: Theme.of(context).textTheme.bodyMedium)),
+          DataCell(Text('1,0', style: Theme.of(context).textTheme.bodyMedium)),
         ]),
       ],
     );

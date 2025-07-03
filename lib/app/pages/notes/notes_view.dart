@@ -2,43 +2,31 @@ import 'package:flutter/material.dart' hide View;
 import 'package:flutter_clean_architecture/flutter_clean_architecture.dart';
 
 import '../../../domain/entities/note.dart';
+import '../../../domain/repositories/notes_repository.dart';
 import '../../widgets/regulation_app_bar.dart';
 import 'notes_controller.dart';
 import '../chapter/model/chapter_arguments.dart';
 
 class NotesView extends View {
-  const NotesView({Key? key}) : super(key: key);
+  final NotesRepository notesRepository;
+
+  const NotesView({
+    Key? key,
+    required this.notesRepository,
+  }) : super(key: key);
 
   @override
-  NotesViewState createState() => NotesViewState(NotesController());
+  NotesViewState createState() =>
+      NotesViewState(NotesController(notesRepository));
 }
 
 class NotesViewState extends ViewState<NotesView, NotesController> {
   NotesViewState(NotesController controller) : super(controller);
 
   @override
-  void initState() {
-    super.initState();
-    // Refresh notes when the view is first created
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      // Access controller through the view state
-      if (mounted) {
-        // Use a simple trigger to refresh - in next build cycle controller will refresh
-      }
-    });
-  }
-
-  @override
   Widget get view {
     return ControlledWidgetBuilder<NotesController>(
       builder: (context, controller) {
-        // Refresh notes once when first building
-        if (!controller.hasNotes && !controller.isLoading) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            controller.refreshNotes();
-          });
-        }
-
         return Scaffold(
           appBar: PreferredSize(
             preferredSize: Size.fromHeight(

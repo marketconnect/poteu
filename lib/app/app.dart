@@ -30,6 +30,7 @@ class App extends StatelessWidget {
       home: MainView(
         regulationRepository:
             regulationRepository as StaticRegulationRepository,
+        settingsRepository: settingsRepository,
       ),
       debugShowCheckedModeBanner: false,
     );
