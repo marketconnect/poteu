@@ -58,81 +58,86 @@ class ChapterViewState extends ViewState<ChapterView, ChapterController> {
           });
         }
 
-        return Scaffold(
-          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-          appBar: PreferredSize(
-            preferredSize: Size.fromHeight(
-              Theme.of(context).appBarTheme.toolbarHeight ?? 74.0,
-            ),
-            child: Padding(
-              padding: EdgeInsets.only(
-                top: MediaQuery.of(context).padding.top,
+        return Theme(
+          data: Theme.of(context),
+          child: Scaffold(
+            backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+            appBar: PreferredSize(
+              preferredSize: Size.fromHeight(
+                Theme.of(context).appBarTheme.toolbarHeight ?? 74.0,
               ),
-              child: RegulationAppBar(
-                child: _buildAppBar(controller),
+              child: Padding(
+                padding: EdgeInsets.only(
+                  top: MediaQuery.of(context).padding.top,
+                ),
+                child: RegulationAppBar(
+                  child: _buildAppBar(controller),
+                ),
               ),
             ),
-          ),
-          body: OrientationBuilder(
-            builder: (context, orientation) {
-              print('=== BUILDING BODY WITH ORIENTATION: $orientation ===');
-              double height = MediaQuery.of(context).size.height;
-              double bottomBarBlackHeight = orientation == Orientation.portrait
-                  ? height * 0.4
-                  : height * 0.6;
-              double bottomBarWhiteHeight = orientation == Orientation.portrait
-                  ? height * 0.32
-                  : height * 0.48;
+            body: OrientationBuilder(
+              builder: (context, orientation) {
+                print('=== BUILDING BODY WITH ORIENTATION: $orientation ===');
+                double height = MediaQuery.of(context).size.height;
+                double bottomBarBlackHeight =
+                    orientation == Orientation.portrait
+                        ? height * 0.4
+                        : height * 0.6;
+                double bottomBarWhiteHeight =
+                    orientation == Orientation.portrait
+                        ? height * 0.32
+                        : height * 0.48;
 
-              print('Screen height: $height');
-              print('Bottom bar black height: $bottomBarBlackHeight');
-              print('Bottom bar white height: $bottomBarWhiteHeight');
-              print(
-                  'Is bottom bar expanded: ${controller.isBottomBarExpanded}');
+                print('Screen height: $height');
+                print('Bottom bar black height: $bottomBarBlackHeight');
+                print('Bottom bar white height: $bottomBarWhiteHeight');
+                print(
+                    'Is bottom bar expanded: ${controller.isBottomBarExpanded}');
 
-              return Stack(
-                children: [
-                  _buildPageView(controller),
-                  // Bottom Bar Stack like in original
-                  AnimatedPositioned(
-                    duration: const Duration(milliseconds: 500),
-                    bottom: controller.isBottomBarExpanded
-                        ? 0
-                        : -bottomBarBlackHeight,
-                    child: SizedBox(
-                      height: bottomBarBlackHeight,
-                      width: MediaQuery.of(context).size.width,
-                      child: Stack(
-                        children: [
-                          _buildBottomBarBlack(
-                            controller,
-                            bottomBarBlackHeight,
-                            orientation == Orientation.portrait
-                                ? height * 0.025
-                                : height * 0.04,
-                          ),
-                          _buildBottomBarWhite(
-                            controller,
-                            bottomBarWhiteHeight,
-                          ),
-                        ],
+                return Stack(
+                  children: [
+                    _buildPageView(controller),
+                    // Bottom Bar Stack like in original
+                    AnimatedPositioned(
+                      duration: const Duration(milliseconds: 500),
+                      bottom: controller.isBottomBarExpanded
+                          ? 0
+                          : -bottomBarBlackHeight,
+                      child: SizedBox(
+                        height: bottomBarBlackHeight,
+                        width: MediaQuery.of(context).size.width,
+                        child: Stack(
+                          children: [
+                            _buildBottomBarBlack(
+                              controller,
+                              bottomBarBlackHeight,
+                              orientation == Orientation.portrait
+                                  ? height * 0.025
+                                  : height * 0.04,
+                            ),
+                            _buildBottomBarWhite(
+                              controller,
+                              bottomBarWhiteHeight,
+                            ),
+                          ],
+                        ),
                       ),
                     ),
-                  ),
-                ],
-              );
-            },
+                  ],
+                );
+              },
+            ),
+            floatingActionButton: controller.isTTSPlaying
+                ? FloatingActionButton(
+                    onPressed: controller.stopTTS,
+                    backgroundColor: Theme.of(context).primaryColor,
+                    child: const Icon(Icons.stop, color: Colors.white),
+                  )
+                : null,
+            floatingActionButtonLocation:
+                FloatingActionButtonLocation.centerFloat,
+            resizeToAvoidBottomInset: false,
           ),
-          floatingActionButton: controller.isTTSPlaying
-              ? FloatingActionButton(
-                  onPressed: controller.stopTTS,
-                  backgroundColor: Theme.of(context).primaryColor,
-                  child: const Icon(Icons.stop, color: Colors.white),
-                )
-              : null,
-          floatingActionButtonLocation:
-              FloatingActionButtonLocation.centerFloat,
-          resizeToAvoidBottomInset: false,
         );
       },
     );
@@ -180,7 +185,7 @@ class ChapterViewState extends ViewState<ChapterView, ChapterController> {
             Icons.arrow_back_ios,
             size: Theme.of(context).iconTheme.size,
             color: controller.canGoPreviousChapter
-                ? Theme.of(context).iconTheme.color
+                ? Theme.of(context).appBarTheme.iconTheme?.color
                 : Colors.grey,
           ),
         ),
@@ -211,7 +216,8 @@ class ChapterViewState extends ViewState<ChapterView, ChapterController> {
             },
             keyboardType: TextInputType.number,
             textAlign: TextAlign.center,
-            style: TextStyle(color: Theme.of(context).iconTheme.color),
+            style: TextStyle(
+                color: Theme.of(context).appBarTheme.titleTextStyle?.color),
             decoration: InputDecoration(
               contentPadding: EdgeInsets.zero,
               border: OutlineInputBorder(
@@ -230,9 +236,7 @@ class ChapterViewState extends ViewState<ChapterView, ChapterController> {
                 TextSpan(
                   text: '${controller.totalChapters}',
                   style: TextStyle(
-                    color:
-                        Theme.of(context).appBarTheme.titleTextStyle?.color ??
-                            Colors.black,
+                    color: Theme.of(context).appBarTheme.titleTextStyle?.color,
                     fontWeight: FontWeight.w400,
                   ),
                 ),
@@ -248,7 +252,7 @@ class ChapterViewState extends ViewState<ChapterView, ChapterController> {
             Icons.arrow_forward_ios,
             size: Theme.of(context).iconTheme.size,
             color: controller.canGoNextChapter
-                ? Theme.of(context).iconTheme.color
+                ? Theme.of(context).appBarTheme.iconTheme?.color
                 : Colors.grey,
           ),
         ),
@@ -341,14 +345,16 @@ class ChapterViewState extends ViewState<ChapterView, ChapterController> {
         if (index == 0) {
           return Padding(
             padding: const EdgeInsets.only(
-                top: 50.0, bottom: 20.0, left: 20.0, right: 20.0),
+                top: 20.0, bottom: 20.0, left: 20.0, right: 20.0),
             child: Center(
               child: Text(
                 chapterData['title'],
-                style: Theme.of(context)
-                    .textTheme
-                    .headlineSmall
-                    ?.copyWith(fontWeight: FontWeight.bold),
+                style: Theme.of(context).textTheme.displayLarge?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      fontSize:
+                          Theme.of(context).textTheme.displayLarge?.fontSize ??
+                              20,
+                    ),
                 textAlign: TextAlign.center,
               ),
             ),
@@ -1182,16 +1188,8 @@ class ChapterViewState extends ViewState<ChapterView, ChapterController> {
                 ? Colors.yellow.withOpacity(0.1)
                 : Theme.of(context).scaffoldBackgroundColor,
         margin: EdgeInsets.zero,
-        child: Container(
-          decoration: BoxDecoration(
-            border: isSelected
-                ? Border.all(color: Theme.of(context).primaryColor, width: 2)
-                : null,
-            borderRadius: BorderRadius.circular(4),
-          ),
-          child: _buildParagraphContent(paragraph, controller,
-              isSelectable: controller.isBottomBarExpanded),
-        ),
+        child: _buildParagraphContent(paragraph, controller,
+            isSelectable: controller.isBottomBarExpanded),
       ),
     );
   }
@@ -1237,39 +1235,50 @@ class ChapterViewState extends ViewState<ChapterView, ChapterController> {
         MediaQuery.of(context).size.width * 0.1,
         MediaQuery.of(context).size.height * 0.3,
       ),
-      color: Theme.of(context).scaffoldBackgroundColor,
+      color: Theme.of(context).drawerTheme.backgroundColor,
       elevation: 8,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       items: [
         PopupMenuItem(
           value: 'edit',
           child: ListTile(
-            leading: const Icon(Icons.edit),
-            title: const Text('Редактировать'),
+            leading: Icon(Icons.edit, color: Theme.of(context).iconTheme.color),
+            title: Text('Редактировать',
+                style: TextStyle(
+                    color: Theme.of(context).textTheme.bodyLarge?.color)),
             contentPadding: EdgeInsets.zero,
           ),
         ),
         PopupMenuItem(
           value: 'share',
           child: ListTile(
-            leading: const Icon(Icons.share),
-            title: const Text('Поделиться'),
+            leading:
+                Icon(Icons.share, color: Theme.of(context).iconTheme.color),
+            title: Text('Поделиться',
+                style: TextStyle(
+                    color: Theme.of(context).textTheme.bodyLarge?.color)),
             contentPadding: EdgeInsets.zero,
           ),
         ),
         PopupMenuItem(
           value: 'listen',
           child: ListTile(
-            leading: const Icon(Icons.hearing_rounded),
-            title: const Text('Прослушать'),
+            leading: Icon(Icons.hearing_rounded,
+                color: Theme.of(context).iconTheme.color),
+            title: Text('Прослушать',
+                style: TextStyle(
+                    color: Theme.of(context).textTheme.bodyLarge?.color)),
             contentPadding: EdgeInsets.zero,
           ),
         ),
         PopupMenuItem(
           value: 'notes',
           child: ListTile(
-            leading: const Icon(Icons.note_alt_outlined),
-            title: const Text('Заметки'),
+            leading: Icon(Icons.note_alt_outlined,
+                color: Theme.of(context).iconTheme.color),
+            title: Text('Заметки',
+                style: TextStyle(
+                    color: Theme.of(context).textTheme.bodyLarge?.color)),
             contentPadding: EdgeInsets.zero,
           ),
         ),

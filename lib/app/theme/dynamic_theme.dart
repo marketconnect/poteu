@@ -138,12 +138,12 @@ class DynamicTheme {
           fontSize: settings.fontSize,
         ),
         bodyLarge: TextStyle(
-          color: const Color(0xFF999da5),
+          color: Colors.white,
           fontWeight: FontWeight.w600,
           fontSize: settings.fontSize,
         ),
         bodyMedium: TextStyle(
-          color: const Color(0xFF999da5),
+          color: Colors.white,
           fontSize: settings.fontSize - 1,
         ),
       ),
