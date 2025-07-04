@@ -105,7 +105,7 @@ abstract class AppRouteNames {
   static const contents = '/';
   static const chapter = '/chapter';
   static const notesList = '/notesList';
-  static const searchScreen = '/searchScreen';
+  static const search = '/search';
 }
 
 class AppRouter {
@@ -150,13 +150,18 @@ class AppRouter {
             regulationId: 1, // POTEU regulation ID
             initialChapterOrderNum: chapterArguments.chapterOrderNum,
             settingsRepository: _settingsRepository,
+            ttsRepository: _ttsRepository,
             scrollToParagraphId: chapterArguments.scrollTo > 0
                 ? chapterArguments.scrollTo
                 : null,
           ),
         );
-      case AppRouteNames.searchScreen:
-        return MaterialPageRoute(builder: (_) => const SearchPage());
+      case AppRouteNames.search:
+        return MaterialPageRoute(
+          builder: (_) => SearchPage(
+            regulationRepository: _repository,
+          ),
+        );
       default:
         return null;
     }

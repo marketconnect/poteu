@@ -7,6 +7,7 @@ import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 
 import '../../../domain/entities/paragraph.dart';
 import '../../../domain/repositories/settings_repository.dart';
+import '../../../domain/repositories/tts_repository.dart';
 import '../../widgets/regulation_app_bar.dart';
 import '../../utils/text_utils.dart';
 import 'chapter_controller.dart';
@@ -17,12 +18,14 @@ class ChapterView extends View {
   final int initialChapterOrderNum;
   final int? scrollToParagraphId;
   final SettingsRepository settingsRepository;
+  final TTSRepository ttsRepository;
 
   const ChapterView({
     Key? key,
     required this.regulationId,
     required this.initialChapterOrderNum,
     required this.settingsRepository,
+    required this.ttsRepository,
     this.scrollToParagraphId,
   }) : super(key: key);
 
@@ -32,6 +35,7 @@ class ChapterView extends View {
           regulationId: regulationId,
           initialChapterOrderNum: initialChapterOrderNum,
           settingsRepository: settingsRepository,
+          ttsRepository: ttsRepository,
           scrollToParagraphId: scrollToParagraphId,
         ),
       );
@@ -42,18 +46,8 @@ class ChapterViewState extends ViewState<ChapterView, ChapterController> {
 
   @override
   Widget get view {
-    print('=== BUILDING CHAPTER VIEW ===');
     return ControlledWidgetBuilder<ChapterController>(
       builder: (context, controller) {
-        print('=== CONTROLLED WIDGET BUILDER ===');
-        print('Controller state:');
-        print('  isLoading: ${controller.isLoading}');
-        print('  error: ${controller.error}');
-        print('  isBottomBarExpanded: ${controller.isBottomBarExpanded}');
-        print('  selectedParagraph: ${controller.selectedParagraph?.id}');
-        print('  lastSelectedText: "${controller.lastSelectedText}"');
-        print('  currentChapterOrderNum: ${controller.currentChapterOrderNum}');
-
         // Listen to errors like SaveParagraphCubit listener in original
         if (controller.error != null) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -81,7 +75,6 @@ class ChapterViewState extends ViewState<ChapterView, ChapterController> {
             ),
             body: OrientationBuilder(
               builder: (context, orientation) {
-                print('=== BUILDING BODY WITH ORIENTATION: $orientation ===');
                 double height = MediaQuery.of(context).size.height;
                 double bottomBarBlackHeight =
                     orientation == Orientation.portrait
@@ -91,12 +84,6 @@ class ChapterViewState extends ViewState<ChapterView, ChapterController> {
                     orientation == Orientation.portrait
                         ? height * 0.32
                         : height * 0.48;
-
-                print('Screen height: $height');
-                print('Bottom bar black height: $bottomBarBlackHeight');
-                print('Bottom bar white height: $bottomBarWhiteHeight');
-                print(
-                    'Is bottom bar expanded: ${controller.isBottomBarExpanded}');
 
                 return Stack(
                   children: [
@@ -384,14 +371,8 @@ class ChapterViewState extends ViewState<ChapterView, ChapterController> {
     final bool hasFormatting = controller.hasFormatting(paragraph);
     final bool bottomBarExpanded = controller.isBottomBarExpanded;
 
-    print('=== BUILDING PARAGRAPH CARD ===');
-    print(
-        'Paragraph ${paragraph.id}: selected=$isSelected, hasFormatting=$hasFormatting, bottomBarExpanded=$bottomBarExpanded');
-
     // If bottom bar is expanded or paragraph is table/NFT, don't show context menu
     if (bottomBarExpanded || paragraph.isTable || paragraph.isNft) {
-      print(
-          'Building paragraph WITHOUT context menu (expanded=$bottomBarExpanded, table=${paragraph.isTable}, nft=${paragraph.isNft})');
       return Card(
         elevation: 0,
         color: isSelected
@@ -414,7 +395,6 @@ class ChapterViewState extends ViewState<ChapterView, ChapterController> {
     }
 
     // Show context menu on tap when bottom bar is collapsed
-    print('Building paragraph WITH context menu');
     return _buildParagraphWithContextMenu(
       paragraph,
       controller,
@@ -426,15 +406,6 @@ class ChapterViewState extends ViewState<ChapterView, ChapterController> {
   Widget _buildParagraphContent(
       Paragraph paragraph, ChapterController controller,
       {bool isSelectable = false}) {
-    print('Building regular content for paragraph ${paragraph.id}:');
-    print('  Content: "${paragraph.content}"');
-    print('  isSelectable: $isSelectable');
-    print('  Has formatting: ${controller.hasFormatting(paragraph)}');
-    print('  Current selectedParagraph: ${controller.selectedParagraph?.id}');
-    print(
-        '  Current selection: start=${controller.selectionStart}, end=${controller.selectionEnd}');
-    print('  Last selected text: "${controller.lastSelectedText}"');
-
     // Handle paragraph class styles
     switch (paragraph.paragraphClass?.toLowerCase()) {
       case 'indent':
@@ -475,33 +446,18 @@ class ChapterViewState extends ViewState<ChapterView, ChapterController> {
 
   Widget _buildRegularContent(Paragraph paragraph, TextAlign? textAlign,
       ChapterController controller, bool isSelectable) {
-    print('Building regular content for paragraph ${paragraph.id}:');
-    print('  Content: "${paragraph.content}"');
-    print('  isSelectable: $isSelectable');
-    print('  Has formatting: ${controller.hasFormatting(paragraph)}');
-    print('  Current selectedParagraph: ${controller.selectedParagraph?.id}');
-    print(
-        '  Current selection: start=${controller.selectionStart}, end=${controller.selectionEnd}');
-    print('  Last selected text: "${controller.lastSelectedText}"');
-
     if (isSelectable) {
       // Use SelectableText with plain text for selection mode
       String plainText = TextUtils.parseHtmlString(paragraph.content);
-      print('  Plain text for selection: "$plainText"');
 
       return SelectableText(
         plainText,
         style: Theme.of(context).textTheme.bodyMedium,
         textAlign: textAlign,
         onSelectionChanged: (selection, cause) {
-          print('=== TEXT SELECTION CHANGED ===');
-          print('Selection: $selection');
-          print('Cause: $cause');
-
           try {
             // Multiple safety checks
             if (selection == null) {
-              print('Selection is null, returning');
               return;
             }
 
@@ -524,26 +480,16 @@ class ChapterViewState extends ViewState<ChapterView, ChapterController> {
                   start < plainText.length &&
                   end > start &&
                   end <= plainText.length) {
-                print(
-                    'Valid selection: start=$start, end=$end, textLength=${plainText.length}');
-                print('Selected text: "${plainText.substring(start, end)}"');
                 controller.setTextSelection(paragraph, start, end);
-              } else {
-                print(
-                    'Invalid selection bounds ignored: start=$start, end=$end, textLength=${plainText.length}');
-              }
-            } else {
-              print('No text selected or invalid offsets');
-            }
+              } else {}
+            } else {}
           } catch (e) {
-            print('Selection change error: $e');
             // Don't crash the app, just ignore the selection
           }
         },
       );
     } else {
       // Use HtmlWidget for normal display
-      print('  Displaying HTML content with HtmlWidget');
       return HtmlWidget(
         paragraph.content,
         textStyle: Theme.of(context).textTheme.bodyMedium,
@@ -555,7 +501,6 @@ class ChapterViewState extends ViewState<ChapterView, ChapterController> {
             : null,
         onTapUrl: (url) => _handleInternalLink(url, controller),
         onErrorBuilder: (context, element, error) {
-          print('HtmlWidget error: $error');
           return Text('Error displaying content: $error');
         },
       );
@@ -636,11 +581,6 @@ class ChapterViewState extends ViewState<ChapterView, ChapterController> {
 
   Widget _buildBottomBarBlack(
       ChapterController controller, double height, double iconSize) {
-    print('=== BUILDING BOTTOM BAR BLACK ===');
-    print('Height: $height, iconSize: $iconSize');
-    print(
-        'Controller state: expanded=${controller.isBottomBarExpanded}, selectedParagraph=${controller.selectedParagraph?.id}');
-
     return Positioned(
       bottom: 0,
       child: Container(
@@ -663,7 +603,6 @@ class ChapterViewState extends ViewState<ChapterView, ChapterController> {
                     Icons.format_underline,
                     iconSize,
                     () async {
-                      print('UNDERLINE BUTTON TAPPED!');
                       await controller.underlineText();
                       if (controller.error != null) {
                         _showErrorSnackBar(controller.error!);
@@ -678,7 +617,6 @@ class ChapterViewState extends ViewState<ChapterView, ChapterController> {
                     Icons.brush,
                     iconSize,
                     () async {
-                      print('MARK BUTTON TAPPED!');
                       await controller.markText();
                       if (controller.error != null) {
                         _showErrorSnackBar(controller.error!);
@@ -693,7 +631,6 @@ class ChapterViewState extends ViewState<ChapterView, ChapterController> {
                     Icons.cleaning_services,
                     iconSize,
                     () async {
-                      print('CLEAR BUTTON TAPPED!');
                       await controller.clearFormatting();
                       if (controller.error != null) {
                         _showErrorSnackBar(controller.error!);
@@ -708,7 +645,6 @@ class ChapterViewState extends ViewState<ChapterView, ChapterController> {
                     Icons.close,
                     iconSize,
                     () async {
-                      print('CLOSE BUTTON TAPPED!');
                       await controller.saveColors();
                       controller.collapseBottomBar();
                     },
@@ -723,11 +659,6 @@ class ChapterViewState extends ViewState<ChapterView, ChapterController> {
   }
 
   Widget _buildBottomBarWhite(ChapterController controller, double height) {
-    print('=== BUILDING BOTTOM BAR WHITE ===');
-    print('Height: $height');
-    print(
-        'Controller state: lastSelectedText="${controller.lastSelectedText}", colorsList length=${controller.colorsList.length}');
-
     return Positioned(
       bottom: 0,
       child: Container(
@@ -764,13 +695,8 @@ class ChapterViewState extends ViewState<ChapterView, ChapterController> {
 
   Widget _buildBlackBarButton(
       IconData icon, double size, VoidCallback onPressed) {
-    print('=== BUILDING BLACK BAR BUTTON ===');
-    print('Icon: $icon, size: $size');
-
     return GestureDetector(
       onTap: () {
-        print('=== GESTURE DETECTOR ON TAP ===');
-        print('Button with icon $icon was tapped');
         onPressed();
       },
       child: Container(
@@ -979,8 +905,11 @@ class ChapterViewState extends ViewState<ChapterView, ChapterController> {
         builder: (context, setState) => AlertDialog(
           backgroundColor: Theme.of(context).scaffoldBackgroundColor,
           title: const Text('Поиск по главе'),
-          content: SizedBox(
+          content: Container(
             width: double.maxFinite,
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(context).size.height * 0.7,
+            ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -1000,9 +929,9 @@ class ChapterViewState extends ViewState<ChapterView, ChapterController> {
                 ),
                 const SizedBox(height: 16),
                 if (searchResults.isNotEmpty)
-                  SizedBox(
-                    height: 200,
+                  Expanded(
                     child: ListView.builder(
+                      shrinkWrap: true,
                       itemCount: searchResults.length,
                       itemBuilder: (context, index) {
                         final paragraph = searchResults[index];
@@ -1017,7 +946,6 @@ class ChapterViewState extends ViewState<ChapterView, ChapterController> {
                           ),
                           onTap: () {
                             Navigator.pop(context);
-                            // Navigate to the paragraph using its ID
                             controller.goToParagraph(paragraph.id);
                             _showSnackBar('Переход к параграфу');
                           },
@@ -1135,7 +1063,6 @@ class ChapterViewState extends ViewState<ChapterView, ChapterController> {
     try {
       await Share.share(text);
     } catch (e) {
-      print('Share error: $e');
       try {
         await Clipboard.setData(ClipboardData(text: text));
         _showSnackBar('Текст скопирован в буфер обмена');
@@ -1174,14 +1101,8 @@ class ChapterViewState extends ViewState<ChapterView, ChapterController> {
 
   Widget _buildParagraphWithContextMenu(Paragraph paragraph,
       ChapterController controller, bool isSelected, bool hasFormatting) {
-    print('=== BUILDING PARAGRAPH WITH CONTEXT MENU ===');
-    print(
-        'Paragraph ${paragraph.id}: selected=$isSelected, hasFormatting=$hasFormatting');
-
     return GestureDetector(
       onTap: () {
-        print('=== PARAGRAPH TAPPED ===');
-        print('Paragraph ${paragraph.id} tapped - showing context menu');
         _showParagraphContextMenu(context, paragraph, controller);
       },
       child: Card(
@@ -1200,37 +1121,25 @@ class ChapterViewState extends ViewState<ChapterView, ChapterController> {
 
   void _handleMenuAction(
       String action, Paragraph paragraph, ChapterController controller) {
-    print('=== MENU ACTION CALLED ===');
-    print('Action: $action');
-    print('Paragraph ID: ${paragraph.id}');
-
     switch (action) {
       case 'edit':
-        print('Opening edit dialog');
         _showEditDialog(paragraph, controller);
         break;
       case 'share':
-        print('Sharing text');
         _shareText(TextUtils.parseHtmlString(paragraph.content));
         break;
       case 'listen':
-        print('Opening TTS bottom sheet');
         _showTTSBottomSheet(paragraph, controller);
         break;
       case 'notes':
-        print('Opening notes mode');
         controller.expandBottomBar();
         controller.selectParagraphForFormatting(paragraph);
-        print('Notes mode should be active now');
         break;
     }
   }
 
   void _showParagraphContextMenu(
       BuildContext context, Paragraph paragraph, ChapterController controller) {
-    print('=== SHOWING CONTEXT MENU ===');
-    print('Paragraph ID: ${paragraph.id}');
-
     showMenu(
       context: context,
       position: RelativeRect.fromLTRB(
@@ -1288,12 +1197,9 @@ class ChapterViewState extends ViewState<ChapterView, ChapterController> {
         ),
       ],
     ).then((value) {
-      print('Context menu selection: $value');
       if (value != null) {
         _handleMenuAction(value, paragraph, controller);
-      } else {
-        print('Context menu cancelled');
-      }
+      } else {}
     });
   }
 
@@ -1389,9 +1295,6 @@ class ChapterViewState extends ViewState<ChapterView, ChapterController> {
 
   Future<bool> _handleInternalLink(
       String url, ChapterController controller) async {
-    print('=== INTERNAL LINK TAPPED ===');
-    print('URL: $url');
-
     try {
       // Check for chapter#paragraphId format (like "76#340571")
       if (url.contains('#') && !url.startsWith('#')) {
@@ -1400,16 +1303,10 @@ class ChapterViewState extends ViewState<ChapterView, ChapterController> {
           final chapterStr = parts[0];
           final paragraphIdStr = parts[1];
 
-          print(
-              'Split URL: chapter="$chapterStr", paragraphId="$paragraphIdStr"');
-
           final chapterNum = int.tryParse(chapterStr);
           final paragraphId = int.tryParse(paragraphIdStr);
 
           if (chapterNum != null && paragraphId != null) {
-            print(
-                'Opening new chapter page: chapter $chapterNum, paragraph ID $paragraphId');
-
             // Open new chapter page on top of current one
             Navigator.of(context).push(
               MaterialPageRoute(
@@ -1418,6 +1315,7 @@ class ChapterViewState extends ViewState<ChapterView, ChapterController> {
                   initialChapterOrderNum: chapterNum,
                   scrollToParagraphId: paragraphId,
                   settingsRepository: widget.settingsRepository,
+                  ttsRepository: widget.ttsRepository,
                 ),
               ),
             );
@@ -1437,8 +1335,6 @@ class ChapterViewState extends ViewState<ChapterView, ChapterController> {
         if (chapterNum != null &&
             chapterNum > 0 &&
             chapterNum <= controller.totalChapters) {
-          print('Opening new chapter page: $chapterNum');
-
           // Open new chapter page on top of current one
           Navigator.of(context).push(
             MaterialPageRoute(
@@ -1447,6 +1343,7 @@ class ChapterViewState extends ViewState<ChapterView, ChapterController> {
                 initialChapterOrderNum: chapterNum,
                 scrollToParagraphId: null,
                 settingsRepository: widget.settingsRepository,
+                ttsRepository: widget.ttsRepository,
               ),
             ),
           );
@@ -1458,14 +1355,12 @@ class ChapterViewState extends ViewState<ChapterView, ChapterController> {
       // Check if it's an anchor link (like #paragraph_123)
       if (url.startsWith('#')) {
         final anchorId = url.substring(1);
-        print('Anchor link detected: $anchorId');
 
         // Try to extract paragraph ID from anchor
         if (anchorId.startsWith('paragraph_')) {
           final paragraphIdStr = anchorId.substring('paragraph_'.length);
           final paragraphId = int.tryParse(paragraphIdStr);
           if (paragraphId != null) {
-            print('Scrolling to paragraph ID in current chapter: $paragraphId');
             controller.goToParagraph(paragraphId);
             return true; // Prevent default behavior
           }
@@ -1474,8 +1369,6 @@ class ChapterViewState extends ViewState<ChapterView, ChapterController> {
         // Try to handle other anchor formats
         final paragraphId = int.tryParse(anchorId);
         if (paragraphId != null) {
-          print(
-              'Scrolling to numeric anchor ID in current chapter: $paragraphId');
           controller.goToParagraph(paragraphId);
           return true;
         }
@@ -1483,8 +1376,6 @@ class ChapterViewState extends ViewState<ChapterView, ChapterController> {
 
       // Handle paragraph references in various formats that might lead to other chapters
       if (url.contains('п.') || url.contains('пункт') || url.contains('p.')) {
-        print('Paragraph reference detected in URL: $url');
-
         // Try multiple regex patterns for paragraph references
         final patterns = [
           RegExp(r'п\.?\s*(\d+)\.(\d+)'), // п.1.2, п. 1.2
@@ -1498,16 +1389,13 @@ class ChapterViewState extends ViewState<ChapterView, ChapterController> {
           if (match != null) {
             final chapter = int.tryParse(match.group(1) ?? '');
             final paragraph = int.tryParse(match.group(2) ?? '');
-            print('Pattern matched: chapter $chapter, paragraph $paragraph');
 
             if (chapter != null && paragraph != null) {
               // Check if it's the same chapter as current
               if (chapter == controller.currentChapterOrderNum) {
-                print('Scrolling to paragraph in current chapter');
                 // Try to find paragraph by the number pattern
                 controller.goToParagraph(int.parse('$chapter$paragraph'));
               } else {
-                print('Opening new chapter page: chapter $chapter');
                 // Open new chapter page
                 Navigator.of(context).push(
                   MaterialPageRoute(
@@ -1516,6 +1404,7 @@ class ChapterViewState extends ViewState<ChapterView, ChapterController> {
                       initialChapterOrderNum: chapter,
                       scrollToParagraphId: int.parse('$chapter$paragraph'),
                       settingsRepository: widget.settingsRepository,
+                      ttsRepository: widget.ttsRepository,
                     ),
                   ),
                 );
@@ -1533,8 +1422,6 @@ class ChapterViewState extends ViewState<ChapterView, ChapterController> {
         if (match != null) {
           final chapter = int.tryParse(match.group(1) ?? '');
           if (chapter != null) {
-            print('Opening new chapter page: $chapter');
-
             // Open new chapter page on top of current one
             Navigator.of(context).push(
               MaterialPageRoute(
@@ -1543,6 +1430,7 @@ class ChapterViewState extends ViewState<ChapterView, ChapterController> {
                   initialChapterOrderNum: chapter,
                   scrollToParagraphId: null,
                   settingsRepository: widget.settingsRepository,
+                  ttsRepository: widget.ttsRepository,
                 ),
               ),
             );
@@ -1558,8 +1446,6 @@ class ChapterViewState extends ViewState<ChapterView, ChapterController> {
       if (numericMatches.isNotEmpty) {
         final firstNumber = int.tryParse(numericMatches.first.group(0) ?? '');
         if (firstNumber != null) {
-          print(
-              'Trying numeric ID as paragraph ID in current chapter: $firstNumber');
           controller.goToParagraph(firstNumber);
           return true;
         }
@@ -1569,15 +1455,12 @@ class ChapterViewState extends ViewState<ChapterView, ChapterController> {
       if (!url.startsWith('http') &&
           !url.startsWith('mailto:') &&
           !url.startsWith('tel:')) {
-        print('Internal-looking link: $url (unhandled format)');
         return true; // Prevent default behavior
       }
 
       // For external links, return false to allow default handling
-      print('External link, allowing default handling');
       return false;
     } catch (e) {
-      print('Error handling link: $e');
       return false;
     }
   }

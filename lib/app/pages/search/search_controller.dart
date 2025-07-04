@@ -5,61 +5,73 @@ import '../../../domain/entities/chapter.dart';
 import '../../../domain/repositories/regulation_repository.dart';
 import '../../../domain/repositories/settings_repository.dart';
 import '../../../domain/repositories/tts_repository.dart';
+import '../../../domain/entities/search_result.dart';
+import 'search_presenter.dart';
 
 class SearchController extends Controller {
   final RegulationRepository _regulationRepository;
   final SettingsRepository _settingsRepository;
   final TTSRepository _ttsRepository;
+  final SearchPresenter _presenter;
 
   bool _isLoading = false;
   String? _error;
-  List<Map<String, dynamic>> _results = [];
+  List<SearchResult>? _results;
   String _query = '';
 
   bool get isLoading => _isLoading;
   String? get error => _error;
-  List<Map<String, dynamic>> get results => _results;
+  List<SearchResult>? get results => _results;
 
   SearchController(
     this._regulationRepository,
     this._settingsRepository,
     this._ttsRepository,
-  );
+  )   : _presenter = SearchPresenter(_regulationRepository),
+        super();
 
   @override
-  void initListeners() {}
+  void initListeners() {
+    _presenter.onSearchComplete = (results) {
+      _results = results;
+      _isLoading = false;
+      refreshUI();
+    };
+
+    _presenter.onSearchError = (error) {
+      _results = null;
+      _isLoading = false;
+      refreshUI();
+    };
+  }
 
   void onSearchQueryChanged(String query) {
     _query = query;
     if (query.length >= 3) {
-      search();
+      _isLoading = true;
+      refreshUI();
+      _presenter.search(query);
     } else {
-      _results = [];
+      _results = null;
       refreshUI();
     }
   }
 
-  Future<void> search() async {
-    if (_query.isEmpty) {
-      return;
-    }
-
-    _isLoading = true;
-    _error = null;
-    refreshUI();
-
-    try {
-      _results = await _regulationRepository.searchChapters(_query);
-      _isLoading = false;
+  void onSearchSubmitted() {
+    if (_query.isNotEmpty) {
+      _isLoading = true;
       refreshUI();
-    } catch (e) {
-      _error = e.toString();
-      _isLoading = false;
-      refreshUI();
+      _presenter.search(_query);
     }
   }
 
   void onChapterSelected(Map<String, dynamic> chapter) {
     // TODO: Implement chapter selection
+  }
+
+  @override
+  void onDisposed() {
+    _presenter.dispose();
+    super.onDisposed();
   }
 }

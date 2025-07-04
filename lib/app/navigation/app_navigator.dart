@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../router/app_router.dart';
 import '../../domain/repositories/regulation_repository.dart';
 import '../../domain/repositories/settings_repository.dart';
 import '../../domain/repositories/tts_repository.dart';
@@ -9,18 +10,8 @@ import '../pages/table_of_contents/table_of_contents_page.dart';
 import '../pages/notes/notes_view.dart';
 
 class AppNavigator {
-  static void navigateToSearch(
-    BuildContext context, {
-    required RegulationRepository regulationRepository,
-    required SettingsRepository settingsRepository,
-    required TTSRepository ttsRepository,
-  }) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => const SearchPage(),
-      ),
-    );
+  static void navigateToSearch(BuildContext context) {
+    Navigator.pushNamed(context, AppRouteNames.search);
   }
 
   static void navigateToSettings(
@@ -46,6 +37,7 @@ class AppNavigator {
           regulationId: regulationId,
           initialChapterOrderNum: chapterOrderNum,
           settingsRepository: settingsRepository,
+          ttsRepository: ttsRepository,
         ),
       ),
     );
@@ -64,6 +56,7 @@ class AppNavigator {
         builder: (context) => TableOfContentsPage(
           regulationRepository: regulationRepository,
           settingsRepository: settingsRepository,
+          ttsRepository: ttsRepository,
         ),
       ),
     );

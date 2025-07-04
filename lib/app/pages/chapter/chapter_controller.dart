@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/scheduler.dart'; // Added for WidgetsBinding
 import 'package:flutter_clean_architecture/flutter_clean_architecture.dart';
 import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 import '../../../domain/entities/paragraph.dart';
@@ -8,9 +7,9 @@ import '../../../domain/entities/tts_state.dart';
 import '../../../domain/usecases/tts_usecase.dart';
 import '../../../data/repositories/static_regulation_repository.dart';
 import '../../../data/repositories/data_regulation_repository.dart';
-import '../../../data/repositories/data_tts_repository.dart';
 import '../../../data/helpers/database_helper.dart';
 import '../../../domain/repositories/settings_repository.dart';
+import '../../../domain/repositories/tts_repository.dart';
 import '../../utils/text_utils.dart';
 
 class ChapterController extends Controller {
@@ -98,7 +97,6 @@ class ChapterController extends Controller {
   ScrollController getScrollControllerForChapter(int chapterOrderNum) {
     if (!_chapterScrollControllers.containsKey(chapterOrderNum)) {
       _chapterScrollControllers[chapterOrderNum] = ScrollController();
-      print('Created ScrollController for chapter $chapterOrderNum');
     }
     return _chapterScrollControllers[chapterOrderNum]!;
   }
@@ -111,7 +109,6 @@ class ChapterController extends Controller {
   ItemScrollController getItemScrollControllerForChapter(int chapterOrderNum) {
     if (!_itemScrollControllers.containsKey(chapterOrderNum)) {
       _itemScrollControllers[chapterOrderNum] = ItemScrollController();
-      print('Created ItemScrollController for chapter $chapterOrderNum');
     }
     return _itemScrollControllers[chapterOrderNum]!;
   }
@@ -127,39 +124,30 @@ class ChapterController extends Controller {
     }
     if (!_paragraphKeys[chapterOrderNum]!.containsKey(paragraphIndex)) {
       _paragraphKeys[chapterOrderNum]![paragraphIndex] = GlobalKey();
-      print(
-          'Created GlobalKey for chapter $chapterOrderNum, paragraph $paragraphIndex');
     }
     return _paragraphKeys[chapterOrderNum]![paragraphIndex]!;
   }
 
   void clearParagraphKeys(int chapterOrderNum) {
     _paragraphKeys[chapterOrderNum]?.clear();
-    print('Cleared paragraph keys for chapter $chapterOrderNum');
   }
 
   ChapterController({
     required int regulationId,
     required int initialChapterOrderNum,
     required SettingsRepository settingsRepository,
+    required TTSRepository ttsRepository,
     int? scrollToParagraphId,
   })  : _regulationId = regulationId,
         _initialChapterOrderNum = initialChapterOrderNum,
         _scrollToParagraphId = scrollToParagraphId,
         _currentChapterOrderNum = initialChapterOrderNum,
-        _ttsUseCase = TTSUseCase(DataTTSRepository(settingsRepository)) {
-    print('=== CHAPTER CONTROLLER CONSTRUCTOR ===');
-    print('regulationId: $regulationId');
-    print('initialChapterOrderNum: $initialChapterOrderNum');
-    print('scrollToParagraphId: $scrollToParagraphId');
-
+        _ttsUseCase = TTSUseCase(ttsRepository) {
     pageController = PageController(initialPage: initialChapterOrderNum - 1);
     pageTextController = TextEditingController(
       text: initialChapterOrderNum.toString(),
     );
 
-    print('PageController and TextController initialized');
-    print('Calling loadAllChapters...');
     loadAllChapters();
 
     // Subscribe to TTS state changes
@@ -170,25 +158,17 @@ class ChapterController extends Controller {
   }
 
   Future<void> loadAllChapters() async {
-    print('=== LOAD ALL CHAPTERS ===');
-    print('Setting loading state...');
     _isLoading = true;
     refreshUI();
 
     try {
-      print('Getting chapters from repository...');
       final chapters = await _repository.getChapters(_regulationId);
       _totalChapters = chapters.length;
-      print('Got ${chapters.length} chapters');
 
       for (final chapter in chapters) {
-        print('Processing chapter ${chapter.level}: ${chapter.title}');
-
         // Apply saved edits/formatting to paragraphs
         final updatedParagraphs =
             await _dataRepository.applyParagraphEdits(chapter.paragraphs);
-        print(
-            'Applied formatting to ${updatedParagraphs.length} paragraphs in chapter ${chapter.level}');
 
         _chaptersData[chapter.level] = {
           'id': chapter.id,
@@ -199,7 +179,6 @@ class ChapterController extends Controller {
         };
       }
 
-      print('Chapters data loaded successfully with formatting applied');
       _isLoading = false;
       refreshUI();
 
@@ -210,7 +189,6 @@ class ChapterController extends Controller {
         });
       }
     } catch (e) {
-      print('Error loading chapters: $e');
       _error = e.toString();
       _isLoading = false;
       refreshUI();
@@ -228,22 +206,14 @@ class ChapterController extends Controller {
   }
 
   void goToChapter(int chapterOrderNum) {
-    print('=== GO TO CHAPTER ===');
-    print('Target chapter: $chapterOrderNum');
-    print('Total chapters: $_totalChapters');
-    print('PageController has clients: ${pageController.hasClients}');
-
     if (chapterOrderNum >= 1 && chapterOrderNum <= _totalChapters) {
       if (pageController.hasClients) {
-        print(
-            'PageController is attached, animating to page ${chapterOrderNum - 1}');
         pageController.animateToPage(
           chapterOrderNum - 1,
           duration: const Duration(seconds: 1),
           curve: Curves.ease,
         );
       } else {
-        print('PageController not attached yet, scheduling for next frame');
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (pageController.hasClients) {
             pageController.animateToPage(
@@ -251,16 +221,10 @@ class ChapterController extends Controller {
               duration: const Duration(seconds: 1),
               curve: Curves.ease,
             );
-          } else {
-            print(
-                'ERROR: PageController still not attached after post frame callback');
-          }
+          } else {}
         });
       }
-    } else {
-      print(
-          'ERROR: Invalid chapter number $chapterOrderNum (total: $_totalChapters)');
-    }
+    } else {}
   }
 
   void goToPreviousChapter() {
@@ -282,10 +246,6 @@ class ChapterController extends Controller {
   }
 
   void goToParagraph(int paragraphId) {
-    print('=== GO TO PARAGRAPH ===');
-    print('Looking for paragraph ID: $paragraphId');
-    print('Available chapters: ${_chaptersData.keys.toList()}');
-
     // First, try to find the paragraph by ID to get its order number
     int? targetChapterOrderNum;
     int?
@@ -296,14 +256,10 @@ class ChapterController extends Controller {
       final chapterOrderNum = entry.key;
       final chapterData = entry.value;
 
-      print('Searching in chapter $chapterOrderNum (${chapterData['title']})');
       final paragraphs = chapterData['paragraphs'] as List<Paragraph>;
-      print('Chapter $chapterOrderNum has ${paragraphs.length} paragraphs');
 
       for (int i = 0; i < paragraphs.length; i++) {
         final paragraph = paragraphs[i];
-        print(
-            '  Paragraph $i: id=${paragraph.id}, originalId=${paragraph.originalId}, num=${paragraph.num}');
 
         // Try matching by different ID types
         bool found = false;
@@ -314,10 +270,6 @@ class ChapterController extends Controller {
             paragraph.num == paragraphId) {
           found = true;
           paragraphOrderNum = i + 1; // 1-based order number in chapter
-          print(
-              '✅ Found target paragraph in chapter $chapterOrderNum at order number $paragraphOrderNum (index $i)');
-          print(
-              '   Matched by: ${paragraph.originalId == paragraphId ? 'originalId' : paragraph.id == paragraphId ? 'id' : 'num'}');
         }
 
         // Also check HTML anchor IDs in content
@@ -331,9 +283,6 @@ class ChapterController extends Controller {
             if (anchorId == paragraphId) {
               found = true;
               paragraphOrderNum = i + 1; // 1-based order number in chapter
-              print(
-                  '✅ Found target paragraph by HTML anchor in chapter $chapterOrderNum at order number $paragraphOrderNum (index $i)');
-              print('   Matched anchor ID: $anchorId');
               break;
             }
           }
@@ -347,10 +296,6 @@ class ChapterController extends Controller {
               if (int.tryParse(fullNumber) == paragraphId) {
                 found = true;
                 paragraphOrderNum = i + 1; // 1-based order number in chapter
-                print(
-                    '✅ Found target paragraph by content number in chapter $chapterOrderNum at order number $paragraphOrderNum (index $i)');
-                print(
-                    '   Matched content number: ${match.group(1)}.${match.group(2)} -> $fullNumber');
                 break;
               }
             }
@@ -372,10 +317,6 @@ class ChapterController extends Controller {
                 if (combinedNumber == paragraphId) {
                   found = true;
                   paragraphOrderNum = i + 1; // 1-based order number in chapter
-                  print(
-                      '✅ Found target paragraph by combined number in chapter $chapterOrderNum at order number $paragraphOrderNum (index $i)');
-                  print(
-                      '   Matched combined number: $chapterNum.$paragraphNum -> $combinedNumber');
                   break;
                 }
               }
@@ -393,28 +334,20 @@ class ChapterController extends Controller {
     }
 
     if (targetChapterOrderNum == null || paragraphOrderNum == null) {
-      print('❌ Paragraph with ID $paragraphId not found in any chapter');
-      print('Available paragraph IDs in current chapter:');
       final currentChapterData = _chaptersData[_currentChapterOrderNum];
       if (currentChapterData != null) {
         final paragraphs = currentChapterData['paragraphs'] as List<Paragraph>;
         for (int i = 0; i < paragraphs.length && i < 10; i++) {
           // Show first 10
           final p = paragraphs[i];
-          print(
-              '  [${i + 1}] id=${p.id}, originalId=${p.originalId}, num=${p.num}');
 
           // Also show anchor IDs
           final anchorRegex = RegExp('<a\\s+id=["\']([0-9]+)["\']');
           final matches = anchorRegex.allMatches(p.content);
           final anchorIds = matches.map((m) => m.group(1)).toList();
-          if (anchorIds.isNotEmpty) {
-            print('      anchors: ${anchorIds.join(", ")}');
-          }
+          if (anchorIds.isNotEmpty) {}
         }
-        if (paragraphs.length > 10) {
-          print('  ... and ${paragraphs.length - 10} more paragraphs');
-        }
+        if (paragraphs.length > 10) {}
       }
       return;
     }
@@ -423,17 +356,12 @@ class ChapterController extends Controller {
     final finalTargetChapter = targetChapterOrderNum;
     final finalParagraphOrderNum = paragraphOrderNum;
 
-    print(
-        '✅ Target found: Chapter $finalTargetChapter, Paragraph order number $finalParagraphOrderNum');
-
     // Check if we're already on the target chapter
     if (_currentChapterOrderNum == finalTargetChapter) {
-      print('Already on target chapter, scrolling directly...');
       _scrollToParagraphInCurrentChapter(
           finalTargetChapter, finalParagraphOrderNum);
     } else {
       // Navigate to the chapter first
-      print('✅ Navigating to chapter $finalTargetChapter');
       goToChapter(finalTargetChapter);
 
       // Then scroll to the paragraph after the page transition completes
@@ -443,14 +371,11 @@ class ChapterController extends Controller {
           _scrollToParagraphInCurrentChapter(
               finalTargetChapter, finalParagraphOrderNum);
         } else {
-          print('Chapter navigation not completed yet, trying again...');
           Future.delayed(const Duration(milliseconds: 500), () {
             if (_currentChapterOrderNum == finalTargetChapter) {
               _scrollToParagraphInCurrentChapter(
                   finalTargetChapter, finalParagraphOrderNum);
-            } else {
-              print('⚠️  Chapter navigation failed or still in progress');
-            }
+            } else {}
           });
         }
       });
@@ -459,34 +384,22 @@ class ChapterController extends Controller {
 
   void _scrollToParagraphInCurrentChapter(
       int chapterOrderNum, int paragraphOrderNum) {
-    print('=== SCROLL TO PARAGRAPH IN CHAPTER (PRECISE METHOD) ===');
-    print(
-        'Chapter: $chapterOrderNum, Paragraph order number: $paragraphOrderNum');
-
     // First try using ItemScrollController for precise navigation (like original)
     final itemScrollController =
         getItemScrollControllerForChapter(chapterOrderNum);
 
     if (itemScrollController.isAttached) {
-      print('Using ItemScrollController for precise navigation');
-
       // Get paragraphs to validate order number
       final paragraphs =
           _chaptersData[chapterOrderNum]?['paragraphs'] as List<Paragraph>?;
       if (paragraphs == null) {
-        print('❌ No paragraphs found for chapter $chapterOrderNum');
         return;
       }
-
-      print('Total paragraphs in chapter: ${paragraphs.length}');
-      print('Target paragraph order number: $paragraphOrderNum');
 
       // Convert 1-based order number to 0-based index
       final paragraphIndex = paragraphOrderNum - 1;
 
       if (paragraphIndex < 0 || paragraphIndex >= paragraphs.length) {
-        print(
-            '❌ Invalid paragraph order number: $paragraphOrderNum (valid range: 1-${paragraphs.length})');
         return;
       }
 
@@ -496,20 +409,11 @@ class ChapterController extends Controller {
       final targetItemIndex =
           paragraphOrderNum; // Direct mapping: order 1 -> index 1, order 2 -> index 2, etc.
 
-      print(
-          'Jumping to item index: $targetItemIndex (paragraph order $paragraphOrderNum)');
-
       try {
         itemScrollController.jumpTo(index: targetItemIndex);
-        print(
-            '✅ Successfully jumped to item index $targetItemIndex using ItemScrollController');
         return;
-      } catch (e) {
-        print('❌ Error jumping with ItemScrollController: $e');
-        print('Falling back to ScrollController method...');
-      }
+      } catch (e) {}
     } else {
-      print('ItemScrollController not attached yet, trying again in 300ms...');
       Future.delayed(const Duration(milliseconds: 300), () {
         _scrollToParagraphInCurrentChapter(chapterOrderNum, paragraphOrderNum);
       });
@@ -517,11 +421,9 @@ class ChapterController extends Controller {
     }
 
     // Fallback to ScrollController method if ItemScrollController fails
-    print('=== FALLBACK TO SCROLLCONTROLLER METHOD ===');
     final scrollController = getScrollControllerForChapter(chapterOrderNum);
 
     if (!scrollController.hasClients) {
-      print('ScrollController has no clients yet, retrying...');
       Future.delayed(const Duration(milliseconds: 300), () {
         _scrollToParagraphInCurrentChapter(chapterOrderNum, paragraphOrderNum);
       });
@@ -529,25 +431,17 @@ class ChapterController extends Controller {
     }
 
     try {
-      print('ScrollController has clients, calculating position...');
-
       // Get paragraphs to understand total count
       final paragraphs =
           _chaptersData[chapterOrderNum]?['paragraphs'] as List<Paragraph>?;
       if (paragraphs == null) {
-        print('❌ No paragraphs found for chapter $chapterOrderNum');
         return;
       }
-
-      print('Total paragraphs in chapter: ${paragraphs.length}');
-      print('Target paragraph order number: $paragraphOrderNum');
 
       // Convert 1-based order number to 0-based index
       final paragraphIndex = paragraphOrderNum - 1;
 
       if (paragraphIndex < 0 || paragraphIndex >= paragraphs.length) {
-        print(
-            '❌ Invalid paragraph order number: $paragraphOrderNum (valid range: 1-${paragraphs.length})');
         return;
       }
 
@@ -558,21 +452,13 @@ class ChapterController extends Controller {
       final maxScrollExtent = scrollController.position.maxScrollExtent;
       final finalPosition = targetPosition.clamp(0.0, maxScrollExtent);
 
-      print('Calculated target position: $targetPosition');
-      print(
-          'Clamped to max scroll extent: $finalPosition (max: $maxScrollExtent)');
-
       // Scroll to the calculated position
       scrollController.animateTo(
         finalPosition,
         duration: const Duration(milliseconds: 800),
         curve: Curves.easeInOutCubic,
       );
-
-      print('✅ Scroll animation started to position $finalPosition');
     } catch (e) {
-      print('❌ Error in order number scrolling: $e');
-      print('Trying simple fallback...');
       _scrollToParagraphFallback(chapterOrderNum,
           paragraphOrderNum - 1); // Convert to 0-based for fallback
     }
@@ -581,26 +467,17 @@ class ChapterController extends Controller {
   /// Calculate position for a paragraph index using more accurate height estimation
   double _calculatePositionForParagraphIndex(
       List<Paragraph> paragraphs, int targetParagraphIndex) {
-    print(
-        '=== CALCULATING POSITION FOR PARAGRAPH INDEX $targetParagraphIndex ===');
-
     // Title section height (fixed)
     const double titleHeight = 70.0; // title height + padding
     double totalHeight = titleHeight;
-
-    print('Starting with title height: $titleHeight');
 
     // Calculate height for all paragraphs before the target
     for (int i = 0; i < targetParagraphIndex && i < paragraphs.length; i++) {
       final paragraph = paragraphs[i];
       final paragraphHeight = _calculateParagraphHeight(paragraph);
       totalHeight += paragraphHeight;
-
-      print(
-          'Paragraph $i: estimated height = $paragraphHeight, total = $totalHeight');
     }
 
-    print('Final calculated position: $totalHeight');
     return totalHeight;
   }
 
@@ -656,12 +533,9 @@ class ChapterController extends Controller {
 
   // Fallback method using the old calculation approach
   void _scrollToParagraphFallback(int chapterOrderNum, int paragraphIndex) {
-    print('=== FALLBACK SCROLL METHOD ===');
     final scrollController = getScrollControllerForChapter(chapterOrderNum);
 
     if (scrollController.hasClients) {
-      print('ScrollController has clients, using fallback calculation...');
-
       // Simplified fallback calculation - much more conservative
       const titleHeight = 100.0; // Title section height
       const averageParagraphHeight = 80.0; // Average paragraph height
@@ -672,14 +546,10 @@ class ChapterController extends Controller {
       // Add some extra offset to ensure target paragraph is visible
       targetPosition += 20.0;
 
-      print('Fallback calculated position: $targetPosition');
-
       // Get max scroll extent to avoid over-scrolling
       final maxScroll = scrollController.position.maxScrollExtent;
       final finalPosition =
           targetPosition > maxScroll ? maxScroll : targetPosition;
-
-      print('Final fallback position: $finalPosition (max: $maxScroll)');
 
       scrollController.animateTo(
         finalPosition,
@@ -687,7 +557,6 @@ class ChapterController extends Controller {
         curve: Curves.easeInOutCubic,
       );
     } else {
-      print('ScrollController has no clients yet, trying again...');
       // Try again after a short delay
       Future.delayed(const Duration(milliseconds: 300), () {
         _scrollToParagraphInCurrentChapter(chapterOrderNum, paragraphIndex);
@@ -697,15 +566,12 @@ class ChapterController extends Controller {
 
   /// Debug function to print information about paragraphs in current chapter
   void debugPrintChapterParagraphs() {
-    print('=== DEBUG: CHAPTER $currentChapterOrderNum PARAGRAPHS ===');
     final chapterData = getChapterData(currentChapterOrderNum);
     if (chapterData == null) {
-      print('No chapter data available');
       return;
     }
 
     final paragraphs = chapterData['paragraphs'] as List<Paragraph>;
-    print('Total paragraphs: ${paragraphs.length}');
 
     for (int i = 0; i < paragraphs.length && i < 20; i++) {
       // Show first 20
@@ -716,18 +582,11 @@ class ChapterController extends Controller {
           ? '${plainText.substring(0, 50)}...'
           : plainText;
 
-      print('[$i] id=${p.id}, originalId=${p.originalId}, num=${p.num}');
-      print(
-          '    class="${p.paragraphClass}", table=${p.isTable}, nft=${p.isNft}');
-      print('    preview: "$preview"');
-
       // Look for anchor IDs
       final anchorRegex = RegExp('<a\\s+id=["\']([0-9]+)["\']');
       final matches = anchorRegex.allMatches(p.content);
       final anchorIds = matches.map((m) => m.group(1)).toList();
-      if (anchorIds.isNotEmpty) {
-        print('    anchors: ${anchorIds.join(", ")}');
-      }
+      if (anchorIds.isNotEmpty) {}
 
       // Look for number patterns
       final numberRegex = RegExp(r'(\d+)\.(\d+)');
@@ -735,46 +594,31 @@ class ChapterController extends Controller {
       if (numberMatches.isNotEmpty) {
         final numbers =
             numberMatches.map((m) => '${m.group(1)}.${m.group(2)}').toList();
-        print('    numbers: ${numbers.join(", ")}');
       }
-
-      print('');
     }
 
-    if (paragraphs.length > 20) {
-      print('... and ${paragraphs.length - 20} more paragraphs');
-    }
+    if (paragraphs.length > 20) {}
   }
 
   // ========== BOTTOM BAR MANAGEMENT (like BottomBarCubit) ==========
 
   void toggleBottomBar() {
-    print('=== TOGGLE BOTTOM BAR ===');
-    print('Before: isBottomBarExpanded = $_isBottomBarExpanded');
     _isBottomBarExpanded = !_isBottomBarExpanded;
-    print('After: isBottomBarExpanded = $_isBottomBarExpanded');
     refreshUI();
   }
 
   void expandBottomBar() {
-    print('=== EXPAND BOTTOM BAR ===');
-    print('Before: isBottomBarExpanded = $_isBottomBarExpanded');
     _isBottomBarExpanded = true;
-    print('After: isBottomBarExpanded = $_isBottomBarExpanded');
     refreshUI();
   }
 
   void collapseBottomBar() {
-    print('=== COLLAPSE BOTTOM BAR ===');
-    print('Before: isBottomBarExpanded = $_isBottomBarExpanded');
     _isBottomBarExpanded = false;
     _isBottomBarWhiteMode = false;
     _selectedParagraph = null;
     _selectionStart = 0;
     _selectionEnd = 0;
     _lastSelectedText = '';
-    print('After: isBottomBarExpanded = $_isBottomBarExpanded');
-    print('Cleared selection and text');
     refreshUI();
   }
 
@@ -816,14 +660,10 @@ class ChapterController extends Controller {
           try {
             _lastSelectedText = plainText.substring(start, end);
           } catch (e) {
-            print(
-                'Substring error: start=$start, end=$end, length=${plainText.length}');
             _lastSelectedText = '';
             _error = 'Ошибка выделения текста';
           }
         } else {
-          print(
-              'Invalid selection bounds: start=$start, end=$end, length=${plainText.length}');
           _lastSelectedText = '';
         }
       } else {
@@ -833,7 +673,6 @@ class ChapterController extends Controller {
       _error = null; // Clear any previous errors
       refreshUI();
     } catch (e) {
-      print('SetTextSelection error: $e');
       _lastSelectedText = '';
       _error = 'Ошибка при обработке выделения';
       refreshUI();
@@ -841,15 +680,11 @@ class ChapterController extends Controller {
   }
 
   void selectParagraphForFormatting(Paragraph paragraph) {
-    print('=== SELECT PARAGRAPH FOR FORMATTING ===');
-    print('Paragraph ID: ${paragraph.id}');
-    print('Paragraph content: "${paragraph.content}"');
     _selectedParagraph = paragraph;
     _selectionStart = 0;
     _selectionEnd = 0;
     _lastSelectedText = '';
     _isBottomBarExpanded = true;
-    print('Paragraph selected, bottom bar expanded');
     refreshUI();
   }
 
@@ -865,21 +700,13 @@ class ChapterController extends Controller {
 
   Future<void> applyFormatting(Tag tag) async {
     try {
-      print('=== APPLY FORMATTING START ===');
-      print('Tag: $tag');
-
       if (_selectedParagraph == null) {
-        print('ERROR: No paragraph selected');
         _error = 'Параграф не выбран';
         refreshUI();
         return;
       }
 
-      print('Selected paragraph ID: ${_selectedParagraph!.id}');
-      print('Original content: "${_selectedParagraph!.content}"');
-
       if (_selectionStart == _selectionEnd && tag != Tag.c) {
-        print('ERROR: No text selected for formatting');
         _error = tag == Tag.m
             ? 'Вы не выделили участок параграфа, который собираетесь выделить.'
             : 'Вы не выделили участок параграфа, который собираетесь подчеркнуть.';
@@ -891,17 +718,12 @@ class ChapterController extends Controller {
 
       if (tag == Tag.c) {
         // Clear all formatting - this is safe
-        print('Clearing all formatting');
         content = TextUtils.removeAllFormatting(content);
-        print('Content after clearing: "$content"');
       } else {
         // For text formatting, we need to be more careful about HTML vs plain text
         String plainText = TextUtils.parseHtmlString(content);
-        print('Plain text extracted: "$plainText"');
-        print('Plain text length: ${plainText.length}');
 
         if (plainText.isEmpty) {
-          print('ERROR: Empty plain text');
           _error = 'Пустой текст параграфа';
           refreshUI();
           return;
@@ -917,8 +739,6 @@ class ChapterController extends Controller {
           end = temp;
         }
 
-        print('Final selection bounds: start=$start, end=$end');
-
         if (start >= 0 &&
             end > start &&
             start < plainText.length &&
@@ -926,58 +746,42 @@ class ChapterController extends Controller {
           try {
             // Get the selected text from plain text
             String selectedText = plainText.substring(start, end);
-            print('Selected text for formatting: "$selectedText"');
 
             // Create formatting tags
             String openTag =
                 TextUtils.createOpenTag(tag, _colorsList[_activeColorIndex]);
             String closeTag = TextUtils.createCloseTag(tag);
-            print('Open tag: "$openTag"');
-            print('Close tag: "$closeTag"');
 
             // If original content has no HTML tags, work with plain text
             if (content == plainText) {
-              print('Working with plain text (no HTML)');
               String before = plainText.substring(0, start);
               String after = plainText.substring(end);
               content = before + openTag + selectedText + closeTag + after;
             } else {
               // If content has HTML, we need to be more careful
-              print(
-                  'Working with HTML content - adding formatting to existing content');
               // For now, let's append the formatting to the existing content
               // This is a simplified approach - in a real app you'd want more sophisticated HTML manipulation
               String before = plainText.substring(0, start);
               String after = plainText.substring(end);
               content = before + openTag + selectedText + closeTag + after;
             }
-
-            print('Final formatted content: "$content"');
           } catch (substringError) {
-            print('Substring error during formatting: $substringError');
             _error = 'Ошибка при форматировании: ${substringError.toString()}';
             refreshUI();
             return;
           }
         } else {
-          print(
-              'Invalid bounds for formatting: start=$start, end=$end, length=${plainText.length}');
           _error = 'Неверные границы выделения';
           refreshUI();
           return;
         }
       }
 
-      print('Saving formatted content to database...');
       // Save to database using originalId
       try {
         await _dataRepository.saveParagraphEditByOriginalId(
             _selectedParagraph!.originalId, content, _selectedParagraph!);
-        print('✅ Successfully saved to database');
-        print('Original ID: ${_selectedParagraph!.originalId}');
-        print('New content: "$content"');
       } catch (saveError) {
-        print('❌ Failed to save to database: $saveError');
         _error = 'Ошибка сохранения: ${saveError.toString()}';
         refreshUI();
         return;
@@ -986,53 +790,36 @@ class ChapterController extends Controller {
       // Update local data
       final chapterData = getChapterData(_currentChapterOrderNum);
       if (chapterData != null) {
-        print('Updating local chapter data...');
         final paragraphs = List<Paragraph>.from(chapterData['paragraphs']);
         final index =
             paragraphs.indexWhere((p) => p.id == _selectedParagraph!.id);
         if (index != -1) {
-          print('Found paragraph at index $index, updating...');
           paragraphs[index] = _selectedParagraph!.copyWith(content: content);
           _chaptersData[_currentChapterOrderNum] = {
             ...chapterData,
             'paragraphs': paragraphs,
           };
           _selectedParagraph = paragraphs[index];
-          print('Paragraph updated successfully');
-        } else {
-          print('ERROR: Could not find paragraph in chapter data');
-        }
+        } else {}
       }
 
       _error = null;
-      print('=== FORMATTING APPLIED SUCCESSFULLY ===');
       refreshUI();
     } catch (e) {
-      print('Apply formatting error: $e');
       _error = 'Ошибка форматирования: ${e.toString()}';
       refreshUI();
     }
   }
 
   Future<void> markText() async {
-    print('=== MARK TEXT BUTTON PRESSED ===');
-    print('Selected paragraph: ${_selectedParagraph?.id}');
-    print('Selection: start=$_selectionStart, end=$_selectionEnd');
-    print('Selected text: "$_lastSelectedText"');
     await applyFormatting(Tag.m);
   }
 
   Future<void> underlineText() async {
-    print('=== UNDERLINE TEXT BUTTON PRESSED ===');
-    print('Selected paragraph: ${_selectedParagraph?.id}');
-    print('Selection: start=$_selectionStart, end=$_selectionEnd');
-    print('Selected text: "$_lastSelectedText"');
     await applyFormatting(Tag.u);
   }
 
   Future<void> clearFormatting() async {
-    print('=== CLEAR FORMATTING BUTTON PRESSED ===');
-    print('Selected paragraph: ${_selectedParagraph?.id}');
     await applyFormatting(Tag.c);
   }
 
@@ -1071,7 +858,6 @@ class ChapterController extends Controller {
       // Save colors to repository/preferences
       // In original this was: await _regulationRepository.setColorPickerColors(_colorsList);
       // For now, we'll implement a simple version
-      print('Saving colors: $_colorsList');
 
       // You can implement actual persistence here later
       // For example: await _dataRepository.saveColorsList(_colorsList);
@@ -1147,24 +933,16 @@ class ChapterController extends Controller {
 
   @override
   void initListeners() {
-    print('=== INIT LISTENERS ===');
     // Initialize listeners here
   }
 
   @override
   void refreshUI() {
-    print('=== REFRESH UI CALLED ===');
-    print('Current state:');
-    print('  isBottomBarExpanded: $_isBottomBarExpanded');
-    print('  selectedParagraph: ${_selectedParagraph?.id}');
-    print('  lastSelectedText: "$_lastSelectedText"');
-    print('  selectionStart: $_selectionStart, selectionEnd: $_selectionEnd');
     super.refreshUI();
   }
 
   @override
   void onDisposed() {
-    print('=== CONTROLLER DISPOSED ===');
     pageController.dispose();
     pageTextController.dispose();
 
@@ -1173,15 +951,12 @@ class ChapterController extends Controller {
       controller.dispose();
     }
     _chapterScrollControllers.clear();
-    print('Disposed ${_chapterScrollControllers.length} scroll controllers');
 
     // Clear all item scroll controllers (they don't need explicit disposal)
     _itemScrollControllers.clear();
-    print('Cleared ${_itemScrollControllers.length} item scroll controllers');
 
     // Clear all paragraph keys
     _paragraphKeys.clear();
-    print('Cleared all paragraph keys');
 
     super.onDisposed();
   }

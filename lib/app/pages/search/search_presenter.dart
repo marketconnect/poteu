@@ -1,49 +1,42 @@
 import 'package:flutter_clean_architecture/flutter_clean_architecture.dart';
+import '../../../domain/entities/search_result.dart';
+import '../../../domain/usecases/search_usecase.dart';
 import '../../../domain/repositories/regulation_repository.dart';
-import '../../../domain/repositories/settings_repository.dart';
-import '../../../domain/repositories/tts_repository.dart';
-import '../../../domain/usecases/search_chapters_usecase.dart';
 
 class SearchPresenter extends Presenter {
-  late Function(List<Map<String, dynamic>>) onSearchResults;
-  late Function(dynamic) onError;
+  late Function(List<SearchResult>?) onSearchComplete;
+  late Function(dynamic error) onSearchError;
 
-  final SearchChaptersUseCase _searchChaptersUseCase;
+  final SearchUseCase _searchUseCase;
 
   SearchPresenter(RegulationRepository regulationRepository)
-      : _searchChaptersUseCase = SearchChaptersUseCase(regulationRepository);
+      : _searchUseCase = SearchUseCase(regulationRepository);
 
   void search(String query) {
-    _searchChaptersUseCase.execute(
-      _SearchChaptersUseCaseObserver(this),
-      SearchChaptersUseCaseParams(query),
-    );
+    _searchUseCase.execute(_SearchUseCaseObserver(this), query);
   }
 
   @override
   void dispose() {
-    _searchChaptersUseCase.dispose();
+    _searchUseCase.dispose();
   }
 }
 
-class _SearchChaptersUseCaseObserver
-    extends Observer<List<Map<String, dynamic>>> {
+class _SearchUseCaseObserver extends Observer<List<SearchResult>?> {
   final SearchPresenter presenter;
 
-  _SearchChaptersUseCaseObserver(this.presenter);
+  _SearchUseCaseObserver(this.presenter);
 
   @override
   void onComplete() {}
 
   @override
-  void onError(dynamic e) {
-    presenter.onError(e);
+  void onError(e) {
+    presenter.onSearchError(e);
   }
 
   @override
-  void onNext(List<Map<String, dynamic>>? response) {
-    if (response != null) {
-      presenter.onSearchResults(response);
-    }
+  void onNext(List<SearchResult>? response) {
+    presenter.onSearchComplete(response);
   }
 }

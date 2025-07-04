@@ -1,127 +1,91 @@
-import 'package:flutter/material.dart';
-import 'package:flutter_clean_architecture/flutter_clean_architecture.dart'
-    as clean;
-import 'search_controller.dart' as app;
-import '../../../domain/entities/chapter.dart';
+import 'package:flutter/material' hide View;
+import 'package:flutter_clean_architecture/flutter_clean_architecture.dart';
 import '../../../domain/repositories/regulation_repository.dart';
-import '../../../domain/repositories/settings_repository.dart';
-import '../../../domain/repositories/tts_repository.dart';
+import 'search_controller.dart';
 
-class SearchPage extends clean.View {
+class SearchPage extends View {
   final RegulationRepository regulationRepository;
-  final SettingsRepository settingsRepository;
-  final TTSRepository ttsRepository;
 
   const SearchPage({
-    Key? key,
     required this.regulationRepository,
-    required this.settingsRepository,
-    required this.ttsRepository,
-  }) : super(key: key);
+    super.key,
+  });
 
   @override
-  SearchPageState createState() => SearchPageState(
-        regulationRepository,
-        settingsRepository,
-        ttsRepository,
-      );
+  State<StatefulWidget> createState() => _SearchPageState(regulationRepository);
 }
 
-class SearchPageState
-    extends clean.ViewState<SearchPage, app.SearchController> {
-  final RegulationRepository regulationRepository;
-  final SettingsRepository settingsRepository;
-  final TTSRepository ttsRepository;
-  List<Map<String, dynamic>> _searchResults = [];
-
-  SearchPageState(
-    this.regulationRepository,
-    this.settingsRepository,
-    this.ttsRepository,
-  ) : super(app.SearchController(
-          regulationRepository,
-          settingsRepository,
-          ttsRepository,
-        ));
-
-  List<Map<String, dynamic>> get searchResults => _searchResults;
+class _SearchPageState extends ViewState<SearchPage, SearchController> {
+  _SearchPageState(RegulationRepository regulationRepository)
+      : super(SearchController(regulationRepository));
 
   @override
   Widget get view {
-    return clean.ControlledWidgetBuilder<app.SearchController>(
-      builder: (context, controller) {
-        return Scaffold(
-          appBar: AppBar(
-            title: TextField(
-              onChanged: controller.onSearchQueryChanged,
-              decoration: const InputDecoration(
-                hintText: 'Search...',
-                border: InputBorder.none,
-                hintStyle: TextStyle(color: Colors.white70),
-              ),
-              style: const TextStyle(color: Colors.white),
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Поиск'),
+      ),
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: ControlledWidgetBuilder<SearchController>(
+              builder: (context, controller) {
+                return TextField(
+                  onChanged: controller.onSearchQueryChanged,
+                  onSubmitted: (_) => controller.onSearchSubmitted(),
+                  decoration: const InputDecoration(
+                    hintText: 'Введите текст для поиска...',
+                    prefixIcon: Icon(Icons.search),
+                    border: OutlineInputBorder(),
+                  ),
+                );
+              },
             ),
           ),
-          body: _buildBody(controller),
-        );
-      },
-    );
-  }
+          Expanded(
+            child: ControlledWidgetBuilder<SearchController>(
+              builder: (context, controller) {
+                if (controller.isLoading) {
+                  return const Center(child: CircularProgressIndicator());
+                }
 
-  Widget _buildBody(app.SearchController controller) {
-    if (controller.isLoading) {
-      return const Center(child: CircularProgressIndicator());
-    }
+                final results = controller.results;
+                if (results == null) {
+                  return const Center(
+                    child: Text('Введите минимум 3 символа для поиска'),
+                  );
+                }
 
-    if (controller.error != null) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(controller.error!),
-            ElevatedButton(
-              onPressed: controller.search,
-              child: const Text('Retry'),
+                if (results.isEmpty) {
+                  return const Center(
+                    child: Text('Ничего не найдено'),
+                  );
+                }
+
+                return ListView.builder(
+                  itemCount: results.length,
+                  itemBuilder: (context, index) {
+                    final result = results[index];
+                    return ListTile(
+                      title: Text(
+                          'Глава ${result.chapterOrderNum}: ${result.chapterTitle}'),
+                      subtitle: Text(
+                        result.highlightedText,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      onTap: () {
+                        // TODO: Navigate to the specific paragraph
+                      },
+                    );
+                  },
+                );
+              },
             ),
-          ],
-        ),
-      );
-    }
-
-    if (controller.results.isEmpty) {
-      return const Center(
-        child: Text('No results found'),
-      );
-    }
-
-    return ListView.builder(
-      itemCount: controller.results.length,
-      itemBuilder: (context, index) {
-        final chapter = controller.results[index];
-        return _buildSearchResultTile(chapter, controller);
-      },
-    );
-  }
-
-  Widget _buildSearchResultTile(
-      Map<String, dynamic> chapter, app.SearchController controller) {
-    return ListTile(
-      title: Text(chapter['title']),
-      subtitle: Text(
-        chapter['content'],
-        maxLines: 2,
-        overflow: TextOverflow.ellipsis,
+          ),
+        ],
       ),
-      onTap: () => controller.onChapterSelected(chapter),
-    );
-  }
-
-  void onChapterSelected(Map<String, dynamic> chapter) {
-    // TODO: Navigate to chapter detail
-    Navigator.pushNamed(
-      context,
-      '/chapter',
-      arguments: chapter,
     );
   }
 }

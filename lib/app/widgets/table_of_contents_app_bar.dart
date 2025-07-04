@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../navigation/app_navigator.dart';
 
 class TableOfContentsAppBar extends StatelessWidget {
   const TableOfContentsAppBar({
@@ -46,18 +47,8 @@ class TableOfContentsAppBar extends StatelessWidget {
           ),
         ),
         IconButton(
-          onPressed: () async {
-            Navigator.pushNamed(
-              context,
-              '/search',
-            );
-          },
-          icon: Icon(
-            Icons.search,
-            size: Theme.of(context).appBarTheme.iconTheme?.size ?? 27,
-            color:
-                Theme.of(context).appBarTheme.iconTheme?.color ?? Colors.black,
-          ),
+          icon: const Icon(Icons.search),
+          onPressed: () => AppNavigator.navigateToSearch(context),
         ),
       ],
     );
