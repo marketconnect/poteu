@@ -19,6 +19,9 @@ class SearchPageController extends Controller {
   bool _isLoading = false;
   List<SearchResult> _searchResults = [];
 
+  // Callback for navigation
+  Function(SearchResult)? onResultSelected;
+
   SearchPageController({
     required RegulationRepository regulationRepository,
     required SettingsRepository settingsRepository,
@@ -64,14 +67,9 @@ class SearchPageController extends Controller {
   }
 
   void goToSearchResult(SearchResult result) {
-    AppNavigator.navigateToChapter(
-      getContext(),
-      1, // POTEU regulation ID
-      result.chapterOrderNum,
-      scrollToParagraphId: result.paragraphId,
-      settingsRepository: _settingsRepository,
-      ttsRepository: _ttsRepository,
-    );
+    if (onResultSelected != null) {
+      onResultSelected!(result);
+    }
   }
 
   @override

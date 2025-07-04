@@ -819,15 +819,10 @@ class ChapterViewState extends ViewState<ChapterView, ChapterController> {
       ),
       child: IconButton(
         onPressed: () => _showColorPicker(controller),
-        icon: Image.asset(
-          'assets/images/colors.png',
-          width: height * 0.1,
-          height: height * 0.1,
-          errorBuilder: (context, error, stackTrace) => Icon(
-            Icons.palette,
-            color: Theme.of(context).primaryColor,
-            size: height * 0.1,
-          ),
+        icon: Icon(
+          Icons.palette,
+          color: Theme.of(context).primaryColor,
+          size: height * 0.1,
         ),
       ),
     );
@@ -901,89 +896,17 @@ class ChapterViewState extends ViewState<ChapterView, ChapterController> {
   }
 
   void _showSearchDialog(ChapterController controller) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          backgroundColor: Theme.of(context).dialogBackgroundColor,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(15.0),
-          ),
-          contentPadding: const EdgeInsets.all(16.0),
-          content: SizedBox(
-            width: MediaQuery.of(context).size.width * 0.9,
-            height: MediaQuery.of(context).size.height * 0.8,
-            child: Column(
-              children: [
-                TextField(
-                  autofocus: true,
-                  onChanged: controller.search,
-                  decoration: InputDecoration(
-                    hintText: 'Поиск',
-                    prefixIcon: const Icon(Icons.search),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10.0),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16.0),
-                Expanded(
-                  child: controller.isSearching
-                      ? const Center(child: CircularProgressIndicator())
-                      : controller.searchResults.isEmpty &&
-                              controller.searchQuery.isNotEmpty
-                          ? const Center(child: Text('Ничего не найдено'))
-                          : ListView.builder(
-                              itemCount: controller.searchResults.length,
-                              itemBuilder: (context, index) {
-                                final result = controller.searchResults[index];
-                                return ListTile(
-                                  title: RichText(
-                                    text: TextSpan(
-                                      children: [
-                                        TextSpan(
-                                          text: result.text
-                                              .substring(0, result.matchStart),
-                                          style: Theme.of(context)
-                                              .textTheme
-                                              .bodyMedium,
-                                        ),
-                                        TextSpan(
-                                          text: result.text.substring(
-                                            result.matchStart,
-                                            result.matchEnd,
-                                          ),
-                                          style: Theme.of(context)
-                                              .textTheme
-                                              .bodyMedium
-                                              ?.copyWith(
-                                                backgroundColor: Colors.yellow,
-                                                fontWeight: FontWeight.bold,
-                                              ),
-                                        ),
-                                        TextSpan(
-                                          text: result.text
-                                              .substring(result.matchEnd),
-                                          style: Theme.of(context)
-                                              .textTheme
-                                              .bodyMedium,
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  onTap: () {
-                                    Navigator.pop(context);
-                                    controller.goToSearchResult(result);
-                                  },
-                                );
-                              },
-                            ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => _SearchScreen(
+          controller: controller,
+          regulationId: widget.regulationId,
+          settingsRepository: widget.settingsRepository,
+          ttsRepository: widget.ttsRepository,
+          regulationRepository: widget.regulationRepository,
+        ),
+      ),
     );
   }
 
@@ -1487,5 +1410,233 @@ class ChapterViewState extends ViewState<ChapterView, ChapterController> {
     } catch (e) {
       return false;
     }
+  }
+}
+
+class _SearchScreen extends StatefulWidget {
+  final ChapterController controller;
+  final int regulationId;
+  final SettingsRepository settingsRepository;
+  final TTSRepository ttsRepository;
+  final RegulationRepository regulationRepository;
+
+  const _SearchScreen({
+    required this.controller,
+    required this.regulationId,
+    required this.settingsRepository,
+    required this.ttsRepository,
+    required this.regulationRepository,
+  });
+
+  @override
+  State<_SearchScreen> createState() => _SearchScreenState();
+}
+
+class _SearchScreenState extends State<_SearchScreen> {
+  final TextEditingController _searchController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _searchController.addListener(() {
+      widget.controller.search(_searchController.text);
+    });
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: PreferredSize(
+        preferredSize: Size.fromHeight(
+          Theme.of(context).appBarTheme.toolbarHeight ?? 74.0,
+        ),
+        child: Padding(
+          padding: EdgeInsets.only(
+            top: MediaQuery.of(context).padding.top,
+            right: MediaQuery.of(context).size.width * 0.1,
+          ),
+          child: RegulationAppBar(
+            child: Row(
+              children: [
+                IconButton(
+                  onPressed: () => Navigator.pop(context),
+                  icon: Icon(
+                    Icons.arrow_back,
+                    size: Theme.of(context).appBarTheme.iconTheme?.size ?? 27,
+                    color: Theme.of(context).appBarTheme.iconTheme?.color,
+                  ),
+                ),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.only(left: 15.0),
+                    child: TextField(
+                      controller: _searchController,
+                      autofocus: true,
+                      cursorColor:
+                          Theme.of(context).appBarTheme.foregroundColor,
+                      style: Theme.of(context).appBarTheme.toolbarTextStyle,
+                      decoration: InputDecoration(
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 7,
+                        ),
+                        prefixIconConstraints: const BoxConstraints(
+                          minWidth: 22,
+                          maxHeight: 22,
+                        ),
+                        prefixIcon: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 12.0),
+                          child: Icon(
+                            Icons.search,
+                            color:
+                                Theme.of(context).appBarTheme.foregroundColor,
+                          ),
+                        ),
+                        border: const OutlineInputBorder(),
+                        focusedBorder: OutlineInputBorder(
+                          borderSide: BorderSide(
+                            color: Theme.of(context).iconTheme.color!,
+                          ),
+                        ),
+                        isDense: true,
+                        hintText: 'Поиск',
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+      body: StreamBuilder<void>(
+        stream: Stream.periodic(const Duration(milliseconds: 100), (_) {}),
+        builder: (context, snapshot) {
+          final controller = widget.controller;
+
+          if (controller.isSearching) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          if (controller.searchResults.isEmpty &&
+              controller.searchQuery.isNotEmpty) {
+            return Container(
+              color: Theme.of(context).scaffoldBackgroundColor,
+              child: Center(
+                child: Text(
+                  'По вашему запросу ничего не найдено.',
+                  style: Theme.of(context).textTheme.bodyLarge,
+                ),
+              ),
+            );
+          }
+
+          return ListView.builder(
+            itemCount: controller.searchResults.length,
+            itemBuilder: (context, index) {
+              final result = controller.searchResults[index];
+              final width = MediaQuery.of(context).size.width;
+
+              return Card(
+                elevation: 0,
+                color: Theme.of(context).scaffoldBackgroundColor,
+                margin: EdgeInsets.zero,
+                shape: Border(
+                  bottom: BorderSide(
+                    width: 1.0,
+                    color: Theme.of(context).shadowColor,
+                  ),
+                ),
+                child: Padding(
+                  padding: EdgeInsets.fromLTRB(
+                    width * 0.01,
+                    width * 0.06,
+                    width * 0.01,
+                    width * 0.05,
+                  ),
+                  child: Column(
+                    children: [
+                      Row(
+                        children: [
+                          GestureDetector(
+                            onTap: () {
+                              Navigator.pop(context);
+                              // Navigate to the chapter with the search result
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => ChapterView(
+                                    regulationId: widget.regulationId,
+                                    initialChapterOrderNum:
+                                        result.chapterOrderNum,
+                                    scrollToParagraphId: result.paragraphId,
+                                    settingsRepository:
+                                        widget.settingsRepository,
+                                    ttsRepository: widget.ttsRepository,
+                                    regulationRepository:
+                                        widget.regulationRepository,
+                                  ),
+                                ),
+                              );
+                            },
+                            child: Row(
+                              children: [
+                                SizedBox(width: width * 0.05),
+                                SizedBox(
+                                  width: width * 0.85,
+                                  child: RichText(
+                                    text: TextSpan(
+                                      children: [
+                                        TextSpan(
+                                          text: result.text
+                                              .substring(0, result.matchStart),
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .bodyMedium,
+                                        ),
+                                        TextSpan(
+                                          text: result.text.substring(
+                                            result.matchStart,
+                                            result.matchEnd,
+                                          ),
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .bodyMedium
+                                              ?.copyWith(
+                                                backgroundColor: Colors.yellow,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                        ),
+                                        TextSpan(
+                                          text: result.text
+                                              .substring(result.matchEnd),
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .bodyMedium,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          );
+        },
+      ),
+    );
   }
 }

@@ -6,6 +6,7 @@ import '../../../domain/repositories/regulation_repository.dart';
 import '../../../domain/repositories/settings_repository.dart';
 import '../../../domain/repositories/tts_repository.dart';
 import '../../widgets/regulation_app_bar.dart';
+import '../chapter/chapter_view.dart';
 import 'search_controller.dart';
 
 class SearchView extends View {
@@ -138,8 +139,28 @@ class SearchViewState extends ViewState<SearchView, SearchPageController> {
                                 Row(
                                   children: [
                                     GestureDetector(
-                                      onTap: () =>
-                                          controller.goToSearchResult(result),
+                                      onTap: () {
+                                        // Navigate to chapter with search result
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (context) => ChapterView(
+                                              regulationId:
+                                                  1, // POTEU regulation ID
+                                              initialChapterOrderNum:
+                                                  result.chapterOrderNum,
+                                              scrollToParagraphId:
+                                                  result.paragraphId,
+                                              settingsRepository:
+                                                  widget.settingsRepository,
+                                              ttsRepository:
+                                                  widget.ttsRepository,
+                                              regulationRepository:
+                                                  widget.regulationRepository,
+                                            ),
+                                          ),
+                                        );
+                                      },
                                       child: Row(
                                         children: [
                                           SizedBox(
