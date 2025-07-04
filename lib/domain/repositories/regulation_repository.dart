@@ -1,6 +1,7 @@
 import '../entities/regulation.dart';
 import '../entities/chapter.dart';
 import '../entities/paragraph.dart';
+import '../entities/search_result.dart';
 
 abstract class RegulationRepository {
   Future<List<Regulation>> getRegulations();
@@ -34,4 +35,9 @@ abstract class RegulationRepository {
   Future<Map<String, dynamic>?> getParagraphEdit(int originalParagraphId);
   Future<void> saveParagraphEditByOriginalId(
       int originalId, String content, Paragraph originalParagraph);
+
+  Future<List<SearchResult>> searchInRegulation({
+    required int regulationId,
+    required String query,
+  });
 }

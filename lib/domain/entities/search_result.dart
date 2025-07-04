@@ -1,17 +1,17 @@
 class SearchResult {
-  final int chapterId;
-  final int chapterOrderNum;
-  final String chapterTitle;
+  final int id;
   final int paragraphId;
-  final String paragraphContent;
-  final String highlightedText;
+  final int chapterOrderNum;
+  final String text;
+  final int matchStart;
+  final int matchEnd;
 
   SearchResult({
-    required this.chapterId,
-    required this.chapterOrderNum,
-    required this.chapterTitle,
+    required this.id,
     required this.paragraphId,
-    required this.paragraphContent,
-    required this.highlightedText,
+    required this.chapterOrderNum,
+    required this.text,
+    required this.matchStart,
+    required this.matchEnd,
   });
 }

@@ -5,6 +5,8 @@ import '../../domain/repositories/regulation_repository.dart';
 import '../static/regulation.dart' as static_data;
 import '../static/chapter.dart' as static_model;
 import '../static/paragraph.dart' as static_model;
+import '../../domain/entities/search_result.dart';
+import '../../app/utils/text_utils.dart';
 
 class StaticRegulationRepository implements RegulationRepository {
   // Маппер static->domain для параграфа
@@ -216,5 +218,53 @@ class StaticRegulationRepository implements RegulationRepository {
       domain.Paragraph originalParagraph) async {
     // Static repository - editing not supported
     throw UnsupportedError('Editing not supported in static repository');
+  }
+
+  @override
+  Future<List<SearchResult>> searchInRegulation({
+    required int regulationId,
+    required String query,
+  }) async {
+    if (query.isEmpty) return [];
+
+    final results = <SearchResult>[];
+    final chapters = await getChapters(regulationId);
+    int searchResultId = 0;
+
+    for (var chapter in chapters) {
+      for (var paragraph in chapter.paragraphs) {
+        final text = TextUtils.parseHtmlString(paragraph.content);
+        final lowerText = text.toLowerCase();
+        final lowerQuery = query.toLowerCase();
+
+        int startIndex = lowerText.indexOf(lowerQuery);
+        while (startIndex != -1) {
+          // Get context around the found text
+          int contextStart = startIndex - 50;
+          if (contextStart < 0) contextStart = 0;
+
+          int contextEnd = startIndex + query.length + 50;
+          if (contextEnd > text.length) contextEnd = text.length;
+
+          final contextText = text.substring(contextStart, contextEnd);
+          final matchStartInContext = startIndex - contextStart;
+          final matchEndInContext = matchStartInContext + query.length;
+
+          results.add(SearchResult(
+            id: searchResultId++,
+            paragraphId: paragraph.id,
+            chapterOrderNum: chapter.level,
+            text: contextText,
+            matchStart: matchStartInContext,
+            matchEnd: matchEndInContext,
+          ));
+
+          // Find next occurrence
+          startIndex = lowerText.indexOf(lowerQuery, startIndex + 1);
+        }
+      }
+    }
+
+    return results;
   }
 }

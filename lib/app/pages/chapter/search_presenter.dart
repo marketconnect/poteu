@@ -4,16 +4,23 @@ import '../../../domain/usecases/search_usecase.dart';
 import '../../../domain/repositories/regulation_repository.dart';
 
 class SearchPresenter extends Presenter {
-  late Function(List<SearchResult>?) onSearchComplete;
-  late Function(dynamic error) onSearchError;
-
   final SearchUseCase _searchUseCase;
+
+  // Functions to be called when search completes
+  Function(List<SearchResult>)? onSearchComplete;
+  Function(dynamic)? onSearchError;
 
   SearchPresenter(RegulationRepository regulationRepository)
       : _searchUseCase = SearchUseCase(regulationRepository);
 
-  void search(String query) {
-    _searchUseCase.execute(_SearchUseCaseObserver(this), query);
+  void search(int regulationId, String query) {
+    _searchUseCase.execute(
+      _SearchObserver(this),
+      SearchUseCaseParams(
+        regulationId: regulationId,
+        query: query,
+      ),
+    );
   }
 
   @override
@@ -22,21 +29,25 @@ class SearchPresenter extends Presenter {
   }
 }
 
-class _SearchUseCaseObserver extends Observer<List<SearchResult>?> {
+class _SearchObserver implements Observer<List<SearchResult>> {
   final SearchPresenter presenter;
 
-  _SearchUseCaseObserver(this.presenter);
+  _SearchObserver(this.presenter);
 
   @override
   void onComplete() {}
 
   @override
   void onError(e) {
-    presenter.onSearchError(e);
+    if (presenter.onSearchError != null) {
+      presenter.onSearchError!(e);
+    }
   }
 
   @override
   void onNext(List<SearchResult>? response) {
-    presenter.onSearchComplete(response);
+    if (presenter.onSearchComplete != null) {
+      presenter.onSearchComplete!(response ?? []);
+    }
   }
 }

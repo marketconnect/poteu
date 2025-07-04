@@ -1,77 +1,83 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_clean_architecture/flutter_clean_architecture.dart';
-import '../../../domain/entities/chapter.dart';
+
+import '../../../domain/entities/search_result.dart';
 import '../../../domain/repositories/regulation_repository.dart';
 import '../../../domain/repositories/settings_repository.dart';
 import '../../../domain/repositories/tts_repository.dart';
-import '../../../domain/entities/search_result.dart';
-import 'search_presenter.dart';
+import '../../navigation/app_navigator.dart';
 
-class SearchController extends Controller {
+class SearchPageController extends Controller {
   final RegulationRepository _regulationRepository;
   final SettingsRepository _settingsRepository;
   final TTSRepository _ttsRepository;
-  final SearchPresenter _presenter;
-
+  final TextEditingController _searchController;
+  final List<String> _searchQueries = [];
+  int _searchQueriesIndex = 0;
+  Timer? _debounceTimer;
   bool _isLoading = false;
-  String? _error;
-  List<SearchResult>? _results;
-  String _query = '';
+  List<SearchResult> _searchResults = [];
 
+  SearchPageController({
+    required RegulationRepository regulationRepository,
+    required SettingsRepository settingsRepository,
+    required TTSRepository ttsRepository,
+  })  : _regulationRepository = regulationRepository,
+        _settingsRepository = settingsRepository,
+        _ttsRepository = ttsRepository,
+        _searchController = TextEditingController();
+
+  TextEditingController get searchController => _searchController;
   bool get isLoading => _isLoading;
-  String? get error => _error;
-  List<SearchResult>? get results => _results;
-
-  SearchController(
-    this._regulationRepository,
-    this._settingsRepository,
-    this._ttsRepository,
-  )   : _presenter = SearchPresenter(_regulationRepository),
-        super();
+  List<SearchResult> get searchResults => _searchResults;
 
   @override
-  void initListeners() {
-    _presenter.onSearchComplete = (results) {
-      _results = results;
-      _isLoading = false;
-      refreshUI();
-    };
+  void initListeners() {}
 
-    _presenter.onSearchError = (error) {
-      _results = null;
-      _isLoading = false;
-      refreshUI();
-    };
-  }
+  void search() {
+    if (_debounceTimer?.isActive ?? false) _debounceTimer?.cancel();
 
-  void onSearchQueryChanged(String query) {
-    _query = query;
-    if (query.length >= 3) {
+    _debounceTimer = Timer(const Duration(milliseconds: 300), () async {
+      if (_searchController.text.isEmpty) {
+        _searchResults = [];
+        refreshUI();
+        return;
+      }
+
       _isLoading = true;
       refreshUI();
-      _presenter.search(query);
-    } else {
-      _results = null;
+
+      try {
+        _searchResults = await _regulationRepository.searchInRegulation(
+          regulationId: 1, // POTEU regulation ID
+          query: _searchController.text,
+        );
+      } catch (e) {
+        print('Search error: $e');
+        _searchResults = [];
+      }
+
+      _isLoading = false;
       refreshUI();
-    }
+    });
   }
 
-  void onSearchSubmitted() {
-    if (_query.isNotEmpty) {
-      _isLoading = true;
-      refreshUI();
-      _presenter.search(_query);
-    }
-  }
-
-  void onChapterSelected(Map<String, dynamic> chapter) {
-    // TODO: Implement chapter selection
+  void goToSearchResult(SearchResult result) {
+    AppNavigator.navigateToChapter(
+      getContext(),
+      1, // POTEU regulation ID
+      result.chapterOrderNum,
+      scrollToParagraphId: result.paragraphId,
+      settingsRepository: _settingsRepository,
+      ttsRepository: _ttsRepository,
+    );
   }
 
   @override
   void onDisposed() {
-    _presenter.dispose();
+    _searchController.dispose();
+    _debounceTimer?.cancel();
     super.onDisposed();
   }
 }

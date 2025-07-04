@@ -3,38 +3,42 @@ import 'package:flutter_clean_architecture/flutter_clean_architecture.dart';
 import '../entities/search_result.dart';
 import '../repositories/regulation_repository.dart';
 
-class SearchUseCase extends UseCase<List<SearchResult>, String?> {
+class SearchUseCase extends UseCase<List<SearchResult>, SearchUseCaseParams> {
   final RegulationRepository _regulationRepository;
 
   SearchUseCase(this._regulationRepository);
 
   @override
-  Future<Stream<List<SearchResult>?>> buildUseCaseStream(String? query) async {
-    final StreamController<List<SearchResult>?> controller = StreamController();
+  Future<Stream<List<SearchResult>>> buildUseCaseStream(
+      SearchUseCaseParams? params) async {
+    final controller = StreamController<List<SearchResult>>();
     try {
-      if (query == null || query.isEmpty) {
-        controller.add(null);
+      if (params == null || params.query.isEmpty) {
+        controller.add([]);
         controller.close();
         return controller.stream;
       }
 
-      final results = await _regulationRepository.searchChapters(query);
-      final searchResults = results
-          .map((result) => SearchResult(
-                chapterId: result['chapterId'] as int,
-                chapterOrderNum: result['chapterOrderNum'] as int,
-                chapterTitle: result['chapterTitle'] as String,
-                paragraphId: result['paragraphId'] as int,
-                paragraphContent: result['paragraphContent'] as String,
-                highlightedText: result['highlightedText'] as String,
-              ))
-          .toList();
+      final results = await _regulationRepository.searchInRegulation(
+        regulationId: params.regulationId,
+        query: params.query,
+      );
 
-      controller.add(searchResults);
+      controller.add(results);
       controller.close();
     } catch (e) {
       controller.addError(e);
     }
     return controller.stream;
   }
+}
+
+class SearchUseCaseParams {
+  final int regulationId;
+  final String query;
+
+  SearchUseCaseParams({
+    required this.regulationId,
+    required this.query,
+  });
 }

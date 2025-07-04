@@ -8,7 +8,9 @@ import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 import '../../../domain/entities/paragraph.dart';
 import '../../../domain/repositories/settings_repository.dart';
 import '../../../domain/repositories/tts_repository.dart';
+import '../../../domain/repositories/regulation_repository.dart';
 import '../../widgets/regulation_app_bar.dart';
+import '../../widgets/search_dialog.dart';
 import '../../utils/text_utils.dart';
 import 'chapter_controller.dart';
 import 'dart:ui';
@@ -19,6 +21,7 @@ class ChapterView extends View {
   final int? scrollToParagraphId;
   final SettingsRepository settingsRepository;
   final TTSRepository ttsRepository;
+  final RegulationRepository regulationRepository;
 
   const ChapterView({
     Key? key,
@@ -26,6 +29,7 @@ class ChapterView extends View {
     required this.initialChapterOrderNum,
     required this.settingsRepository,
     required this.ttsRepository,
+    required this.regulationRepository,
     this.scrollToParagraphId,
   }) : super(key: key);
 
@@ -36,6 +40,7 @@ class ChapterView extends View {
           initialChapterOrderNum: initialChapterOrderNum,
           settingsRepository: settingsRepository,
           ttsRepository: ttsRepository,
+          regulationRepository: regulationRepository,
           scrollToParagraphId: scrollToParagraphId,
         ),
       );
@@ -896,74 +901,89 @@ class ChapterViewState extends ViewState<ChapterView, ChapterController> {
   }
 
   void _showSearchDialog(ChapterController controller) {
-    final searchController = TextEditingController();
-    List<Paragraph> searchResults = [];
-
     showDialog(
       context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setState) => AlertDialog(
-          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-          title: const Text('Поиск по главе'),
-          content: Container(
-            width: double.maxFinite,
-            constraints: BoxConstraints(
-              maxHeight: MediaQuery.of(context).size.height * 0.7,
-            ),
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: Theme.of(context).dialogBackgroundColor,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(15.0),
+          ),
+          contentPadding: const EdgeInsets.all(16.0),
+          content: SizedBox(
+            width: MediaQuery.of(context).size.width * 0.9,
+            height: MediaQuery.of(context).size.height * 0.8,
             child: Column(
-              mainAxisSize: MainAxisSize.min,
               children: [
-                TextFormField(
-                  controller: searchController,
-                  style: Theme.of(context).textTheme.bodyLarge,
-                  decoration: const InputDecoration(
-                    border: OutlineInputBorder(),
-                    hintText: 'Введите текст для поиска...',
-                    prefixIcon: Icon(Icons.search),
-                  ),
-                  onChanged: (value) {
-                    setState(() {
-                      searchResults = controller.searchInCurrentChapter(value);
-                    });
-                  },
-                ),
-                const SizedBox(height: 16),
-                if (searchResults.isNotEmpty)
-                  Expanded(
-                    child: ListView.builder(
-                      shrinkWrap: true,
-                      itemCount: searchResults.length,
-                      itemBuilder: (context, index) {
-                        final paragraph = searchResults[index];
-                        return ListTile(
-                          title: Text(
-                            TextUtils.parseHtmlString(paragraph.content)
-                                        .length >
-                                    100
-                                ? '${TextUtils.parseHtmlString(paragraph.content).substring(0, 100)}...'
-                                : TextUtils.parseHtmlString(paragraph.content),
-                            style: Theme.of(context).textTheme.bodySmall,
-                          ),
-                          onTap: () {
-                            Navigator.pop(context);
-                            controller.goToParagraph(paragraph.id);
-                            _showSnackBar('Переход к параграфу');
-                          },
-                        );
-                      },
+                TextField(
+                  autofocus: true,
+                  onChanged: controller.search,
+                  decoration: InputDecoration(
+                    hintText: 'Поиск',
+                    prefixIcon: const Icon(Icons.search),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10.0),
                     ),
                   ),
+                ),
+                const SizedBox(height: 16.0),
+                Expanded(
+                  child: controller.isSearching
+                      ? const Center(child: CircularProgressIndicator())
+                      : controller.searchResults.isEmpty &&
+                              controller.searchQuery.isNotEmpty
+                          ? const Center(child: Text('Ничего не найдено'))
+                          : ListView.builder(
+                              itemCount: controller.searchResults.length,
+                              itemBuilder: (context, index) {
+                                final result = controller.searchResults[index];
+                                return ListTile(
+                                  title: RichText(
+                                    text: TextSpan(
+                                      children: [
+                                        TextSpan(
+                                          text: result.text
+                                              .substring(0, result.matchStart),
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .bodyMedium,
+                                        ),
+                                        TextSpan(
+                                          text: result.text.substring(
+                                            result.matchStart,
+                                            result.matchEnd,
+                                          ),
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .bodyMedium
+                                              ?.copyWith(
+                                                backgroundColor: Colors.yellow,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                        ),
+                                        TextSpan(
+                                          text: result.text
+                                              .substring(result.matchEnd),
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .bodyMedium,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  onTap: () {
+                                    Navigator.pop(context);
+                                    controller.goToSearchResult(result);
+                                  },
+                                );
+                              },
+                            ),
+                ),
               ],
             ),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Закрыть'),
-            ),
-          ],
-        ),
-      ),
+        );
+      },
     );
   }
 
@@ -1316,6 +1336,7 @@ class ChapterViewState extends ViewState<ChapterView, ChapterController> {
                   scrollToParagraphId: paragraphId,
                   settingsRepository: widget.settingsRepository,
                   ttsRepository: widget.ttsRepository,
+                  regulationRepository: widget.regulationRepository,
                 ),
               ),
             );
@@ -1344,6 +1365,7 @@ class ChapterViewState extends ViewState<ChapterView, ChapterController> {
                 scrollToParagraphId: null,
                 settingsRepository: widget.settingsRepository,
                 ttsRepository: widget.ttsRepository,
+                regulationRepository: widget.regulationRepository,
               ),
             ),
           );
@@ -1405,6 +1427,7 @@ class ChapterViewState extends ViewState<ChapterView, ChapterController> {
                       scrollToParagraphId: int.parse('$chapter$paragraph'),
                       settingsRepository: widget.settingsRepository,
                       ttsRepository: widget.ttsRepository,
+                      regulationRepository: widget.regulationRepository,
                     ),
                   ),
                 );
@@ -1431,6 +1454,7 @@ class ChapterViewState extends ViewState<ChapterView, ChapterController> {
                   scrollToParagraphId: null,
                   settingsRepository: widget.settingsRepository,
                   ttsRepository: widget.ttsRepository,
+                  regulationRepository: widget.regulationRepository,
                 ),
               ),
             );

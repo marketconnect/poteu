@@ -2,7 +2,9 @@ import "../../domain/entities/chapter.dart";
 import "../../domain/entities/regulation.dart";
 import "../../domain/entities/paragraph.dart";
 import "../../domain/repositories/regulation_repository.dart";
+import "../../domain/entities/search_result.dart";
 import "../helpers/database_helper.dart";
+import "../../app/utils/text_utils.dart";
 
 class DataRegulationRepository implements RegulationRepository {
   final DatabaseHelper _db;
@@ -375,5 +377,53 @@ class DataRegulationRepository implements RegulationRepository {
     if (verification.isNotEmpty) {
       print('Saved content: "${verification.first['content']}"');
     }
+  }
+
+  @override
+  Future<List<SearchResult>> searchInRegulation({
+    required int regulationId,
+    required String query,
+  }) async {
+    if (query.isEmpty) return [];
+
+    final results = <SearchResult>[];
+    final chapters = await getChapters(regulationId);
+    int searchResultId = 0;
+
+    for (var chapter in chapters) {
+      for (var paragraph in chapter.paragraphs) {
+        final text = TextUtils.parseHtmlString(paragraph.content);
+        final lowerText = text.toLowerCase();
+        final lowerQuery = query.toLowerCase();
+
+        int startIndex = lowerText.indexOf(lowerQuery);
+        while (startIndex != -1) {
+          // Get context around the found text
+          int contextStart = startIndex - 50;
+          if (contextStart < 0) contextStart = 0;
+
+          int contextEnd = startIndex + query.length + 50;
+          if (contextEnd > text.length) contextEnd = text.length;
+
+          final contextText = text.substring(contextStart, contextEnd);
+          final matchStartInContext = startIndex - contextStart;
+          final matchEndInContext = matchStartInContext + query.length;
+
+          results.add(SearchResult(
+            id: searchResultId++,
+            paragraphId: paragraph.id,
+            chapterOrderNum: chapter.level,
+            text: contextText,
+            matchStart: matchStartInContext,
+            matchEnd: matchEndInContext,
+          ));
+
+          // Find next occurrence
+          startIndex = lowerText.indexOf(lowerQuery, startIndex + 1);
+        }
+      }
+    }
+
+    return results;
   }
 }

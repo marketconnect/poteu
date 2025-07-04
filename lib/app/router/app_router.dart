@@ -2,21 +2,22 @@ import 'package:flutter/material.dart';
 import 'package:poteu/app/pages/chapter/model/chapter_arguments.dart';
 import 'package:poteu/app/pages/chapter/chapter_view.dart';
 import 'package:poteu/app/pages/notes/notes_view.dart';
-import 'package:poteu/app/pages/search/search_page.dart';
+import 'package:poteu/app/pages/search/search_view.dart';
 import 'package:poteu/app/pages/table_of_contents/table_of_contents_page.dart';
 import 'package:poteu/data/repositories/static_regulation_repository.dart';
 import 'package:poteu/data/repositories/data_notes_repository.dart';
 import 'package:poteu/data/repositories/data_settings_repository.dart';
 import 'package:poteu/data/repositories/data_tts_repository.dart';
 import 'package:poteu/data/helpers/database_helper.dart';
+import 'package:poteu/data/repositories/data_regulation_repository.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../domain/entities/chapter.dart';
 import '../../domain/repositories/settings_repository.dart';
 import '../../domain/repositories/tts_repository.dart';
 import '../../domain/repositories/notes_repository.dart';
 import '../../domain/entities/settings.dart';
-import 'dart:async';
 import '../../domain/entities/tts_state.dart';
+import 'dart:async';
 
 // Simple mock repositories for router
 class _MockSettingsRepository implements SettingsRepository {
@@ -149,17 +150,20 @@ class AppRouter {
           builder: (_) => ChapterView(
             regulationId: 1, // POTEU regulation ID
             initialChapterOrderNum: chapterArguments.chapterOrderNum,
-            settingsRepository: _settingsRepository,
-            ttsRepository: _ttsRepository,
             scrollToParagraphId: chapterArguments.scrollTo > 0
                 ? chapterArguments.scrollTo
                 : null,
+            settingsRepository: _settingsRepository,
+            ttsRepository: _ttsRepository,
+            regulationRepository: DataRegulationRepository(DatabaseHelper()),
           ),
         );
       case AppRouteNames.search:
         return MaterialPageRoute(
-          builder: (_) => SearchPage(
+          builder: (_) => SearchView(
             regulationRepository: _repository,
+            settingsRepository: _settingsRepository,
+            ttsRepository: _ttsRepository,
           ),
         );
       default:

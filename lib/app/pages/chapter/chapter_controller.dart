@@ -10,7 +10,10 @@ import '../../../data/repositories/data_regulation_repository.dart';
 import '../../../data/helpers/database_helper.dart';
 import '../../../domain/repositories/settings_repository.dart';
 import '../../../domain/repositories/tts_repository.dart';
+import '../../../domain/repositories/regulation_repository.dart';
 import '../../utils/text_utils.dart';
+import 'search_presenter.dart';
+import '../../../domain/entities/search_result.dart';
 
 class ChapterController extends Controller {
   final int _regulationId;
@@ -21,6 +24,7 @@ class ChapterController extends Controller {
     DatabaseHelper(),
   );
   final TTSUseCase _ttsUseCase;
+  late SearchPresenter _searchPresenter;
 
   // PageView управление как в оригинале
   late PageController pageController;
@@ -66,6 +70,11 @@ class ChapterController extends Controller {
   ];
   int _activeColorIndex = 0;
 
+  // Search state
+  bool _isSearching = false;
+  List<SearchResult> _searchResults = [];
+  String _searchQuery = '';
+
   // Getters
   Map<int, Map<String, dynamic>> get chaptersData => _chaptersData;
   int get currentChapterOrderNum => _currentChapterOrderNum;
@@ -92,6 +101,11 @@ class ChapterController extends Controller {
   // Navigation getters
   bool get canGoPreviousChapter => _currentChapterOrderNum > 1;
   bool get canGoNextChapter => _currentChapterOrderNum < _totalChapters;
+
+  // Search getters
+  bool get isSearching => _isSearching;
+  List<SearchResult> get searchResults => _searchResults;
+  String get searchQuery => _searchQuery;
 
   // ScrollController methods
   ScrollController getScrollControllerForChapter(int chapterOrderNum) {
@@ -137,6 +151,7 @@ class ChapterController extends Controller {
     required int initialChapterOrderNum,
     required SettingsRepository settingsRepository,
     required TTSRepository ttsRepository,
+    required RegulationRepository regulationRepository,
     int? scrollToParagraphId,
   })  : _regulationId = regulationId,
         _initialChapterOrderNum = initialChapterOrderNum,
@@ -155,6 +170,25 @@ class ChapterController extends Controller {
       _isTTSPlaying = state == TtsState.playing;
       refreshUI();
     });
+  }
+
+  @override
+  void initListeners() {
+    // Initialize search presenter with the same repository used for loading chapters
+    _searchPresenter = SearchPresenter(_repository);
+
+    _searchPresenter.onSearchComplete = (results) {
+      _searchResults = results;
+      _isSearching = false;
+      refreshUI();
+    };
+
+    _searchPresenter.onSearchError = (error) {
+      _searchResults = [];
+      _isSearching = false;
+      _error = error.toString();
+      refreshUI();
+    };
   }
 
   Future<void> loadAllChapters() async {
@@ -932,11 +966,6 @@ class ChapterController extends Controller {
   }
 
   @override
-  void initListeners() {
-    // Initialize listeners here
-  }
-
-  @override
   void refreshUI() {
     super.refreshUI();
   }
@@ -958,7 +987,31 @@ class ChapterController extends Controller {
     // Clear all paragraph keys
     _paragraphKeys.clear();
 
+    _searchPresenter.dispose();
     super.onDisposed();
+  }
+
+  void search(String query) {
+    _searchQuery = query;
+    if (query.isEmpty) {
+      _searchResults = [];
+      refreshUI();
+      return;
+    }
+
+    _isSearching = true;
+    refreshUI();
+    _searchPresenter.search(_regulationId, query);
+  }
+
+  void goToSearchResult(SearchResult result) {
+    // Scroll to the paragraph
+    goToParagraph(result.paragraphId);
+
+    // Clear search results
+    _searchResults = [];
+    _searchQuery = '';
+    refreshUI();
   }
 }
 
