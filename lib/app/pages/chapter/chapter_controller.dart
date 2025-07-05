@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_clean_architecture/flutter_clean_architecture.dart';
 import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 import '../../../domain/entities/paragraph.dart';
+import '../../../domain/entities/chapter.dart';
 import '../../../domain/entities/formatting.dart';
 import '../../../domain/entities/tts_state.dart';
 import '../../../domain/usecases/tts_usecase.dart';
@@ -14,6 +15,7 @@ import '../../../domain/repositories/regulation_repository.dart';
 import '../../utils/text_utils.dart';
 import 'search_presenter.dart';
 import '../../../domain/entities/search_result.dart';
+import 'dart:async';
 
 class ChapterController extends Controller {
   final int _regulationId;
@@ -110,6 +112,13 @@ class ChapterController extends Controller {
   // ScrollController methods
   ScrollController getScrollControllerForChapter(int chapterOrderNum) {
     if (!_chapterScrollControllers.containsKey(chapterOrderNum)) {
+      // Ограничиваем количество контроллеров для экономии памяти
+      if (_chapterScrollControllers.length > 5) {
+        // Удаляем самый старый контроллер
+        final oldestKey = _chapterScrollControllers.keys.first;
+        _chapterScrollControllers[oldestKey]?.dispose();
+        _chapterScrollControllers.remove(oldestKey);
+      }
       _chapterScrollControllers[chapterOrderNum] = ScrollController();
     }
     return _chapterScrollControllers[chapterOrderNum]!;
@@ -122,6 +131,12 @@ class ChapterController extends Controller {
   // ItemScrollController methods for precise scrolling (like original)
   ItemScrollController getItemScrollControllerForChapter(int chapterOrderNum) {
     if (!_itemScrollControllers.containsKey(chapterOrderNum)) {
+      // Ограничиваем количество контроллеров для экономии памяти
+      if (_itemScrollControllers.length > 5) {
+        // Удаляем самый старый контроллер
+        final oldestKey = _itemScrollControllers.keys.first;
+        _itemScrollControllers.remove(oldestKey);
+      }
       _itemScrollControllers[chapterOrderNum] = ItemScrollController();
     }
     return _itemScrollControllers[chapterOrderNum]!;
@@ -192,29 +207,25 @@ class ChapterController extends Controller {
   }
 
   Future<void> loadAllChapters() async {
+    final stopwatch = Stopwatch()..start();
+    print('🔄 Начало загрузки глав...');
+
     _isLoading = true;
     refreshUI();
 
     try {
       final chapters = await _repository.getChapters(_regulationId);
       _totalChapters = chapters.length;
+      print('📚 Найдено глав: $_totalChapters');
 
-      for (final chapter in chapters) {
-        // Apply saved edits/formatting to paragraphs
-        final updatedParagraphs =
-            await _dataRepository.applyParagraphEdits(chapter.paragraphs);
-
-        _chaptersData[chapter.level] = {
-          'id': chapter.id,
-          'title': chapter.title,
-          'content': chapter.content,
-          'paragraphs':
-              updatedParagraphs, // Use updated paragraphs with formatting
-        };
-      }
+      // Загружаем только текущую главу и соседние для быстрой загрузки
+      await _loadChapterWithNeighbors(_initialChapterOrderNum);
 
       _isLoading = false;
       refreshUI();
+
+      stopwatch.stop();
+      print('✅ Загрузка завершена за ${stopwatch.elapsedMilliseconds}ms');
 
       // Delay navigation until after the PageView is built
       if (_scrollToParagraphId != null) {
@@ -223,9 +234,81 @@ class ChapterController extends Controller {
         });
       }
     } catch (e) {
+      stopwatch.stop();
+      print('❌ Ошибка загрузки за ${stopwatch.elapsedMilliseconds}ms: $e');
       _error = e.toString();
       _isLoading = false;
       refreshUI();
+    }
+  }
+
+  // Загружает главу и соседние главы
+  Future<void> _loadChapterWithNeighbors(int chapterOrderNum) async {
+    final stopwatch = Stopwatch()..start();
+    print('🔄 Загрузка главы $chapterOrderNum и соседних...');
+
+    final chapters = await _repository.getChapters(_regulationId);
+
+    // Загружаем текущую главу
+    await _loadChapterData(chapters[chapterOrderNum - 1]);
+
+    // Загружаем предыдущую главу если есть
+    if (chapterOrderNum > 1) {
+      await _loadChapterData(chapters[chapterOrderNum - 2]);
+    }
+
+    // Загружаем следующую главу если есть
+    if (chapterOrderNum < chapters.length) {
+      await _loadChapterData(chapters[chapterOrderNum]);
+    }
+
+    stopwatch.stop();
+    print(
+        '✅ Загрузка соседних глав завершена за ${stopwatch.elapsedMilliseconds}ms');
+  }
+
+  // Загружает данные конкретной главы
+  Future<void> _loadChapterData(Chapter chapter) async {
+    if (_chaptersData.containsKey(chapter.level)) {
+      return; // Уже загружена
+    }
+
+    final stopwatch = Stopwatch()..start();
+    print('📖 Загрузка главы ${chapter.level}: ${chapter.title}');
+
+    // Применяем форматирование только для текущей главы
+    List<Paragraph> updatedParagraphs;
+    if (chapter.level == _currentChapterOrderNum) {
+      updatedParagraphs =
+          await _dataRepository.applyParagraphEdits(chapter.paragraphs);
+      print(
+          '🎨 Применено форматирование для ${updatedParagraphs.length} параграфов');
+    } else {
+      // Для соседних глав пока используем оригинальные параграфы
+      updatedParagraphs = chapter.paragraphs;
+    }
+
+    _chaptersData[chapter.level] = {
+      'id': chapter.id,
+      'title': chapter.title,
+      'content': chapter.content,
+      'paragraphs': updatedParagraphs,
+    };
+
+    stopwatch.stop();
+    print(
+        '✅ Глава ${chapter.level} загружена за ${stopwatch.elapsedMilliseconds}ms');
+  }
+
+  // Загружает главу по требованию при переключении
+  Future<void> _ensureChapterLoaded(int chapterOrderNum) async {
+    if (_chaptersData.containsKey(chapterOrderNum)) {
+      return; // Уже загружена
+    }
+
+    final chapters = await _repository.getChapters(_regulationId);
+    if (chapterOrderNum > 0 && chapterOrderNum <= chapters.length) {
+      await _loadChapterData(chapters[chapterOrderNum - 1]);
     }
   }
 
@@ -233,10 +316,34 @@ class ChapterController extends Controller {
     return _chaptersData[chapterOrderNum];
   }
 
-  void onPageChanged(int newChapterOrderNum) {
+  void onPageChanged(int newChapterOrderNum) async {
     _currentChapterOrderNum = newChapterOrderNum;
     pageTextController.text = newChapterOrderNum.toString();
+
+    // Лениво загружаем главу если она еще не загружена
+    await _ensureChapterLoaded(newChapterOrderNum);
+
+    // Загружаем соседние главы в фоне
+    _loadNeighborChaptersInBackground(newChapterOrderNum);
+
     refreshUI();
+  }
+
+  // Загружает соседние главы в фоне
+  void _loadNeighborChaptersInBackground(int chapterOrderNum) {
+    Future.microtask(() async {
+      final chapters = await _repository.getChapters(_regulationId);
+
+      // Загружаем предыдущую главу если есть
+      if (chapterOrderNum > 1) {
+        await _loadChapterData(chapters[chapterOrderNum - 2]);
+      }
+
+      // Загружаем следующую главу если есть
+      if (chapterOrderNum < chapters.length) {
+        await _loadChapterData(chapters[chapterOrderNum]);
+      }
+    });
   }
 
   void goToChapter(int chapterOrderNum) {

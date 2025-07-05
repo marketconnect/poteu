@@ -5,6 +5,7 @@ import "../../domain/repositories/regulation_repository.dart";
 import "../../domain/entities/search_result.dart";
 import "../helpers/database_helper.dart";
 import "../../app/utils/text_utils.dart";
+import "dart:async";
 
 class DataRegulationRepository implements RegulationRepository {
   final DatabaseHelper _db;
@@ -261,32 +262,52 @@ class DataRegulationRepository implements RegulationRepository {
   // Method to get saved paragraph edits and apply them to original paragraphs
   Future<List<Paragraph>> applyParagraphEdits(
       List<Paragraph> originalParagraphs) async {
-    final db = await _db.database;
+    if (originalParagraphs.isEmpty) return originalParagraphs;
 
+    final stopwatch = Stopwatch()..start();
+    print(
+        '🔄 Применение форматирования для ${originalParagraphs.length} параграфов...');
+
+    final db = await _db.database;
     final List<Paragraph> updatedParagraphs = [];
 
-    for (final paragraph in originalParagraphs) {
-      // Check if there's a saved edit for this paragraph
-      final List<Map<String, dynamic>> savedEdits = await db.query(
-        'paragraphs',
-        where: 'original_id = ? AND updated_at IS NOT NULL',
-        whereArgs: [paragraph.originalId],
-      );
+    // Получаем все original_id для одного запроса
+    final originalIds = originalParagraphs.map((p) => p.originalId).toList();
 
-      if (savedEdits.isNotEmpty) {
-        final savedEdit = savedEdits.first;
+    // Делаем один запрос для всех параграфов
+    final List<Map<String, dynamic>> savedEdits = await db.query(
+      'paragraphs',
+      where:
+          'original_id IN (${List.filled(originalIds.length, '?').join(',')}) AND updated_at IS NOT NULL',
+      whereArgs: originalIds,
+    );
+
+    print('📊 Найдено ${savedEdits.length} сохраненных форматирований');
+
+    // Создаем Map для быстрого поиска
+    final Map<int, Map<String, dynamic>> editsMap = {};
+    for (final edit in savedEdits) {
+      editsMap[edit['original_id'] as int] = edit;
+    }
+
+    // Применяем форматирование
+    for (final paragraph in originalParagraphs) {
+      final savedEdit = editsMap[paragraph.originalId];
+
+      if (savedEdit != null) {
         // Apply the saved formatting/content
         updatedParagraphs.add(paragraph.copyWith(
           content: savedEdit['content'],
           note: savedEdit['note'],
         ));
-        print(
-            'Applied saved formatting to paragraph ${paragraph.id}: "${savedEdit['content']}"');
       } else {
         // No saved edits, use original
         updatedParagraphs.add(paragraph);
       }
     }
+
+    stopwatch.stop();
+    print('✅ Форматирование применено за ${stopwatch.elapsedMilliseconds}ms');
 
     return updatedParagraphs;
   }

@@ -318,7 +318,19 @@ class ChapterViewState extends ViewState<ChapterView, ChapterController> {
     final chapterData = controller.getChapterData(chapterOrderNum);
 
     if (chapterData == null) {
-      return const Center(child: CircularProgressIndicator());
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const CircularProgressIndicator(),
+            const SizedBox(height: 16),
+            Text(
+              'Загрузка главы $chapterOrderNum...',
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
+          ],
+        ),
+      );
     }
 
     // Get the item scroll controller for this chapter (for precise scrolling)
