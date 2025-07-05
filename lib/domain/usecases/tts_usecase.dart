@@ -30,6 +30,12 @@ class TTSUseCase extends UseCase<void, TTSUseCaseParams> {
         case TTSAction.stop:
           await _ttsRepository.stop();
           break;
+        case TTSAction.pause:
+          await _ttsRepository.pause();
+          break;
+        case TTSAction.resume:
+          await _ttsRepository.resume();
+          break;
         case TTSAction.setLanguage:
           if (params.language == null) {
             controller.addError(ArgumentError(
@@ -78,6 +84,8 @@ class TTSUseCase extends UseCase<void, TTSUseCaseParams> {
 enum TTSAction {
   speak,
   stop,
+  pause,
+  resume,
   setLanguage,
   setVolume,
   setPitch,
@@ -102,6 +110,22 @@ class TTSUseCaseParams {
 
   TTSUseCaseParams.stop()
       : action = TTSAction.stop,
+        text = null,
+        language = null,
+        volume = null,
+        pitch = null,
+        rate = null;
+
+  TTSUseCaseParams.pause()
+      : action = TTSAction.pause,
+        text = null,
+        language = null,
+        volume = null,
+        pitch = null,
+        rate = null;
+
+  TTSUseCaseParams.resume()
+      : action = TTSAction.resume,
         text = null,
         language = null,
         volume = null,

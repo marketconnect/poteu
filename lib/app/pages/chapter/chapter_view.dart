@@ -123,11 +123,45 @@ class ChapterViewState extends ViewState<ChapterView, ChapterController> {
                 );
               },
             ),
-            floatingActionButton: controller.isTTSPlaying
-                ? FloatingActionButton(
-                    onPressed: controller.stopTTS,
-                    backgroundColor: Theme.of(context).primaryColor,
-                    child: const Icon(Icons.stop, color: Colors.white),
+            floatingActionButton: controller.isTTSActive
+                ? Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      if (controller.isTTSPlaying) ...[
+                        // Pause button when playing
+                        FloatingActionButton(
+                          onPressed: controller.pauseTTS,
+                          backgroundColor: Theme.of(context).primaryColor,
+                          heroTag: "pause",
+                          child: const Icon(Icons.pause, color: Colors.white),
+                        ),
+                        const SizedBox(width: 16),
+                        // Stop button when playing
+                        FloatingActionButton(
+                          onPressed: controller.stopTTS,
+                          backgroundColor: Colors.red,
+                          heroTag: "stop",
+                          child: const Icon(Icons.stop, color: Colors.white),
+                        ),
+                      ] else if (controller.isTTSPaused) ...[
+                        // Resume button when paused
+                        FloatingActionButton(
+                          onPressed: controller.resumeTTS,
+                          backgroundColor: Colors.green,
+                          heroTag: "resume",
+                          child:
+                              const Icon(Icons.play_arrow, color: Colors.white),
+                        ),
+                        const SizedBox(width: 16),
+                        // Stop button when paused
+                        FloatingActionButton(
+                          onPressed: controller.stopTTS,
+                          backgroundColor: Colors.red,
+                          heroTag: "stop",
+                          child: const Icon(Icons.stop, color: Colors.white),
+                        ),
+                      ],
+                    ],
                   )
                 : null,
             floatingActionButtonLocation:

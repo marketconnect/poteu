@@ -70,6 +70,12 @@ class _MockTTSRepository implements TTSRepository {
   Future<void> stop() async {}
 
   @override
+  Future<void> pause() async {}
+
+  @override
+  Future<void> resume() async {}
+
+  @override
   Future<void> setLanguage(String language) async {}
 
   @override

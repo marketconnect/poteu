@@ -219,11 +219,16 @@ class NotesViewState extends ViewState<NotesView, NotesController> {
                   SizedBox(width: MediaQuery.of(context).size.width * 0.05),
                   Icon(
                     Icons.date_range,
-                    color:
-                        Theme.of(context).appBarTheme.toolbarTextStyle!.color,
+                    color: Theme.of(context).textTheme.bodyLarge!.color,
                   ),
                   SizedBox(width: MediaQuery.of(context).size.width * 0.05),
-                  const Text('Сортировать по дате'),
+                  Text(
+                    'Сортировать по дате',
+                    style: TextStyle(
+                      color: Theme.of(context).textTheme.bodyLarge!.color,
+                      fontSize: 16,
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -232,7 +237,7 @@ class NotesViewState extends ViewState<NotesView, NotesController> {
           Container(
             height: 1,
             width: MediaQuery.of(context).size.width * 0.95,
-            color: Theme.of(context).dividerColor,
+            color: Theme.of(context).shadowColor,
           ),
           // Sort by color option
           GestureDetector(
@@ -256,11 +261,16 @@ class NotesViewState extends ViewState<NotesView, NotesController> {
                   SizedBox(width: MediaQuery.of(context).size.width * 0.05),
                   Icon(
                     Icons.color_lens_outlined,
-                    color:
-                        Theme.of(context).appBarTheme.toolbarTextStyle!.color,
+                    color: Theme.of(context).textTheme.bodyLarge!.color,
                   ),
                   SizedBox(width: MediaQuery.of(context).size.width * 0.05),
-                  const Text('Сортировать по цвету'),
+                  Text(
+                    'Сортировать по цвету',
+                    style: TextStyle(
+                      color: Theme.of(context).textTheme.bodyLarge!.color,
+                      fontSize: 16,
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -278,7 +288,15 @@ class NotesViewState extends ViewState<NotesView, NotesController> {
               ),
               height: 70,
               width: MediaQuery.of(context).size.width * 0.95,
-              child: const Center(child: Text("Отменить")),
+              child: Center(
+                child: Text(
+                  "Отменить",
+                  style: TextStyle(
+                    color: Theme.of(context).textTheme.bodyLarge!.color,
+                    fontSize: 16,
+                  ),
+                ),
+              ),
             ),
           ),
         ],
@@ -290,14 +308,35 @@ class NotesViewState extends ViewState<NotesView, NotesController> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Удалить заметку?'),
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+        title: Text(
+          'Удалить заметку?',
+          style: TextStyle(
+            color: Theme.of(context).textTheme.bodyLarge!.color,
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
         content: Text(
           'Вы уверены, что хотите удалить заметку "${note.link.text}"?',
+          style: TextStyle(
+            color: Theme.of(context).textTheme.bodyLarge!.color,
+            fontSize: 16,
+          ),
+        ),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Отмена'),
+            child: Text(
+              'Отмена',
+              style: TextStyle(
+                color: Theme.of(context).textTheme.bodyLarge!.color,
+                fontSize: 16,
+              ),
+            ),
           ),
           TextButton(
             onPressed: () async {
@@ -309,7 +348,13 @@ class NotesViewState extends ViewState<NotesView, NotesController> {
                 _showSnackBar('Заметка удалена');
               }
             },
-            child: const Text('Удалить'),
+            child: Text(
+              'Удалить',
+              style: TextStyle(
+                color: Theme.of(context).indicatorColor,
+                fontSize: 16,
+              ),
+            ),
           ),
         ],
       ),
@@ -338,7 +383,14 @@ class NotesViewState extends ViewState<NotesView, NotesController> {
   void _showSnackBar(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(message),
+        content: Text(
+          message,
+          style: TextStyle(
+            color: Theme.of(context).scaffoldBackgroundColor,
+            fontSize: 16,
+          ),
+        ),
+        backgroundColor: Theme.of(context).textTheme.bodyLarge!.color,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(10),
@@ -351,7 +403,13 @@ class NotesViewState extends ViewState<NotesView, NotesController> {
   void _showErrorSnackBar(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(message),
+        content: Text(
+          message,
+          style: TextStyle(
+            color: Theme.of(context).scaffoldBackgroundColor,
+            fontSize: 16,
+          ),
+        ),
         backgroundColor: Colors.red,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(

@@ -45,21 +45,14 @@ class ChapterController extends Controller {
   Map<int, Map<String, dynamic>> _chaptersData = {};
   int _currentChapterOrderNum = 1;
   int _totalChapters = 0;
-  bool _isLoading = false;
+  bool _isLoading = true;
   String? _error;
-  bool _isTTSPlaying = false;
-
-  // Bottom Bar state management (like BottomBarCubit)
   bool _isBottomBarExpanded = false;
   bool _isBottomBarWhiteMode = false;
-
-  // Text selection state (like SaveParagraphCubit)
   Paragraph? _selectedParagraph;
   int _selectionStart = 0;
   int _selectionEnd = 0;
   String _lastSelectedText = '';
-
-  // Colors state management (like ColorsCubit)
   List<int> _colorsList = [
     0xFFFFFF00, // Yellow
     0xFFFF8C00, // Orange
@@ -71,11 +64,11 @@ class ChapterController extends Controller {
     0xFF00FFFF, // Cyan
   ];
   int _activeColorIndex = 0;
-
-  // Search state
   bool _isSearching = false;
   List<SearchResult> _searchResults = [];
   String _searchQuery = '';
+  TtsState _ttsState = TtsState.stopped;
+  StreamSubscription<TtsState>? _ttsStateSubscription;
 
   // Getters
   Map<int, Map<String, dynamic>> get chaptersData => _chaptersData;
@@ -83,7 +76,10 @@ class ChapterController extends Controller {
   int get totalChapters => _totalChapters;
   bool get isLoading => _isLoading;
   String? get error => _error;
-  bool get isTTSPlaying => _isTTSPlaying;
+  bool get isTTSPlaying => _ttsState == TtsState.playing;
+  bool get isTTSPaused => _ttsState == TtsState.paused;
+  bool get isTTSActive =>
+      _ttsState == TtsState.playing || _ttsState == TtsState.paused;
 
   // Bottom Bar getters
   bool get isBottomBarExpanded => _isBottomBarExpanded;
@@ -108,6 +104,9 @@ class ChapterController extends Controller {
   bool get isSearching => _isSearching;
   List<SearchResult> get searchResults => _searchResults;
   String get searchQuery => _searchQuery;
+
+  // Getter for TTS state
+  TtsState get ttsState => _ttsState;
 
   // ScrollController methods
   ScrollController getScrollControllerForChapter(int chapterOrderNum) {
@@ -182,7 +181,7 @@ class ChapterController extends Controller {
 
     // Subscribe to TTS state changes
     _ttsUseCase.stateStream.listen((state) {
-      _isTTSPlaying = state == TtsState.playing;
+      _ttsState = state;
       refreshUI();
     });
   }
@@ -192,18 +191,30 @@ class ChapterController extends Controller {
     // Initialize search presenter with the same repository used for loading chapters
     _searchPresenter = SearchPresenter(_repository);
 
-    _searchPresenter.onSearchComplete = (results) {
+    _searchPresenter.onSearchComplete = (List<SearchResult> results) {
       _searchResults = results;
       _isSearching = false;
       refreshUI();
     };
 
-    _searchPresenter.onSearchError = (error) {
-      _searchResults = [];
+    _searchPresenter.onSearchError = (e) {
+      _error = e.toString();
       _isSearching = false;
-      _error = error.toString();
       refreshUI();
     };
+
+    // Initialize TTS state subscription
+    _ttsStateSubscription = _ttsUseCase.stateStream.listen(
+      (TtsState state) {
+        _ttsState = state;
+        refreshUI();
+      },
+      onError: (error) {
+        _error = 'TTS Error: ${error.toString()}';
+        _ttsState = TtsState.error;
+        refreshUI();
+      },
+    );
   }
 
   Future<void> loadAllChapters() async {
@@ -1072,6 +1083,24 @@ class ChapterController extends Controller {
     }
   }
 
+  Future<void> pauseTTS() async {
+    try {
+      _ttsUseCase.execute(_TTSUseCaseObserver(this), TTSUseCaseParams.pause());
+    } catch (e) {
+      _error = e.toString();
+      refreshUI();
+    }
+  }
+
+  Future<void> resumeTTS() async {
+    try {
+      _ttsUseCase.execute(_TTSUseCaseObserver(this), TTSUseCaseParams.resume());
+    } catch (e) {
+      _error = e.toString();
+      refreshUI();
+    }
+  }
+
   @override
   void refreshUI() {
     super.refreshUI();
@@ -1093,6 +1122,9 @@ class ChapterController extends Controller {
 
     // Clear all paragraph keys
     _paragraphKeys.clear();
+
+    // Cancel TTS state subscription
+    _ttsStateSubscription?.cancel();
 
     _searchPresenter.dispose();
     super.onDisposed();

@@ -13,6 +13,10 @@ class DataTTSRepository implements TTSRepository {
   // Флаг для включения/отключения логирования TTS (для отладки)
   static const bool _enableTtsLogging = true;
 
+  // Переменные для поддержки resume
+  String? _currentText;
+  bool _isPaused = false;
+
   void _log(String message) {
     if (_enableTtsLogging) {
       print('[TTS] $message');
@@ -52,22 +56,42 @@ class DataTTSRepository implements TTSRepository {
 
       _flutterTts.setStartHandler(() {
         _log('Speech started');
+        _isPaused = false;
         _stateController.add(TtsState.playing);
       });
 
       _flutterTts.setCompletionHandler(() {
         _log('Speech completed');
+        _currentText = null;
+        _isPaused = false;
         _stateController.add(TtsState.stopped);
       });
 
       _flutterTts.setErrorHandler((msg) {
         _log('Speech error: $msg');
+        _currentText = null;
+        _isPaused = false;
         _stateController.add(TtsState.error);
       });
 
       _flutterTts.setCancelHandler(() {
         _log('Speech cancelled');
+        _currentText = null;
+        _isPaused = false;
         _stateController.add(TtsState.stopped);
+      });
+
+      // Обработчики для паузы и возобновления
+      _flutterTts.setPauseHandler(() {
+        _log('Speech paused');
+        _isPaused = true;
+        _stateController.add(TtsState.paused);
+      });
+
+      _flutterTts.setContinueHandler(() {
+        _log('Speech resumed');
+        _isPaused = false;
+        _stateController.add(TtsState.playing);
       });
 
       _log('TTS initialization completed');
@@ -83,6 +107,10 @@ class DataTTSRepository implements TTSRepository {
       _log('=================== SPEAK CALLED ===================');
       _log(
           'Text to speak: ${text.substring(0, text.length > 100 ? 100 : text.length)}...');
+
+      // Сохраняем текст для возможности возобновления
+      _currentText = text;
+      _isPaused = false;
 
       // КРИТИЧНО: Применяем все настройки перед каждым speak(), как в оригинальном приложении
       _log('Applying current settings before speaking...');
@@ -182,7 +210,41 @@ class DataTTSRepository implements TTSRepository {
   @override
   Future<void> stop() async {
     _log('Stopping speech...');
+    _currentText = null;
+    _isPaused = false;
     await _flutterTts.stop();
+  }
+
+  @override
+  Future<void> pause() async {
+    _log('Pausing speech...');
+    try {
+      await _flutterTts.pause();
+      _isPaused = true;
+      _stateController.add(TtsState.paused);
+    } catch (e) {
+      _log('Error pausing speech: $e');
+      // Если pause не поддерживается, попробуем остановить
+      await _flutterTts.stop();
+      _stateController.add(TtsState.paused);
+    }
+  }
+
+  @override
+  Future<void> resume() async {
+    _log('Resuming speech...');
+    try {
+      if (_isPaused && _currentText != null) {
+        // Для Android и других платформ без native resume
+        // используем повторный вызов speak с сохраненным текстом
+        await speak(_currentText!);
+      } else {
+        _log('No text to resume or not paused');
+      }
+    } catch (e) {
+      _log('Error resuming speech: $e');
+      _stateController.add(TtsState.error);
+    }
   }
 
   @override
