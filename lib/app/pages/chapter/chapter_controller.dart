@@ -1120,6 +1120,38 @@ class ChapterController extends Controller {
     _searchQuery = '';
     refreshUI();
   }
+
+  Future<void> saveEditedParagraph(
+      Paragraph paragraph, String editedContent) async {
+    try {
+      // Save to database
+      await _dataRepository.saveEditedParagraph(
+        paragraph.originalId,
+        editedContent,
+        paragraph,
+      );
+
+      // Update local data
+      final chapterData = getChapterData(_currentChapterOrderNum);
+      if (chapterData != null) {
+        final paragraphs = List<Paragraph>.from(chapterData['paragraphs']);
+        final index = paragraphs.indexWhere((p) => p.id == paragraph.id);
+        if (index != -1) {
+          paragraphs[index] = paragraph.copyWith(content: editedContent);
+          _chaptersData[_currentChapterOrderNum] = {
+            ...chapterData,
+            'paragraphs': paragraphs,
+          };
+        }
+      }
+
+      _error = null;
+      refreshUI();
+    } catch (e) {
+      _error = 'Ошибка сохранения: ${e.toString()}';
+      refreshUI();
+    }
+  }
 }
 
 class _TTSUseCaseObserver extends Observer<void> {

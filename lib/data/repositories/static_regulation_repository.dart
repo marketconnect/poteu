@@ -221,6 +221,15 @@ class StaticRegulationRepository implements RegulationRepository {
   }
 
   @override
+  Future<void> saveEditedParagraph(int paragraphId, String editedContent,
+      domain.Paragraph originalParagraph) async {
+    // StaticRegulationRepository is for read-only data
+    // For saving edits, use DataRegulationRepository instead
+    throw UnimplementedError(
+        'StaticRegulationRepository does not support editing. Use DataRegulationRepository instead.');
+  }
+
+  @override
   Future<List<SearchResult>> searchInRegulation({
     required int regulationId,
     required String query,

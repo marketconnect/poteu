@@ -40,4 +40,8 @@ abstract class RegulationRepository {
     required int regulationId,
     required String query,
   });
+
+  /// Saves edited paragraph content
+  Future<void> saveEditedParagraph(
+      int paragraphId, String editedContent, Paragraph originalParagraph);
 }

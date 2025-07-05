@@ -888,10 +888,15 @@ class ChapterViewState extends ViewState<ChapterView, ChapterController> {
         actions: [
           TextButton(
             onPressed: () async {
-              if (textController.text.trim().isNotEmpty) {
+              final editedText = textController.text.trim();
+              if (editedText.isNotEmpty) {
                 Navigator.pop(context);
-                // Note: This needs to be implemented properly with saveEditedParagraph
-                _showSnackBar('Параграф сохранен');
+                await controller.saveEditedParagraph(paragraph, editedText);
+                if (controller.error != null) {
+                  _showErrorSnackBar(controller.error!);
+                } else {
+                  _showSnackBar('Параграф сохранен');
+                }
               } else {
                 _showSnackBar('Текст не может быть пустым');
               }

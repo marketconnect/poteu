@@ -90,6 +90,12 @@ class ThemeManager {
   void setTheme(bool isDark) async {
     print('ThemeManager.setTheme called with: $isDark');
     print('Previous theme state: $_isDarkMode');
+
+    if (_isDarkMode == isDark) {
+      print('Theme is already $isDark, skipping update');
+      return;
+    }
+
     _isDarkMode = isDark;
     print('New theme state: $_isDarkMode');
 
@@ -132,9 +138,10 @@ void main() async {
   final notesRepository = DataNotesRepository(databaseHelper);
   final settings = await settingsRepository.getSettings();
 
-  // Initialize managers with the settings repository and current settings
+  print('Initial settings loaded - isDarkMode: ${settings.isDarkMode}');
+
   ThemeManager().initialize(settingsRepository, settings.isDarkMode);
-  FontManager().initialize(settingsRepository, settings);
+  FontManager().updateSettings(settings);
 
   // Only initialize Sentry if a valid DSN is provided
   if (sentryDsn.isNotEmpty && sentryDsn != 'YOUR_SENTRY_DSN') {
@@ -209,15 +216,16 @@ class _PoteuAppState extends State<PoteuApp> {
             print('App rebuild - isDarkMode: $isDarkMode');
             print('App rebuild - fontSize: ${settings.fontSize}');
 
-            final theme = isDarkMode
-                ? DynamicTheme.getDark(settings)
-                : DynamicTheme.getLight(settings);
+            final lightTheme = DynamicTheme.getLight(settings);
+            final darkTheme = DynamicTheme.getDark(settings);
 
             print('Applied theme');
 
             return MaterialApp(
               title: 'POTEU',
-              theme: theme,
+              theme: lightTheme,
+              darkTheme: darkTheme,
+              themeMode: isDarkMode ? ThemeMode.dark : ThemeMode.light,
               onGenerateRoute: _appRouter.onGenerateRoute,
               initialRoute: '/',
               debugShowCheckedModeBanner: false,

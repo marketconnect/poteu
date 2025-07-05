@@ -447,4 +447,69 @@ class DataRegulationRepository implements RegulationRepository {
 
     return results;
   }
+
+  @override
+  Future<void> saveEditedParagraph(int paragraphId, String editedContent,
+      Paragraph originalParagraph) async {
+    print('=== SAVE EDITED PARAGRAPH ===');
+    print('Paragraph ID: $paragraphId');
+    print('New content: "$editedContent"');
+    print('Chapter ID: ${originalParagraph.chapterId}');
+
+    final db = await _db.database;
+
+    // Check if entry exists
+    final existing = await db.query(
+      'paragraphs',
+      where: 'original_id = ?',
+      whereArgs: [paragraphId],
+    );
+
+    print(
+        'Found ${existing.length} existing entries for paragraphId $paragraphId');
+
+    if (existing.isNotEmpty) {
+      // Update existing entry
+      print('Updating existing entry...');
+      final updateResult = await db.update(
+        'paragraphs',
+        {
+          'content': editedContent,
+          'updated_at': DateTime.now().toIso8601String(),
+        },
+        where: 'original_id = ?',
+        whereArgs: [paragraphId],
+      );
+      print('✅ Updated $updateResult rows for paragraphId: $paragraphId');
+    } else {
+      // Create new entry
+      print('Creating new entry...');
+      final insertResult = await db.insert('paragraphs', {
+        'original_id': paragraphId,
+        'chapter_id': originalParagraph.chapterId,
+        'num': originalParagraph.num,
+        'content': editedContent,
+        'text_to_speech': originalParagraph.textToSpeech,
+        'is_table': originalParagraph.isTable ? 1 : 0,
+        'is_nft': originalParagraph.isNft ? 1 : 0,
+        'paragraph_class': originalParagraph.paragraphClass ?? '',
+        'note': originalParagraph.note,
+        'updated_at': DateTime.now().toIso8601String(),
+      });
+      print(
+          '✅ Created new paragraph edit with ID: $insertResult for paragraphId: $paragraphId');
+    }
+
+    // Verify the save
+    final verification = await db.query(
+      'paragraphs',
+      where: 'original_id = ? AND updated_at IS NOT NULL',
+      whereArgs: [paragraphId],
+    );
+    print(
+        'Verification: Found ${verification.length} entries with edits for paragraphId $paragraphId');
+    if (verification.isNotEmpty) {
+      print('Saved content: "${verification.first['content']}"');
+    }
+  }
 }
