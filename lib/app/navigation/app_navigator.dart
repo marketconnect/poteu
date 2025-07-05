@@ -59,6 +59,7 @@ class AppNavigator {
     required RegulationRepository regulationRepository,
     required SettingsRepository settingsRepository,
     required TTSRepository ttsRepository,
+    required NotesRepository notesRepository,
   }) {
     Navigator.push(
       context,
@@ -67,6 +68,7 @@ class AppNavigator {
           regulationRepository: regulationRepository,
           settingsRepository: settingsRepository,
           ttsRepository: ttsRepository,
+          notesRepository: notesRepository,
         ),
       ),
     );

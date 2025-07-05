@@ -131,6 +131,7 @@ class AppRouter {
             regulationRepository: _repository,
             settingsRepository: _settingsRepository,
             ttsRepository: _ttsRepository,
+            notesRepository: _notesRepository,
           ),
         );
       case AppRouteNames.notesList:

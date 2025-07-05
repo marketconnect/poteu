@@ -88,8 +88,23 @@ class TextUtils {
       if (htmlString.isEmpty) {
         return '';
       }
-      String result = htmlString.replaceAll(RegExp(r'<[^>]*>'), '');
-      return result ?? '';
+
+      // First decode any HTML entities
+      String decoded = htmlString
+          .replaceAll('&amp;', '&')
+          .replaceAll('&lt;', '<')
+          .replaceAll('&gt;', '>')
+          .replaceAll('&quot;', '"')
+          .replaceAll('&#39;', "'")
+          .replaceAll('&nbsp;', ' ');
+
+      // Then remove HTML tags while preserving text content
+      String result = decoded.replaceAll(RegExp(r'<[^>]*>'), '').trim();
+
+      print('parseHtmlString input: "$htmlString"');
+      print('parseHtmlString output: "$result"');
+
+      return result;
     } catch (e) {
       print('parseHtmlString error: $e');
       return htmlString; // Return original if parsing fails

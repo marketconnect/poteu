@@ -90,6 +90,7 @@ class MainController extends Controller {
       regulationRepository: _regulationRepository,
       settingsRepository: _settingsRepository,
       ttsRepository: _ttsRepository,
+      notesRepository: _notesRepository,
     );
   }
 

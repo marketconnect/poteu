@@ -134,7 +134,12 @@ void main() async {
   final settingsRepository = DataSettingsRepository(prefs);
   final regulationRepository = StaticRegulationRepository();
   final ttsRepository = DataTTSRepository(settingsRepository, FlutterTts());
+
+  // Initialize database first
   final databaseHelper = DatabaseHelper();
+  // Wait for database to be ready
+  await databaseHelper.database;
+
   final notesRepository = DataNotesRepository(databaseHelper);
   final settings = await settingsRepository.getSettings();
 

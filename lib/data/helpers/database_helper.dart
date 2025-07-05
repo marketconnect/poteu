@@ -12,14 +12,24 @@ class DatabaseHelper {
   factory DatabaseHelper() => _instance;
 
   Future<Database> get database async {
-    if (_database != null) return _database!;
+    print('=== DATABASE INITIALIZATION ===');
+    if (_database != null) {
+      print('Database already initialized');
+      return _database!;
+    }
+    print('Initializing database...');
     _database = await _initDatabase();
-    await _insertInitialData();
+    print('Database opened successfully');
+    print('Inserting initial data...');
+    await _insertInitialData(_database!);
+    print('Initial data inserted');
     return _database!;
   }
 
   Future<Database> _initDatabase() async {
+    print('Getting database path...');
     String path = join(await getDatabasesPath(), 'poteu.db');
+    print('Database path: $path');
     return await openDatabase(
       path,
       version: 5,
@@ -211,14 +221,61 @@ class DatabaseHelper {
     }
   }
 
-  Future<void> _insertInitialData() async {
-    final db = await database;
+  Future<void> _insertInitialData(Database db) async {
+    print('Checking if initial data needs to be inserted...');
     final count = Sqflite.firstIntValue(
       await db.rawQuery('SELECT COUNT(*) FROM regulations'),
     );
+    print('Current regulations count: $count');
 
     if (count == 0) {
+      print('No regulations found, inserting initial data...');
       await _insertPoteuData(db);
+      print('Initial data inserted successfully');
+    } else {
+      print('Initial data already exists');
+    }
+
+    // Clean up orphaned paragraphs
+    await _cleanupOrphanedParagraphs(db);
+  }
+
+  Future<void> _cleanupOrphanedParagraphs(Database db) async {
+    print('=== CLEANING UP ORPHANED PARAGRAPHS ===');
+
+    // Find paragraphs that reference non-existent chapters
+    final orphanedParagraphs = await db.rawQuery('''
+      SELECT p.id, p.chapter_id, p.original_id, p.content
+      FROM paragraphs p
+      LEFT JOIN chapters c ON p.chapter_id = c.id
+      WHERE c.id IS NULL
+    ''');
+
+    print('Found ${orphanedParagraphs.length} orphaned paragraphs');
+
+    if (orphanedParagraphs.isNotEmpty) {
+      for (final paragraph in orphanedParagraphs) {
+        print('Orphaned paragraph:');
+        print('  ID: ${paragraph['id']}');
+        print('  Chapter ID: ${paragraph['chapter_id']}');
+        print('  Original ID: ${paragraph['original_id']}');
+        print('  Content: ${paragraph['content']}');
+      }
+
+      // Delete orphaned paragraphs
+      final deleteResult = await db.rawDelete('''
+        DELETE FROM paragraphs 
+        WHERE id IN (
+          SELECT p.id
+          FROM paragraphs p
+          LEFT JOIN chapters c ON p.chapter_id = c.id
+          WHERE c.id IS NULL
+        )
+      ''');
+
+      print('✅ Cleaned up $deleteResult orphaned paragraphs');
+    } else {
+      print('✅ No orphaned paragraphs found');
     }
   }
 

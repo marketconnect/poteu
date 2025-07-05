@@ -25,26 +25,38 @@ class NotesController extends Controller {
   bool get hasNotes => _notes.isNotEmpty;
 
   NotesController(this._notesRepository) {
+    print('=== NOTES CONTROLLER INITIALIZATION ===');
+    print('Creating use cases...');
     _getNotesUseCase = GetNotesUseCase(_notesRepository);
     _deleteNoteUseCase = DeleteNoteUseCase(_notesRepository);
-    print('NotesController initialized - ready to load notes');
-    // Load notes immediately
+    print('Use cases created successfully');
+    print('Starting initial notes load...');
     refreshNotes();
   }
 
   Future<void> _loadNotes() async {
-    print('=== LOADING NOTES ===');
+    print('\n=== LOADING NOTES ===');
+    print('Current state:');
+    print('  Loading: $_isLoading');
+    print('  Error: $_error');
+    print('  Sort by color: $_sortByColor');
+    print('  Current notes count: ${_notes.length}');
+
     _isLoading = true;
     _error = null;
     refreshUI();
 
     try {
+      print('Executing GetNotesUseCase...');
       _getNotesUseCase.execute(
         _GetNotesObserver(this),
         GetNotesParams(sortByColor: _sortByColor),
       );
-    } catch (e) {
-      print('Error loading notes: $e');
+      print('GetNotesUseCase execution started');
+    } catch (e, stack) {
+      print('❌ Error loading notes:');
+      print('Error: $e');
+      print('Stack trace: $stack');
       _error = e.toString();
       _isLoading = false;
       refreshUI();

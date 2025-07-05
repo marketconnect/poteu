@@ -3,7 +3,8 @@ import 'package:rolling_switch/rolling_switch.dart';
 import '../../../domain/repositories/regulation_repository.dart';
 import '../../../domain/repositories/settings_repository.dart';
 import '../../../domain/repositories/tts_repository.dart';
-import '../chapter/model/chapter_arguments.dart';
+import '../../../domain/repositories/notes_repository.dart';
+import '../../navigation/app_navigator.dart';
 import '../../widgets/regulation_app_bar.dart';
 import '../../widgets/table_of_contents_app_bar.dart';
 import '../../widgets/chapter_card.dart';
@@ -15,12 +16,14 @@ class TableOfContentsPage extends StatefulWidget {
   final RegulationRepository regulationRepository;
   final SettingsRepository settingsRepository;
   final TTSRepository ttsRepository;
+  final NotesRepository notesRepository;
 
   const TableOfContentsPage({
     super.key,
     required this.regulationRepository,
     required this.settingsRepository,
     required this.ttsRepository,
+    required this.notesRepository,
   });
 
   @override
@@ -138,8 +141,13 @@ class _TableOfContentsPageState extends State<TableOfContentsPage> {
                             // Заметки
                             ExpansionTile(
                               onExpansionChanged: (bool val) async {
-                                Navigator.of(context).pop();
-                                Navigator.pushNamed(context, '/notesList');
+                                if (val) {
+                                  Navigator.of(context).pop();
+                                  AppNavigator.navigateToNotes(
+                                    context,
+                                    notesRepository: widget.notesRepository,
+                                  );
+                                }
                               },
                               trailing: const SizedBox(),
                               backgroundColor: Theme.of(context)
