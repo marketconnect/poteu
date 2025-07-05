@@ -10,7 +10,7 @@ import 'data/repositories/data_settings_repository.dart';
 import 'data/repositories/data_tts_repository.dart';
 import 'data/repositories/data_notes_repository.dart';
 import 'data/helpers/database_helper.dart';
-import 'app/theme/theme.dart';
+
 import 'app/theme/dynamic_theme.dart';
 import 'app/router/app_router.dart';
 import 'domain/entities/settings.dart';

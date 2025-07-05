@@ -3,33 +3,27 @@ import '../../domain/entities/settings.dart';
 import '../../domain/repositories/settings_repository.dart';
 import '../../main.dart';
 
-class SimpleFontSettingsWidget extends StatefulWidget {
+class FontSizeSettingsWidget extends StatefulWidget {
   final SettingsRepository settingsRepository;
 
-  const SimpleFontSettingsWidget({
+  const FontSizeSettingsWidget({
     Key? key,
     required this.settingsRepository,
   }) : super(key: key);
 
   @override
-  State<SimpleFontSettingsWidget> createState() =>
-      _SimpleFontSettingsWidgetState();
+  State<FontSizeSettingsWidget> createState() => _FontSizeSettingsWidgetState();
 }
 
-class _SimpleFontSettingsWidgetState extends State<SimpleFontSettingsWidget> {
+class _FontSizeSettingsWidgetState extends State<FontSizeSettingsWidget> {
   Future<void> _updateFontSize(double fontSize) async {
     try {
-      print('SimpleFontSettingsWidget: Updating font size to $fontSize');
       await widget.settingsRepository.setFontSize(fontSize);
-
       final currentSettings = FontManager().currentSettings;
       final newSettings = currentSettings.copyWith(fontSize: fontSize);
-
-      // Уведомляем FontManager
       FontManager().updateSettings(newSettings);
-      print('SimpleFontSettingsWidget: Font size updated successfully');
     } catch (e) {
-      print('SimpleFontSettingsWidget: Error updating font size: $e');
+      print('Error updating font size: $e');
     }
   }
 
@@ -47,8 +41,6 @@ class _SimpleFontSettingsWidgetState extends State<SimpleFontSettingsWidget> {
         }
 
         final settings = snapshot.data!;
-        print(
-            'SimpleFontSettingsWidget: Building with fontSize=${settings.fontSize}');
 
         return Container(
           color: Theme.of(context).navigationRailTheme.backgroundColor,
@@ -57,7 +49,6 @@ class _SimpleFontSettingsWidgetState extends State<SimpleFontSettingsWidget> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Font Size Section
                 Text(
                   'Размер шрифта',
                   style: TextStyle(
@@ -97,11 +88,7 @@ class _SimpleFontSettingsWidgetState extends State<SimpleFontSettingsWidget> {
                             .unselectedIconTheme!
                             .color
                             ?.withOpacity(0.3),
-                        onChanged: (value) {
-                          print(
-                              'SimpleFontSettingsWidget: Slider changed to $value');
-                          _updateFontSize(value);
-                        },
+                        onChanged: _updateFontSize,
                       ),
                     ),
                     Text(
@@ -115,38 +102,6 @@ class _SimpleFontSettingsWidgetState extends State<SimpleFontSettingsWidget> {
                       ),
                     ),
                   ],
-                ),
-                const SizedBox(height: 24),
-
-                // Preview Text
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context)
-                        .navigationRailTheme
-                        .indicatorColor
-                        ?.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(
-                      color: Theme.of(context)
-                          .navigationRailTheme
-                          .unselectedIconTheme!
-                          .color!
-                          .withOpacity(0.2),
-                    ),
-                  ),
-                  child: Text(
-                    'Пример текста для предварительного просмотра',
-                    style: TextStyle(
-                      fontSize: settings.fontSize,
-                      color: Theme.of(context)
-                          .navigationRailTheme
-                          .unselectedLabelTextStyle!
-                          .color,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
                 ),
               ],
             ),

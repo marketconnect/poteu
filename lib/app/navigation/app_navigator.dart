@@ -12,7 +12,12 @@ import '../../data/repositories/data_regulation_repository.dart';
 import '../../data/helpers/database_helper.dart';
 
 class AppNavigator {
-  static void navigateToSearch(BuildContext context) {
+  static void navigateToSearch(
+    BuildContext context, {
+    required RegulationRepository regulationRepository,
+    required SettingsRepository settingsRepository,
+    required TTSRepository ttsRepository,
+  }) {
     Navigator.pushNamed(context, AppRouteNames.search);
   }
 
@@ -25,9 +30,10 @@ class AppNavigator {
   }
 
   static Future<void> navigateToChapter(
-    BuildContext context,
-    int regulationId,
-    int chapterOrderNum, {
+    BuildContext context, {
+    required int regulationId,
+    required int chapterOrderNum,
+    required RegulationRepository regulationRepository,
     int? scrollToParagraphId,
     required SettingsRepository settingsRepository,
     required TTSRepository ttsRepository,

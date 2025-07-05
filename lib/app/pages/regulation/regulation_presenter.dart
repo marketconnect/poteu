@@ -28,21 +28,23 @@ class RegulationPresenter extends Presenter {
   }
 
   Future<void> startReading(String text) async {
+    _currentText = text;
     await _ttsRepository.speak(text);
   }
 
   Future<void> pauseReading() async {
-    await _ttsRepository.pause();
+    await _ttsRepository.stop();
   }
 
   Future<void> resumeReading() async {
-    await _ttsRepository.resume();
+    await _ttsRepository.speak(_currentText ?? '');
   }
 
   Future<void> stopReading() async {
     await _ttsRepository.stop();
   }
 
+  String? _currentText;
   Future<void> _loadChapter() async {
     try {
       final chapter = await _regulationRepository.getChapter(_chapterId);

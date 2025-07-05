@@ -7,7 +7,7 @@ import '../chapter/model/chapter_arguments.dart';
 import '../../widgets/regulation_app_bar.dart';
 import '../../widgets/table_of_contents_app_bar.dart';
 import '../../widgets/chapter_card.dart';
-import '../../widgets/simple_font_settings_widget.dart';
+import '../../widgets/font_size_settings_widget.dart';
 import '../../../main.dart';
 import '../drawer/sound_settings_view.dart';
 
@@ -71,10 +71,13 @@ class _TableOfContentsPageState extends State<TableOfContentsPage> {
           padding: EdgeInsets.only(
             top: MediaQuery.of(context).padding.top,
           ),
-          child: const RegulationAppBar(
+          child: RegulationAppBar(
             child: TableOfContentsAppBar(
               title: 'ПОТЭУ', // Аббревиатура регламента
               name: 'Правила охраны труда при эксплуатации электроустановок',
+              regulationRepository: widget.regulationRepository,
+              settingsRepository: widget.settingsRepository,
+              ttsRepository: widget.ttsRepository,
             ),
           ),
         ),
@@ -199,7 +202,7 @@ class _TableOfContentsPageState extends State<TableOfContentsPage> {
                               ),
                               leading: const Icon(Icons.font_download_outlined),
                               children: [
-                                SimpleFontSettingsWidget(
+                                FontSizeSettingsWidget(
                                   settingsRepository: widget.settingsRepository,
                                 ),
                               ],

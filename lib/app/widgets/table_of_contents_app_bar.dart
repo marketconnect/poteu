@@ -1,14 +1,23 @@
 import 'package:flutter/material.dart';
 import '../navigation/app_navigator.dart';
+import '../../../domain/repositories/regulation_repository.dart';
+import '../../../domain/repositories/settings_repository.dart';
+import '../../../domain/repositories/tts_repository.dart';
 
 class TableOfContentsAppBar extends StatelessWidget {
+  final String title, name;
+  final RegulationRepository regulationRepository;
+  final SettingsRepository settingsRepository;
+  final TTSRepository ttsRepository;
+
   const TableOfContentsAppBar({
     super.key,
     required this.title,
     required this.name,
+    required this.regulationRepository,
+    required this.settingsRepository,
+    required this.ttsRepository,
   });
-
-  final String title, name;
 
   @override
   Widget build(BuildContext context) {
@@ -48,7 +57,12 @@ class TableOfContentsAppBar extends StatelessWidget {
         ),
         IconButton(
           icon: const Icon(Icons.search),
-          onPressed: () => AppNavigator.navigateToSearch(context),
+          onPressed: () => AppNavigator.navigateToSearch(
+            context,
+            regulationRepository: regulationRepository,
+            settingsRepository: settingsRepository,
+            ttsRepository: ttsRepository,
+          ),
         ),
       ],
     );

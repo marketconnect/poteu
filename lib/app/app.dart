@@ -31,6 +31,7 @@ class App extends StatelessWidget {
         regulationRepository:
             regulationRepository as StaticRegulationRepository,
         settingsRepository: settingsRepository,
+        ttsRepository: ttsRepository,
       ),
       debugShowCheckedModeBanner: false,
     );
