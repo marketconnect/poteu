@@ -138,79 +138,82 @@ class SearchViewState extends ViewState<SearchView, SearchPageController> {
                               children: [
                                 Row(
                                   children: [
-                                    GestureDetector(
-                                      onTap: () {
-                                        // Navigate to chapter with search result
-                                        Navigator.push(
-                                          context,
-                                          MaterialPageRoute(
-                                            builder: (context) => ChapterView(
-                                              regulationId:
-                                                  1, // POTEU regulation ID
-                                              initialChapterOrderNum:
-                                                  result.chapterOrderNum,
-                                              scrollToParagraphId:
-                                                  result.paragraphId,
-                                              settingsRepository:
-                                                  widget.settingsRepository,
-                                              ttsRepository:
-                                                  widget.ttsRepository,
-                                              regulationRepository:
-                                                  widget.regulationRepository,
-                                            ),
-                                          ),
-                                        );
-                                      },
-                                      child: Row(
-                                        children: [
-                                          SizedBox(
-                                            width: MediaQuery.of(context)
-                                                    .size
-                                                    .width *
-                                                0.05,
-                                          ),
-                                          SizedBox(
-                                            width: MediaQuery.of(context)
-                                                    .size
-                                                    .width *
-                                                0.85,
-                                            child: RichText(
-                                              text: TextSpan(
-                                                children: [
-                                                  TextSpan(
-                                                    text: result.text.substring(
-                                                        0, result.matchStart),
-                                                    style: Theme.of(context)
-                                                        .textTheme
-                                                        .bodyMedium,
-                                                  ),
-                                                  TextSpan(
-                                                    text: result.text.substring(
-                                                      result.matchStart,
-                                                      result.matchEnd,
-                                                    ),
-                                                    style: Theme.of(context)
-                                                        .textTheme
-                                                        .bodyMedium
-                                                        ?.copyWith(
-                                                          backgroundColor:
-                                                              Colors.yellow,
-                                                          fontWeight:
-                                                              FontWeight.bold,
-                                                        ),
-                                                  ),
-                                                  TextSpan(
-                                                    text: result.text.substring(
-                                                        result.matchEnd),
-                                                    style: Theme.of(context)
-                                                        .textTheme
-                                                        .bodyMedium,
-                                                  ),
-                                                ],
+                                    Expanded(
+                                      child: GestureDetector(
+                                        onTap: () {
+                                          // Navigate to chapter with search result
+                                          Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (context) => ChapterView(
+                                                regulationId:
+                                                    1, // POTEU regulation ID
+                                                initialChapterOrderNum:
+                                                    result.chapterOrderNum,
+                                                scrollToParagraphId:
+                                                    result.paragraphId,
+                                                settingsRepository:
+                                                    widget.settingsRepository,
+                                                ttsRepository:
+                                                    widget.ttsRepository,
+                                                regulationRepository:
+                                                    widget.regulationRepository,
                                               ),
                                             ),
-                                          ),
-                                        ],
+                                          );
+                                        },
+                                        child: Row(
+                                          children: [
+                                            SizedBox(
+                                              width: MediaQuery.of(context)
+                                                      .size
+                                                      .width *
+                                                  0.05,
+                                            ),
+                                            Expanded(
+                                              child: RichText(
+                                                text: TextSpan(
+                                                  children: [
+                                                    TextSpan(
+                                                      text: result.text
+                                                          .substring(
+                                                              0,
+                                                              result
+                                                                  .matchStart),
+                                                      style: Theme.of(context)
+                                                          .textTheme
+                                                          .bodyMedium,
+                                                    ),
+                                                    TextSpan(
+                                                      text:
+                                                          result.text.substring(
+                                                        result.matchStart,
+                                                        result.matchEnd,
+                                                      ),
+                                                      style: Theme.of(context)
+                                                          .textTheme
+                                                          .bodyMedium
+                                                          ?.copyWith(
+                                                            backgroundColor:
+                                                                Colors.yellow,
+                                                            fontWeight:
+                                                                FontWeight.bold,
+                                                          ),
+                                                    ),
+                                                    TextSpan(
+                                                      text: result.text
+                                                          .substring(
+                                                              result.matchEnd),
+                                                      style: Theme.of(context)
+                                                          .textTheme
+                                                          .bodyMedium,
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
                                       ),
                                     ),
                                   ],

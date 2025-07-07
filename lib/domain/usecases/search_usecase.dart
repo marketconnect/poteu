@@ -13,7 +13,7 @@ class SearchUseCase extends UseCase<List<SearchResult>, SearchUseCaseParams> {
       SearchUseCaseParams? params) async {
     final controller = StreamController<List<SearchResult>>();
     try {
-      if (params == null || params.query.isEmpty) {
+      if (params == null || params.query.trim().isEmpty) {
         controller.add([]);
         controller.close();
         return controller.stream;

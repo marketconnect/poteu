@@ -173,6 +173,27 @@ class NotesViewState extends ViewState<NotesView, NotesController> {
                         ),
                       ],
                     ),
+                    SizedBox(height: width * 0.03),
+                    // Third row: note content
+                    Row(
+                      children: [
+                        SizedBox(
+                            width: width * 0.1), // Indent to align with text
+                        Expanded(
+                          child: Text(
+                            note.content,
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 3,
+                            style: TextStyle(
+                              fontSize: width * 0.035,
+                              color:
+                                  Theme.of(context).textTheme.bodyLarge!.color,
+                              fontWeight: FontWeight.w400,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ],
                 ),
               ),
