@@ -19,18 +19,14 @@ class GetChapterUseCase extends UseCase<Chapter?, GetChapterUseCaseParams?> {
       }
       final chapterData =
           await _regulationRepository.getChapter(params.chapterId);
-      if (chapterData != null) {
-        final chapter = Chapter(
-          id: chapterData['id'] as int,
-          regulationId: chapterData['regulationId'] as int,
-          title: chapterData['title'] as String,
-          content: chapterData['content'] as String,
-          level: chapterData['level'] as int,
-        );
-        controller.add(chapter);
-      } else {
-        controller.add(null);
-      }
+      final chapter = Chapter(
+        id: chapterData['id'] as int,
+        regulationId: chapterData['regulationId'] as int,
+        title: chapterData['title'] as String,
+        content: chapterData['content'] as String,
+        level: chapterData['level'] as int,
+      );
+      controller.add(chapter);
       controller.close();
     } catch (e) {
       controller.addError(e);
