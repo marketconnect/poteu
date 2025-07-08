@@ -47,6 +47,7 @@ class ChapterController extends Controller {
   int _totalChapters = 0;
   bool _isLoading = true;
   String? _error;
+  String? _loadingError; // <--- NEW: for loading errors only
   bool _isBottomBarExpanded = false;
   bool _isBottomBarWhiteMode = false;
   Paragraph? _selectedParagraph;
@@ -78,6 +79,7 @@ class ChapterController extends Controller {
   int get totalChapters => _totalChapters;
   bool get isLoading => _isLoading;
   String? get error => _error;
+  String? get loadingError => _loadingError; // <--- NEW getter
   bool get isTTSPlaying => _ttsState == TtsState.playing;
   bool get isTTSPaused => _ttsState == TtsState.paused;
   bool get isTTSActive =>
@@ -191,7 +193,7 @@ class ChapterController extends Controller {
     };
 
     _searchPresenter.onSearchError = (e) {
-      _error = e.toString();
+      _loadingError = e.toString(); // <--- set loading error for search
       _isSearching = false;
       refreshUI();
     };
@@ -213,7 +215,8 @@ class ChapterController extends Controller {
         refreshUI();
       },
       onError: (error) {
-        _error = 'TTS Error: ${error.toString()}';
+        _loadingError =
+            'TTS Error:  {error.toString()}'; // <--- set loading error for TTS
         _ttsState = TtsState.error;
         _stopRequested = false; // Сбрасываем флаг при ошибке
         _isPlayingChapter = false; // Сбрасываем флаг воспроизведения главы
@@ -234,7 +237,7 @@ class ChapterController extends Controller {
     };
 
     _searchPresenter.onSearchError = (e) {
-      _error = e.toString();
+      _loadingError = e.toString(); // <--- set loading error for search
       _isSearching = false;
       refreshUI();
     };
@@ -256,7 +259,8 @@ class ChapterController extends Controller {
         refreshUI();
       },
       onError: (error) {
-        _error = 'TTS Error: ${error.toString()}';
+        _loadingError =
+            'TTS Error:  {error.toString()}'; // <--- set loading error for TTS
         _ttsState = TtsState.error;
         _stopRequested = false; // Сбрасываем флаг при ошибке
         _isPlayingChapter = false; // Сбрасываем флаг воспроизведения главы
@@ -270,6 +274,7 @@ class ChapterController extends Controller {
     print('🔄 Начало загрузки глав...');
 
     _isLoading = true;
+    _loadingError = null; // <--- clear loading error
     refreshUI();
 
     try {
@@ -281,6 +286,7 @@ class ChapterController extends Controller {
       await _loadChapterWithNeighbors(_initialChapterOrderNum);
 
       _isLoading = false;
+      _loadingError = null; // <--- clear loading error
       refreshUI();
 
       stopwatch.stop();
@@ -295,8 +301,9 @@ class ChapterController extends Controller {
     } catch (e) {
       stopwatch.stop();
       print('❌ Ошибка загрузки за ${stopwatch.elapsedMilliseconds}ms: $e');
-      _error = e.toString();
       _isLoading = false;
+      _loadingError =
+          'Ошибка загрузки: ${e.toString()}'; // <--- set loading error
       refreshUI();
     }
   }

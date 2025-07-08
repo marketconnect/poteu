@@ -295,7 +295,7 @@ class ChapterViewState extends ViewState<ChapterView, ChapterController> {
       return const Center(child: CircularProgressIndicator());
     }
 
-    if (controller.error != null) {
+    if (controller.loadingError != null) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -303,7 +303,7 @@ class ChapterViewState extends ViewState<ChapterView, ChapterController> {
             Icon(
               Icons.error_outline,
               size: 64,
-              color: Colors.red[300],
+              color: Theme.of(context).colorScheme.error,
             ),
             const SizedBox(height: 16),
             Text(
@@ -312,7 +312,7 @@ class ChapterViewState extends ViewState<ChapterView, ChapterController> {
             ),
             const SizedBox(height: 8),
             Text(
-              controller.error!,
+              controller.loadingError!,
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.bodyMedium,
             ),
@@ -566,7 +566,12 @@ class ChapterViewState extends ViewState<ChapterView, ChapterController> {
       ),
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
-        child: _parseAndDisplayTable(content),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            minWidth: MediaQuery.of(context).size.width * 0.9,
+          ),
+          child: _parseAndDisplayTable(content),
+        ),
       ),
     );
   }
@@ -592,40 +597,62 @@ class ChapterViewState extends ViewState<ChapterView, ChapterController> {
   }
 
   Widget _parseAndDisplayTable(String content) {
-    return DataTable(
-      border: TableBorder.all(color: Colors.grey[300]!),
-      columns: [
-        DataColumn(
-            label: Text('Напряжение, кВ',
-                style: Theme.of(context).textTheme.bodyMedium)),
-        DataColumn(
-            label: Text('Расстояние от работников, м',
-                style: Theme.of(context).textTheme.bodyMedium)),
-        DataColumn(
-            label: Text('Расстояния от механизмов, м',
-                style: Theme.of(context).textTheme.bodyMedium)),
-      ],
-      rows: [
-        DataRow(cells: [
-          DataCell(
-              Text('ВЛ до 1', style: Theme.of(context).textTheme.bodyMedium)),
-          DataCell(Text('0,6', style: Theme.of(context).textTheme.bodyMedium)),
-          DataCell(Text('1,0', style: Theme.of(context).textTheme.bodyMedium)),
-        ]),
-        DataRow(cells: [
-          DataCell(Text('до 1', style: Theme.of(context).textTheme.bodyMedium)),
-          DataCell(Text('не нормируется',
-              style: Theme.of(context).textTheme.bodyMedium)),
-          DataCell(Text('1,0', style: Theme.of(context).textTheme.bodyMedium)),
-        ]),
-        DataRow(cells: [
-          DataCell(
-              Text('1 - 35', style: Theme.of(context).textTheme.bodyMedium)),
-          DataCell(Text('0,6', style: Theme.of(context).textTheme.bodyMedium)),
-          DataCell(Text('1,0', style: Theme.of(context).textTheme.bodyMedium)),
-        ]),
-      ],
-    );
+    try {
+      // Parse HTML table using HtmlWidget for better compatibility
+      return HtmlWidget(
+        content,
+        textStyle: Theme.of(context).textTheme.bodyMedium,
+        customStylesBuilder: (element) {
+          if (element.localName == 'table') {
+            return {
+              'border-collapse': 'collapse',
+              'width': '100%',
+              'border': '1px solid #ccc',
+              'font-size': '14px',
+            };
+          }
+          if (element.localName == 'td' || element.localName == 'th') {
+            return {
+              'border': '1px solid #ccc',
+              'padding': '8px 12px',
+              'text-align': 'center',
+              'vertical-align': 'middle',
+              'min-width': '80px',
+            };
+          }
+          if (element.localName == 'tr') {
+            return {
+              'background-color': 'transparent',
+            };
+          }
+          if (element.localName == 'p') {
+            return {
+              'margin': '0',
+              'padding': '0',
+            };
+          }
+          return null;
+        },
+        onErrorBuilder: (context, element, error) {
+          return Text('Ошибка отображения таблицы: $error');
+        },
+      );
+    } catch (e) {
+      // Fallback to simple text display if parsing fails
+      return Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          border: Border.all(color: Colors.grey[300]!),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Text(
+          'Ошибка при отображении таблицы: $e',
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: Colors.red,
+              ),
+        ),
+      );
+    }
   }
 
   // ========== BOTTOM BAR COMPONENTS (like original) ==========
@@ -1083,7 +1110,7 @@ class ChapterViewState extends ViewState<ChapterView, ChapterController> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
-        backgroundColor: Colors.red,
+        backgroundColor: Theme.of(context).colorScheme.error,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(10),

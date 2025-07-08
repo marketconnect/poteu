@@ -6,6 +6,7 @@ import '../../../domain/repositories/notes_repository.dart';
 import '../../widgets/regulation_app_bar.dart';
 import 'notes_controller.dart';
 import '../chapter/model/chapter_arguments.dart';
+import '../../utils/text_utils.dart';
 
 class NotesView extends View {
   final NotesRepository notesRepository;
@@ -181,7 +182,7 @@ class NotesViewState extends ViewState<NotesView, NotesController> {
                             width: width * 0.1), // Indent to align with text
                         Expanded(
                           child: Text(
-                            note.content,
+                            TextUtils.parseHtmlString(note.content),
                             overflow: TextOverflow.ellipsis,
                             maxLines: 3,
                             style: TextStyle(
