@@ -210,9 +210,33 @@ class DataTTSRepository implements TTSRepository {
   @override
   Future<void> stop() async {
     _log('Stopping speech...');
+
+    // Если TTS находится в состоянии paused, сначала попробуем принудительно остановить
+    if (_isPaused) {
+      _log('TTS is paused, forcing stop...');
+      try {
+        // Принудительно останавливаем TTS
+        await _flutterTts.stop();
+        // Небольшая задержка для обработки остановки
+        await Future.delayed(Duration(milliseconds: 100));
+      } catch (e) {
+        _log('Error forcing stop from paused state: $e');
+      }
+    }
+
+    // Обычная остановка
+    try {
+      await _flutterTts.stop();
+    } catch (e) {
+      _log('Error in stop(): $e');
+    }
+
+    // Сбрасываем состояние
     _currentText = null;
     _isPaused = false;
-    await _flutterTts.stop();
+
+    // Принудительно отправляем состояние stopped
+    _stateController.add(TtsState.stopped);
   }
 
   @override
@@ -224,9 +248,17 @@ class DataTTSRepository implements TTSRepository {
       _stateController.add(TtsState.paused);
     } catch (e) {
       _log('Error pausing speech: $e');
-      // Если pause не поддерживается, попробуем остановить
-      await _flutterTts.stop();
-      _stateController.add(TtsState.paused);
+      // Если pause не поддерживается или произошла ошибка,
+      // останавливаем воспроизведение и устанавливаем состояние paused
+      try {
+        await _flutterTts.stop();
+        _isPaused = true;
+        _stateController.add(TtsState.paused);
+        _log('Fallback: stopped speech and set paused state');
+      } catch (stopError) {
+        _log('Error in fallback stop: $stopError');
+        _stateController.add(TtsState.error);
+      }
     }
   }
 

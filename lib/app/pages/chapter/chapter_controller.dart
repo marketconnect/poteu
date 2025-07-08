@@ -204,12 +204,26 @@ class ChapterController extends Controller {
         _ttsState = state;
         print('🎵 TTS state changed to: $state');
 
-        // Сбрасываем флаг остановки только когда воспроизведение главы завершено
-        if ((state == TtsState.stopped || state == TtsState.error) &&
-            !_isPlayingChapter) {
-          _stopRequested = false;
-          print(
-              '🎵 TTS state changed to $state - resetting stop flag (chapter playback finished)');
+        // Обрабатываем переходы состояний
+        switch (state) {
+          case TtsState.stopped:
+          case TtsState.error:
+            // Сбрасываем флаг остановки когда воспроизведение главы завершено
+            if (!_isPlayingChapter) {
+              _stopRequested = false;
+              print(
+                  '🎵 TTS state changed to $state - resetting stop flag (chapter playback finished)');
+            }
+            break;
+          case TtsState.paused:
+            // Если запрошена остановка во время паузы, принудительно останавливаем
+            if (_stopRequested) {
+              print('🎵 Stop requested while paused, forcing stop...');
+              stopTTS();
+            }
+            break;
+          default:
+            break;
         }
 
         refreshUI();
@@ -248,12 +262,26 @@ class ChapterController extends Controller {
         _ttsState = state;
         print('🎵 TTS state changed to: $state');
 
-        // Сбрасываем флаг остановки только когда воспроизведение главы завершено
-        if ((state == TtsState.stopped || state == TtsState.error) &&
-            !_isPlayingChapter) {
-          _stopRequested = false;
-          print(
-              '🎵 TTS state changed to $state - resetting stop flag (chapter playback finished)');
+        // Обрабатываем переходы состояний
+        switch (state) {
+          case TtsState.stopped:
+          case TtsState.error:
+            // Сбрасываем флаг остановки когда воспроизведение главы завершено
+            if (!_isPlayingChapter) {
+              _stopRequested = false;
+              print(
+                  '🎵 TTS state changed to $state - resetting stop flag (chapter playback finished)');
+            }
+            break;
+          case TtsState.paused:
+            // Если запрошена остановка во время паузы, принудительно останавливаем
+            if (_stopRequested) {
+              print('🎵 Stop requested while paused, forcing stop...');
+              stopTTS();
+            }
+            break;
+          default:
+            break;
         }
 
         refreshUI();
@@ -1564,8 +1592,18 @@ class ChapterController extends Controller {
           '🎵 STOP TTS CALLED - Setting stop flag and stopping chapter playback');
       _stopRequested = true; // Устанавливаем флаг остановки
       _isPlayingChapter = false; // Останавливаем воспроизведение главы
+
+      // Вызываем stop() в TTS репозитории
       _ttsUseCase.execute(_TTSUseCaseObserver(this), TTSUseCaseParams.stop());
+
+      // Дополнительная проверка: если TTS все еще в состоянии paused, принудительно останавливаем
+      if (_ttsState == TtsState.paused) {
+        print('🎵 TTS still paused after stop call, forcing stop again...');
+        await Future.delayed(Duration(milliseconds: 200)); // Небольшая задержка
+        _ttsUseCase.execute(_TTSUseCaseObserver(this), TTSUseCaseParams.stop());
+      }
     } catch (e) {
+      print('🎵 Error in stopTTS(): $e');
       _error = e.toString();
       refreshUI();
     }
