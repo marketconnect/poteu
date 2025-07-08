@@ -1145,7 +1145,9 @@ class ChapterController extends Controller {
 
       final chapterData = getChapterData(_currentChapterOrderNum);
       if (chapterData != null) {
-        final paragraphs = chapterData['paragraphs'] as List<Paragraph>;
+        final paragraphs = (chapterData['paragraphs'] as List<Paragraph>)
+            .where((p) => !p.isTable)
+            .toList();
 
         print(
             '🎵 Starting TTS for chapter $_currentChapterOrderNum with ${paragraphs.length} paragraphs');
