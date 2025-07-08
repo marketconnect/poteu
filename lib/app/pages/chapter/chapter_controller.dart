@@ -72,6 +72,7 @@ class ChapterController extends Controller {
   StreamSubscription<TtsState>? _ttsStateSubscription;
   bool _stopRequested = false; // Флаг для остановки воспроизведения
   bool _isPlayingChapter = false; // Флаг для отслеживания воспроизведения главы
+  Paragraph? _currentTTSParagraph; // Текущий читаемый параграф для TTS
 
   // Getters
   Map<int, Map<String, dynamic>> get chaptersData => _chaptersData;
@@ -111,6 +112,9 @@ class ChapterController extends Controller {
 
   // Getter for TTS state
   TtsState get ttsState => _ttsState;
+
+  // Getter for current TTS paragraph
+  Paragraph? get currentTTSParagraph => _currentTTSParagraph;
 
   // ScrollController methods
   ScrollController getScrollControllerForChapter(int chapterOrderNum) {
@@ -207,13 +211,37 @@ class ChapterController extends Controller {
         // Обрабатываем переходы состояний
         switch (state) {
           case TtsState.stopped:
-          case TtsState.error:
+            // Очищаем параграф только если это была запрошенная остановка
+            if (_stopRequested) {
+              print('🎵 TTS stopped as requested - clearing current paragraph');
+              _currentTTSParagraph = null;
+            } else {
+              print(
+                  '🎵 TTS stopped naturally - keeping current paragraph highlighted for 3 seconds');
+              // Автоматически очищаем выделение через 3 секунды после естественного завершения
+              Future.delayed(Duration(seconds: 3), () {
+                if (_currentTTSParagraph != null &&
+                    !_isPlayingChapter &&
+                    _ttsState == TtsState.stopped) {
+                  print(
+                      '🎵 Auto-clearing paragraph highlight after natural completion');
+                  _currentTTSParagraph = null;
+                  refreshUI();
+                }
+              });
+            }
+
             // Сбрасываем флаг остановки когда воспроизведение главы завершено
             if (!_isPlayingChapter) {
               _stopRequested = false;
               print(
                   '🎵 TTS state changed to $state - resetting stop flag (chapter playback finished)');
             }
+            break;
+          case TtsState.error:
+            // При ошибке всегда очищаем
+            print('🎵 TTS error - clearing current paragraph');
+            _currentTTSParagraph = null;
             break;
           case TtsState.paused:
             // Если запрошена остановка во время паузы, принудительно останавливаем
@@ -234,6 +262,8 @@ class ChapterController extends Controller {
         _ttsState = TtsState.error;
         _stopRequested = false; // Сбрасываем флаг при ошибке
         _isPlayingChapter = false; // Сбрасываем флаг воспроизведения главы
+        _currentTTSParagraph = null; // Очищаем при ошибке
+        print('🎵 TTS error in stream - clearing current paragraph');
         refreshUI();
       },
     );
@@ -256,45 +286,8 @@ class ChapterController extends Controller {
       refreshUI();
     };
 
-    // Initialize TTS state subscription
-    _ttsStateSubscription = _ttsUseCase.stateStream.listen(
-      (TtsState state) {
-        _ttsState = state;
-        print('🎵 TTS state changed to: $state');
-
-        // Обрабатываем переходы состояний
-        switch (state) {
-          case TtsState.stopped:
-          case TtsState.error:
-            // Сбрасываем флаг остановки когда воспроизведение главы завершено
-            if (!_isPlayingChapter) {
-              _stopRequested = false;
-              print(
-                  '🎵 TTS state changed to $state - resetting stop flag (chapter playback finished)');
-            }
-            break;
-          case TtsState.paused:
-            // Если запрошена остановка во время паузы, принудительно останавливаем
-            if (_stopRequested) {
-              print('🎵 Stop requested while paused, forcing stop...');
-              stopTTS();
-            }
-            break;
-          default:
-            break;
-        }
-
-        refreshUI();
-      },
-      onError: (error) {
-        _loadingError =
-            'TTS Error:  {error.toString()}'; // <--- set loading error for TTS
-        _ttsState = TtsState.error;
-        _stopRequested = false; // Сбрасываем флаг при ошибке
-        _isPlayingChapter = false; // Сбрасываем флаг воспроизведения главы
-        refreshUI();
-      },
-    );
+    // TTS state subscription уже инициализирована в конструкторе
+    // Не дублируем её здесь
   }
 
   Future<void> loadAllChapters() async {
@@ -1138,6 +1131,9 @@ class ChapterController extends Controller {
       // Сбрасываем флаг остановки в начале воспроизведения
       _stopRequested = false;
 
+      // Убираем установку текущего параграфа для одиночного воспроизведения
+      print('🎵 TTS: Playing single paragraph ID: ${paragraph.id}');
+
       String textToSpeak = '';
 
       // First try to use the dedicated textToSpeech field if available
@@ -1161,15 +1157,16 @@ class ChapterController extends Controller {
       }
     } catch (e) {
       _error = e.toString();
+      _currentTTSParagraph = null; // Очищаем при ошибке
+      print('🎵 TTS: Error occurred, clearing current paragraph');
       refreshUI();
     }
   }
 
   Future<void> playChapterTTS() async {
     try {
-      // Сбрасываем флаг остановки в начале воспроизведения
       _stopRequested = false;
-      _isPlayingChapter = true; // Устанавливаем флаг воспроизведения главы
+      _isPlayingChapter = true;
 
       final chapterData = getChapterData(_currentChapterOrderNum);
       if (chapterData != null) {
@@ -1180,8 +1177,8 @@ class ChapterController extends Controller {
         print(
             '🎵 Starting TTS for chapter $_currentChapterOrderNum with ${paragraphs.length} paragraphs');
 
-        // Extract all text from paragraphs with better handling
-        final allTexts = <String>[];
+        // Создаем структуру для хранения информации о чанках
+        List<Map<String, dynamic>> chunksInfo = [];
 
         for (int i = 0; i < paragraphs.length; i++) {
           final paragraph = paragraphs[i];
@@ -1190,58 +1187,32 @@ class ChapterController extends Controller {
           print(
               '📝 Processing paragraph ${i + 1}/${paragraphs.length} (ID: ${paragraph.id})');
 
-          // First try to use the dedicated textToSpeech field if available
           if (paragraph.textToSpeech != null &&
               paragraph.textToSpeech!.isNotEmpty) {
             textToSpeak = paragraph.textToSpeech!;
-            print(
-                '  ✅ Using textToSpeech field: "${textToSpeak.substring(0, textToSpeak.length > 50 ? 50 : textToSpeak.length)}..."');
           } else {
-            // Fallback to parsing HTML content
             textToSpeak = TextUtils.parseHtmlString(paragraph.content);
-            print(
-                '  🔄 Using parsed HTML: "${textToSpeak.substring(0, textToSpeak.length > 50 ? 50 : textToSpeak.length)}..."');
           }
 
-          // Additional processing for complex content
           if (textToSpeak.trim().isEmpty && paragraph.isTable) {
-            // For tables, try to extract more meaningful text
             textToSpeak = _extractTableText(paragraph.content);
-            print(
-                '  📊 Using extracted table text: "${textToSpeak.substring(0, textToSpeak.length > 50 ? 50 : textToSpeak.length)}..."');
           }
 
-          // Only add non-empty texts
           if (textToSpeak.trim().isNotEmpty) {
-            allTexts.add(textToSpeak.trim());
-            print(
-                '  ✅ Added to TTS queue (${textToSpeak.trim().length} chars)');
-          } else {
-            print('  ⚠️ Skipped - no readable text found');
+            chunksInfo.add({
+              'text': textToSpeak.trim(),
+              'paragraph': paragraph,
+            });
           }
         }
 
-        print('🎵 Total texts to speak: ${allTexts.length}');
-
-        // If no text, return early
-        if (allTexts.isEmpty) {
+        if (chunksInfo.isEmpty) {
           print('❌ No text to speak');
           return;
         }
 
-        // If total text is short enough, speak it all at once
-        final totalLength = allTexts.join('. ').length;
-        if (totalLength <= _maxTtsTextLength) {
-          final fullText = allTexts.join('. ');
-          print('🎵 Speaking all text at once (${totalLength} chars)');
-          _ttsUseCase.execute(
-              _TTSUseCaseObserver(this), TTSUseCaseParams.speak(fullText));
-          return;
-        }
-
-        // Otherwise, chunk the text into smaller pieces
-        print('🎵 Text too long (${totalLength} chars), chunking into pieces');
-        await _playChapterInChunks(allTexts);
+        // Воспроизводим чанки
+        await _playChapterInChunks(chunksInfo);
       }
     } catch (e) {
       print('❌ Error in playChapterTTS: $e');
@@ -1309,30 +1280,32 @@ class ChapterController extends Controller {
     }
   }
 
-  /// Plays chapter text in chunks to avoid TTS text length limits
-  Future<void> _playChapterInChunks(List<String> texts) async {
+  Future<void> _playChapterInChunks(
+      List<Map<String, dynamic>> chunksInfo) async {
     try {
       print('🎵 _playChapterInChunks: Starting chapter playback');
 
-      // Проверяем, не была ли запрошена остановка перед началом
       if (_stopRequested || !_isPlayingChapter) {
         print('🎵 _playChapterInChunks: Playback stopped before starting');
         return;
       }
 
-      final chunks = _createTextChunks(texts);
-      print('🎵 Created ${chunks.length} chunks for TTS playback');
-
-      for (int i = 0; i < chunks.length; i++) {
-        // Проверяем остановку в начале каждого цикла
+      for (int i = 0; i < chunksInfo.length; i++) {
         if (_stopRequested || !_isPlayingChapter) {
           print('🎵 _playChapterInChunks: Playback stopped at chunk ${i + 1}');
           return;
         }
 
-        final chunk = chunks[i];
+        final chunkInfo = chunksInfo[i];
+        final text = chunkInfo['text'] as String;
+        final paragraph = chunkInfo['paragraph'] as Paragraph;
+
         print(
-            '🎵 Playing chunk ${i + 1}/${chunks.length} (${chunk.length} chars)');
+            '🎵 Playing chunk ${i + 1}/${chunksInfo.length} for paragraph ID: ${paragraph.id}');
+
+        // Устанавливаем текущий параграф для выделения
+        _currentTTSParagraph = paragraph;
+        refreshUI();
 
         // Останавливаем предыдущий TTS если он еще играет
         if (_ttsState == TtsState.playing) {
@@ -1340,7 +1313,6 @@ class ChapterController extends Controller {
           await stopTTS();
           await Future.delayed(const Duration(milliseconds: 500));
 
-          // Проверяем остановку после остановки предыдущего TTS
           if (_stopRequested || !_isPlayingChapter) {
             print(
                 '🎵 _playChapterInChunks: Playback stopped after stopping previous TTS');
@@ -1348,23 +1320,19 @@ class ChapterController extends Controller {
           }
         }
 
-        // Отправляем новый чанк в TTS
-        print('🎵 Sending chunk ${i + 1} to TTS');
+        // Отправляем текст в TTS
         _ttsUseCase.execute(
-            _TTSUseCaseObserver(this), TTSUseCaseParams.speak(chunk));
+            _TTSUseCaseObserver(this), TTSUseCaseParams.speak(text));
 
         // Ждем завершения TTS
-        print('🎵 Waiting for TTS completion...');
         await _waitForTTSCompletion();
 
-        // Проверяем остановку после завершения TTS
         if (_stopRequested || !_isPlayingChapter) {
           print(
               '🎵 _playChapterInChunks: Playback stopped after TTS completion');
           return;
         }
 
-        // Проверяем ошибку TTS
         if (_ttsState == TtsState.error) {
           print('❌ TTS chunk ${i + 1} failed with error');
           _error = 'Ошибка воспроизведения TTS';
@@ -1373,22 +1341,16 @@ class ChapterController extends Controller {
           return;
         }
 
-        print('🎵 TTS chunk ${i + 1} completed successfully');
-
-        // Пауза между чанками (кроме последнего)
-        if (i < chunks.length - 1) {
-          print('🎵 Adding pause between chunks...');
+        // Пауза между параграфами
+        if (i < chunksInfo.length - 1) {
           await Future.delayed(const Duration(milliseconds: 300));
-
-          // Проверяем остановку после паузы
-          if (_stopRequested || !_isPlayingChapter) {
-            print('🎵 _playChapterInChunks: Playback stopped after pause');
-            return;
-          }
         }
       }
 
       print('🎵 All chunks completed successfully');
+      // Очищаем выделение после завершения всей главы
+      _currentTTSParagraph = null;
+      refreshUI();
     } catch (e) {
       print('❌ Error in _playChapterInChunks: $e');
       _error = 'Ошибка воспроизведения главы: ${e.toString()}';
@@ -1592,6 +1554,9 @@ class ChapterController extends Controller {
           '🎵 STOP TTS CALLED - Setting stop flag and stopping chapter playback');
       _stopRequested = true; // Устанавливаем флаг остановки
       _isPlayingChapter = false; // Останавливаем воспроизведение главы
+      _currentTTSParagraph = null; // Очищаем текущий читаемый параграф
+      print('🎵 TTS: Clearing current paragraph in stopTTS');
+      refreshUI(); // Обновляем UI для снятия выделения
 
       // Вызываем stop() в TTS репозитории
       _ttsUseCase.execute(_TTSUseCaseObserver(this), TTSUseCaseParams.stop());
@@ -1605,6 +1570,8 @@ class ChapterController extends Controller {
     } catch (e) {
       print('🎵 Error in stopTTS(): $e');
       _error = e.toString();
+      _currentTTSParagraph = null; // Очищаем при ошибке
+      print('🎵 TTS: Clearing current paragraph due to error in stopTTS');
       refreshUI();
     }
   }
@@ -1631,6 +1598,8 @@ class ChapterController extends Controller {
 
   @override
   void refreshUI() {
+    print(
+        '🔄 RefreshUI called - currentTTSParagraph: ${_currentTTSParagraph?.id ?? "null"}');
     super.refreshUI();
   }
 
@@ -1723,13 +1692,20 @@ class _TTSUseCaseObserver extends Observer<void> {
 
   @override
   void onComplete() {
-    print('🎵 TTS Observer: onComplete called');
+    print(
+        '🎵 TTS Observer: onComplete called - NOT clearing current paragraph');
+    // НЕ очищаем текущий читаемый параграф при завершении TTS
+    // Пусть пользователь сам остановит или это сделает stopTTS()
+    _controller.refreshUI();
   }
 
   @override
   void onError(e) {
     print('❌ TTS Observer: onError called with: $e');
     _controller._error = e.toString();
+    // Очищаем текущий читаемый параграф только при ошибке TTS
+    _controller._currentTTSParagraph = null;
+    print('🎵 TTS Observer: Clearing current paragraph in onError');
     _controller.refreshUI();
   }
 

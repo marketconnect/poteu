@@ -421,24 +421,46 @@ class ChapterViewState extends ViewState<ChapterView, ChapterController> {
     final bool isSelected = controller.selectedParagraph?.id == paragraph.id;
     final bool hasFormatting = controller.hasFormatting(paragraph);
     final bool bottomBarExpanded = controller.isBottomBarExpanded;
+    final bool isCurrentTTSParagraph =
+        controller.currentTTSParagraph?.id == paragraph.id;
+
+    // Debug info for TTS highlighting - только если есть TTS параграф
+    if (controller.currentTTSParagraph != null && isCurrentTTSParagraph) {
+      print('🎵 UI: TTS highlighting paragraph ${paragraph.id}');
+    }
 
     // If bottom bar is expanded or paragraph is table/NFT, don't show context menu
     if (bottomBarExpanded || paragraph.isTable || paragraph.isNft) {
+      Color cardColor;
+      BoxDecoration? decoration;
+
+      if (isCurrentTTSParagraph) {
+        cardColor =
+            Colors.green.withOpacity(0.2); // Приятный зелёный цвет для TTS
+        decoration = BoxDecoration(
+          border: Border.all(color: Colors.green, width: 3), // Зелёная рамка
+          borderRadius: BorderRadius.circular(4),
+        );
+      } else if (isSelected) {
+        cardColor = Theme.of(context).primaryColor.withOpacity(0.1);
+        decoration = BoxDecoration(
+          border: Border.all(color: Theme.of(context).primaryColor, width: 2),
+          borderRadius: BorderRadius.circular(4),
+        );
+      } else if (hasFormatting) {
+        cardColor = Colors.yellow.withOpacity(0.1);
+        decoration = BoxDecoration(borderRadius: BorderRadius.circular(4));
+      } else {
+        cardColor = Theme.of(context).scaffoldBackgroundColor;
+        decoration = BoxDecoration(borderRadius: BorderRadius.circular(4));
+      }
+
       return Card(
         elevation: 0,
-        color: isSelected
-            ? Theme.of(context).primaryColor.withOpacity(0.1)
-            : hasFormatting
-                ? Colors.yellow.withOpacity(0.1)
-                : Theme.of(context).scaffoldBackgroundColor,
+        color: cardColor,
         margin: EdgeInsets.zero,
         child: Container(
-          decoration: BoxDecoration(
-            border: isSelected
-                ? Border.all(color: Theme.of(context).primaryColor, width: 2)
-                : null,
-            borderRadius: BorderRadius.circular(4),
-          ),
+          decoration: decoration,
           child: _buildParagraphContent(paragraph, controller,
               isSelectable: controller.isBottomBarExpanded),
         ),
@@ -451,6 +473,7 @@ class ChapterViewState extends ViewState<ChapterView, ChapterController> {
       controller,
       isSelected,
       hasFormatting,
+      isCurrentTTSParagraph,
     );
   }
 
@@ -483,15 +506,44 @@ class ChapterViewState extends ViewState<ChapterView, ChapterController> {
         textAlign = null;
     }
 
+    final bool isCurrentTTSParagraph =
+        controller.currentTTSParagraph?.id == paragraph.id;
+
+    Widget content = paragraph.isTable
+        ? _buildTableContent(paragraph.content)
+        : paragraph.isNft
+            ? _buildNftContent(paragraph.content, controller)
+            : _buildRegularContent(
+                paragraph, textAlign, controller, isSelectable);
+
     return Container(
       alignment: Alignment.centerLeft,
       padding: padding,
-      child: paragraph.isTable
-          ? _buildTableContent(paragraph.content)
-          : paragraph.isNft
-              ? _buildNftContent(paragraph.content, controller)
-              : _buildRegularContent(
-                  paragraph, textAlign, controller, isSelectable),
+      child: isCurrentTTSParagraph && !paragraph.isTable && !paragraph.isNft
+          ? Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // TTS indicator icon
+                Padding(
+                  padding: const EdgeInsets.only(right: 8.0, top: 2.0),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.green, // Зелёный цвет для TTS иконки
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    padding: const EdgeInsets.all(4.0),
+                    child: Icon(
+                      Icons.volume_up,
+                      color: Colors.white,
+                      size: 20,
+                    ),
+                  ),
+                ),
+                // Paragraph content
+                Expanded(child: content),
+              ],
+            )
+          : content,
     );
   }
 
@@ -507,11 +559,6 @@ class ChapterViewState extends ViewState<ChapterView, ChapterController> {
         textAlign: textAlign,
         onSelectionChanged: (selection, cause) {
           try {
-            // Multiple safety checks
-            if (selection == null) {
-              return;
-            }
-
             if (selection.baseOffset != selection.extentOffset &&
                 selection.baseOffset >= 0 &&
                 selection.extentOffset >= 0) {
@@ -532,8 +579,8 @@ class ChapterViewState extends ViewState<ChapterView, ChapterController> {
                   end > start &&
                   end <= plainText.length) {
                 controller.setTextSelection(paragraph, start, end);
-              } else {}
-            } else {}
+              }
+            }
           } catch (e) {
             // Don't crash the app, just ignore the selection
           }
@@ -1120,22 +1167,48 @@ class ChapterViewState extends ViewState<ChapterView, ChapterController> {
     );
   }
 
-  Widget _buildParagraphWithContextMenu(Paragraph paragraph,
-      ChapterController controller, bool isSelected, bool hasFormatting) {
+  Widget _buildParagraphWithContextMenu(
+      Paragraph paragraph,
+      ChapterController controller,
+      bool isSelected,
+      bool hasFormatting,
+      bool isCurrentTTSParagraph) {
+    Color cardColor;
+    BoxDecoration? decoration;
+
+    if (isCurrentTTSParagraph) {
+      cardColor =
+          Colors.green.withOpacity(0.2); // Приятный зелёный цвет для TTS
+      decoration = BoxDecoration(
+        border: Border.all(color: Colors.green, width: 3), // Зелёная рамка
+        borderRadius: BorderRadius.circular(4),
+      );
+    } else if (isSelected) {
+      cardColor = Theme.of(context).primaryColor.withOpacity(0.1);
+      decoration = BoxDecoration(
+        border: Border.all(color: Theme.of(context).primaryColor, width: 2),
+        borderRadius: BorderRadius.circular(4),
+      );
+    } else if (hasFormatting) {
+      cardColor = Colors.yellow.withOpacity(0.1);
+      decoration = BoxDecoration(borderRadius: BorderRadius.circular(4));
+    } else {
+      cardColor = Theme.of(context).scaffoldBackgroundColor;
+      decoration = BoxDecoration(borderRadius: BorderRadius.circular(4));
+    }
+
     return GestureDetector(
       onTap: () {
         _showParagraphContextMenu(context, paragraph, controller);
       },
       child: Card(
         elevation: 0,
-        color: isSelected
-            ? Theme.of(context).primaryColor.withOpacity(0.1)
-            : hasFormatting
-                ? Colors.yellow.withOpacity(0.1)
-                : Theme.of(context).scaffoldBackgroundColor,
+        color: cardColor,
         margin: EdgeInsets.zero,
-        child: _buildParagraphContent(paragraph, controller,
-            isSelectable: controller.isBottomBarExpanded),
+        child: Container(
+          decoration: decoration,
+          child: _buildParagraphContent(paragraph, controller),
+        ),
       ),
     );
   }
