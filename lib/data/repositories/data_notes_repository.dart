@@ -1,183 +1,192 @@
 import 'package:flutter/material.dart';
 import '../../domain/entities/note.dart';
 import '../../domain/repositories/notes_repository.dart';
-import '../helpers/database_helper.dart';
-import '../../app/utils/text_utils.dart';
+import '../helpers/duckdb_provider.dart';
 
 class DataNotesRepository implements NotesRepository {
-  final DatabaseHelper _db;
+  final DuckDBProvider _dbProvider = DuckDBProvider.instance;
 
-  DataNotesRepository(this._db);
+  DataNotesRepository() {
+    _dbProvider.initialize();
+  }
 
   @override
   Future<List<Note>> getAllNotes() async {
-    final db = await _db.database;
+    try {
+      print('=== GET ALL NOTES ===');
 
-    // Get all paragraphs that have been updated (either formatted or with notes)
-    final List<Map<String, dynamic>> paragraphMaps = await db.query(
-      'paragraphs',
-      where:
-          'updated_at IS NOT NULL AND (content LIKE ? OR content LIKE ? OR note IS NOT NULL)',
-      whereArgs: ['%<span%', '%<u%'],
-    );
+      final conn = await _dbProvider.connection;
+      print('✅ Database connection established');
 
-    print('=== SEARCHING FOR NOTES ===');
-    print('Found ${paragraphMaps.length} paragraphs with notes or formatting');
+      final query = '''
+        SELECT
+          p.original_id,
+          p.content,
+          p.note,
+          p.updated_at,
+          c.id as chapter_id,
+          c.orderNum as chapter_order_num,
+          c.name as chapter_name,
+          r.name as regulation_title,
+          orig_p.content as original_content
+        FROM user_paragraph_edits p
+        JOIN paragraphs orig_p ON p.original_id = orig_p.id
+        JOIN chapters c ON orig_p.chapterID = c.id
+        JOIN rules r ON c.rule_id = r.id
+      ''';
 
-    final List<Note> notes = [];
+      print('Executing query: $query');
+      final result = await conn.query(query);
 
-    for (final paragraphMap in paragraphMaps) {
-      print('\n=== PROCESSING PARAGRAPH ===');
-      print('Paragraph ID: ${paragraphMap['id']}');
-      print('Chapter ID: ${paragraphMap['chapter_id']}');
-      print('Content: ${paragraphMap['content']}');
-      print('Note: ${paragraphMap['note']}');
+      final paragraphMaps = result.fetchAll();
+      print(
+          'Found ${paragraphMaps.length} paragraphs with notes or formatting');
 
-      // Get chapter info
-      final chapterMaps = await db.query(
-        'chapters',
-        where: 'id = ?',
-        whereArgs: [paragraphMap['chapter_id']],
-      );
+      final List<Note> notes = [];
 
-      print('\n=== CHAPTER LOOKUP ===');
-      print('Looking for chapter ID: ${paragraphMap['chapter_id']}');
-      print('Found ${chapterMaps.length} matching chapters');
-
-      if (chapterMaps.isEmpty) {
-        print(
-            '⚠️ WARNING: No chapter found for ID ${paragraphMap['chapter_id']}');
-        print(
-            'This is an orphaned paragraph - should be cleaned up by database maintenance');
-
-        // Log the orphaned paragraph for debugging
-        print('Orphaned paragraph details:');
-        print('  Paragraph ID: ${paragraphMap['id']}');
-        print('  Original ID: ${paragraphMap['original_id']}');
-        print('  Content: ${paragraphMap['content']}');
-        print('  Note: ${paragraphMap['note']}');
-
-        // Skip processing this orphaned paragraph
-        continue;
-      }
-
-      final chapterMap = chapterMaps.first;
-      print('Chapter details:');
-      print('  Title: ${chapterMap['title']}');
-      print('  Order num: ${chapterMap['order_num']}');
-
-      // First check for formatted links
-      final links =
-          _extractEditedParagraphLinks(paragraphMap['content'] as String);
-      print('\n=== FORMATTED LINKS ===');
-      print('Found ${links.length} formatted links');
-
-      // Add formatted links as notes
-      for (final link in links) {
+      for (int i = 0; i < paragraphMaps.length; i++) {
         try {
-          print('\n=== CREATING NOTE FROM FORMATTED LINK ===');
-          print('Link text: "${link.text}"');
-          print('Link color: ${link.color}');
+          final paragraphMap = paragraphMaps[i];
+          print(
+              '\n=== PROCESSING PARAGRAPH ${i + 1}/${paragraphMaps.length} ===');
 
-          // Check for duplicates before creating note
-          bool isDuplicate = notes.any((existingNote) =>
-              existingNote.link.text == link.text &&
-              existingNote.link.color.value == link.color.value &&
-              existingNote.chapterId == paragraphMap['chapter_id']);
+          final originalId = paragraphMap[0] as int;
+          final editedContent = paragraphMap[1] as String?;
+          final noteText = paragraphMap[2] as String?;
+          final updatedAt = paragraphMap[3] as DateTime?;
+          final chapterId = paragraphMap[4] as int;
+          final chapterOrderNum = paragraphMap[5] as int;
+          final chapterName = paragraphMap[6] as String;
+          final regulationTitle = paragraphMap[7] as String;
+          final originalContent = paragraphMap[8] as String;
 
-          if (isDuplicate) {
-            print('⚠️ Skipping duplicate note: "${link.text}"');
-            continue;
+          print('Paragraph ID: $originalId');
+          print('Chapter ID: $chapterId');
+          print('Content length: ${editedContent?.length ?? 0}');
+          print('Note: "$noteText"');
+          print('Chapter details:');
+          print('  Title: $chapterName');
+          print('  Order num: $chapterOrderNum');
+
+          // First check for formatted links
+          final links = editedContent != null
+              ? _extractEditedParagraphLinks(editedContent)
+              : <EditedParagraphLink>[];
+
+          print('Found ${links.length} formatted links');
+
+          // Add formatted links as notes
+          for (int j = 0; j < links.length; j++) {
+            try {
+              final link = links[j];
+              print(
+                  '\n--- CREATING NOTE FROM FORMATTED LINK ${j + 1}/${links.length} ---');
+              print('Link text: "${link.text}"');
+              print('Link color: ${link.color}');
+
+              // Check for duplicates before creating note
+              bool isDuplicate = notes.any((existingNote) =>
+                  existingNote.link.text == link.text &&
+                  existingNote.link.color.value == link.color.value &&
+                  existingNote.chapterId == chapterId);
+
+              if (isDuplicate) {
+                print('⚠️ Skipping duplicate note: "${link.text}"');
+                continue;
+              }
+
+              final note = Note(
+                paragraphId: originalId,
+                originalParagraphId: originalId,
+                chapterId: chapterId,
+                chapterOrderNum: chapterOrderNum,
+                regulationTitle: regulationTitle,
+                chapterName: chapterName,
+                content: editedContent ?? '',
+                lastTouched: updatedAt ?? DateTime.now(),
+                isEdited: true,
+                link: link,
+              );
+              print('✅ Successfully created formatted note');
+              notes.add(note);
+              print('Added note to list. Current count: ${notes.length}');
+            } catch (e, stackTrace) {
+              print('❌ ERROR creating formatted note ${j + 1}:');
+              print('Error: $e');
+              print('Stack trace: $stackTrace');
+              print('Paragraph data: $originalId');
+              print('Link data: ${links[j]}');
+            }
           }
 
-          final note = Note(
-            paragraphId: paragraphMap['id'] as int,
-            originalParagraphId: paragraphMap['original_id'] as int,
-            chapterId: paragraphMap['chapter_id'] as int,
-            chapterOrderNum: chapterMap['order_num'] as int,
-            regulationTitle: 'Правила по охране труда',
-            chapterName: chapterMap['title'] as String? ??
-                'Глава ${chapterMap['order_num']}',
-            content: paragraphMap['content'] as String,
-            lastTouched: DateTime.tryParse(
-                    paragraphMap['updated_at'] as String? ?? '') ??
-                DateTime.now(),
-            isEdited: true,
-            link: link,
-          );
-          print('✅ Successfully created note');
-          notes.add(note);
-          print('Added note to list. Current count: ${notes.length}');
+          // Then check for plain text note
+          final plainNote = noteText;
+          if (plainNote != null && plainNote.isNotEmpty) {
+            try {
+              print('\n--- CREATING NOTE FROM PLAIN TEXT ---');
+              print('Note text: "$plainNote"');
+
+              // Create a default link for plain text note
+              final link = EditedParagraphLink(
+                text: plainNote,
+                color: Colors.yellow, // Default color for plain notes
+              );
+
+              // Check for duplicates
+              bool isDuplicate = notes.any((existingNote) =>
+                  existingNote.link.text == plainNote &&
+                  existingNote.chapterId == chapterId);
+
+              if (isDuplicate) {
+                print('⚠️ Skipping duplicate plain note: "$plainNote"');
+                continue;
+              }
+
+              final note = Note(
+                paragraphId: originalId,
+                originalParagraphId: originalId,
+                chapterId: chapterId,
+                chapterOrderNum: chapterOrderNum,
+                regulationTitle: regulationTitle,
+                chapterName: chapterName,
+                content: originalContent,
+                lastTouched: updatedAt ?? DateTime.now(),
+                isEdited: false,
+                link: link,
+              );
+              print('✅ Successfully created plain note');
+              notes.add(note);
+            } catch (e, stackTrace) {
+              print('❌ ERROR creating plain note:');
+              print('Error: $e');
+              print('Stack trace: $stackTrace');
+              print('Paragraph data: $originalId');
+            }
+          }
         } catch (e, stackTrace) {
-          print('❌ ERROR creating formatted note:');
+          print('❌ ERROR processing paragraph ${i + 1}:');
           print('Error: $e');
           print('Stack trace: $stackTrace');
-          print('Paragraph data: $paragraphMap');
-          print('Chapter data: $chapterMap');
-          print('Link data: $link');
+          print('Paragraph data: ${paragraphMaps[i]}');
         }
       }
 
-      // Then check for plain text note
-      final plainNote = paragraphMap['note'] as String?;
-      if (plainNote != null && plainNote.isNotEmpty) {
-        try {
-          print('\n=== CREATING NOTE FROM PLAIN TEXT ===');
-          print('Note text: "$plainNote"');
-
-          // Create a default link for plain text note
-          final link = EditedParagraphLink(
-            text: plainNote,
-            color: Colors.yellow, // Default color for plain notes
-          );
-
-          // Check for duplicates
-          bool isDuplicate = notes.any((existingNote) =>
-              existingNote.link.text == plainNote &&
-              existingNote.chapterId == paragraphMap['chapter_id']);
-
-          if (isDuplicate) {
-            print('⚠️ Skipping duplicate plain note: "$plainNote"');
-            continue;
-          }
-
-          final note = Note(
-            paragraphId: paragraphMap['id'] as int,
-            originalParagraphId: paragraphMap['original_id'] as int,
-            chapterId: paragraphMap['chapter_id'] as int,
-            chapterOrderNum: chapterMap['order_num'] as int,
-            regulationTitle: 'Правила по охране труда',
-            chapterName: chapterMap['title'] as String? ??
-                'Глава ${chapterMap['order_num']}',
-            content: paragraphMap['content'] as String,
-            lastTouched: DateTime.tryParse(
-                    paragraphMap['updated_at'] as String? ?? '') ??
-                DateTime.now(),
-            isEdited: false,
-            link: link,
-          );
-          print('✅ Successfully created plain note');
-          notes.add(note);
-        } catch (e, stackTrace) {
-          print('❌ ERROR creating plain note:');
-          print('Error: $e');
-          print('Stack trace: $stackTrace');
-          print('Paragraph data: $paragraphMap');
-          print('Chapter data: $chapterMap');
-        }
+      print('\n=== NOTES SUMMARY ===');
+      print('Total notes found: ${notes.length}');
+      for (var i = 0; i < notes.length; i++) {
+        print('Note $i:');
+        print('  Text: "${notes[i].link.text}"');
+        print('  Chapter: ${notes[i].chapterName}');
+        print('  Is edited: ${notes[i].isEdited}');
       }
-    }
 
-    print('\n=== NOTES SUMMARY ===');
-    print('Total notes found: ${notes.length}');
-    for (var i = 0; i < notes.length; i++) {
-      print('Note $i:');
-      print('  Text: "${notes[i].link.text}"');
-      print('  Chapter: ${notes[i].chapterName}');
-      print('  Is edited: ${notes[i].isEdited}');
+      return notes;
+    } catch (e, stackTrace) {
+      print('❌ ERROR getting all notes:');
+      print('Error: $e');
+      print('Stack trace: $stackTrace');
+      rethrow;
     }
-
-    return notes;
   }
 
   @override
@@ -188,212 +197,225 @@ class DataNotesRepository implements NotesRepository {
 
   @override
   Future<void> deleteNote(Note note) async {
-    final db = await _db.database;
+    try {
+      print('=== DELETE NOTE ===');
+      print('Note ID: ${note.originalParagraphId}');
+      print('Note text: "${note.link.text}"');
+      print('Is edited: ${note.isEdited}');
+      print('Chapter ID: ${note.chapterId}');
+      print('Chapter name: ${note.chapterName}');
 
-    // Get the paragraph content
-    final paragraphMaps = await db.query(
-      'paragraphs',
-      where: 'id = ?',
-      whereArgs: [note.paragraphId],
-    );
+      final conn = await _dbProvider.connection;
+      print('✅ Database connection established');
 
-    if (paragraphMaps.isNotEmpty) {
-      final paragraphMap = paragraphMaps.first;
-      final currentContent = paragraphMap['content'] as String;
-      final currentNote = paragraphMap['note'] as String?;
+      final result = await conn.query(
+        'SELECT content, note FROM user_paragraph_edits WHERE original_id = ${note.originalParagraphId}',
+      );
+      final rows = result.fetchAll();
+      print(
+          'Found ${rows.length} existing records for paragraph ${note.originalParagraphId}');
 
-      // Remove the specific formatting for this note's link
-      final cleanedContent =
-          _removeSpecificFormatting(currentContent, note.link);
+      if (rows.isNotEmpty) {
+        final row = rows.first;
+        final currentContent = row[0] as String?;
+        final currentNote = row[1] as String?;
 
-      // Check if this is a plain text note that needs to be removed
-      final isPlainTextNote =
-          currentNote != null && currentNote == note.link.text;
+        print('Current content length: ${currentContent?.length ?? 0}');
+        print('Current note: "$currentNote"');
 
-      if (_hasAnyFormatting(cleanedContent) ||
-          (currentNote != null && !isPlainTextNote)) {
-        // Still has other formatting or other notes, just update
-        await db.update(
-          'paragraphs',
-          {
-            'content': cleanedContent,
-            'note': isPlainTextNote ? null : currentNote,
-            'updated_at': DateTime.now().toIso8601String(),
-          },
-          where: 'id = ?',
-          whereArgs: [note.paragraphId],
-        );
+        String? newContent = currentContent;
+        String? newNote = currentNote;
+
+        // Remove the specific formatting for this note's link
+        if (note.isEdited && newContent != null) {
+          print('Removing formatting for edited note');
+          newContent = _removeSpecificFormatting(newContent, note.link);
+          print(
+              'Content after formatting removal length: ${newContent.length}');
+        }
+
+        // Check if this is a plain text note that needs to be removed
+        if (!note.isEdited && newNote != null && newNote == note.link.text) {
+          print('Removing plain text note');
+          newNote = null;
+        }
+
+        final hasFormatting =
+            newContent != null && _hasAnyFormatting(newContent);
+        print('Has remaining formatting: $hasFormatting');
+        print('Has remaining notes: ${newNote != null && newNote.isNotEmpty}');
+
+        if (hasFormatting || (newNote != null && newNote.isNotEmpty)) {
+          // Still has other formatting or other notes, just update
+          print('Updating existing record with remaining content/notes');
+          final query = '''
+            INSERT INTO user_paragraph_edits (original_id, content, note, updated_at)
+            VALUES (${note.originalParagraphId}, '${newContent ?? ''}', '${newNote ?? ''}', NOW())
+            ON CONFLICT (original_id) DO UPDATE SET
+              content = EXCLUDED.content,
+              note = EXCLUDED.note,
+              updated_at = NOW();
+          ''';
+          print('Executing query: $query');
+          await conn.query(query);
+          print('✅ Note updated successfully');
+        } else {
+          // No formatting or notes left, remove the edit entry entirely
+          print('No remaining content/notes, deleting entire record');
+          await conn.query(
+            'DELETE FROM user_paragraph_edits WHERE original_id = ${note.originalParagraphId}',
+          );
+          print('✅ Note record deleted successfully');
+        }
       } else {
-        // No formatting or notes left, remove the edit entry entirely
-        await db.delete(
-          'paragraphs',
-          where: 'id = ?',
-          whereArgs: [note.paragraphId],
-        );
+        print(
+            '⚠️ No existing record found for paragraph ${note.originalParagraphId}');
       }
+    } catch (e, stackTrace) {
+      print('❌ ERROR deleting note:');
+      print('Error: $e');
+      print('Stack trace: $stackTrace');
+      print('Note ID: ${note.originalParagraphId}');
+      print('Note text: "${note.link.text}"');
+      print('Is edited: ${note.isEdited}');
+      print('Chapter ID: ${note.chapterId}');
+      rethrow;
     }
   }
 
   @override
   Future<void> deleteNoteById(int paragraphId) async {
-    final db = await _db.database;
-    await db.delete(
-      'paragraphs',
-      where: 'id = ?',
-      whereArgs: [paragraphId],
-    );
-  }
-
-  // Helper method to extract formatted links from content (similar to original)
-  List<EditedParagraphLink> _extractEditedParagraphLinks(String content) {
-    final List<EditedParagraphLink> result = [];
-    print('=== EXTRACTING LINKS START ===');
-    print('Content length: ${content.length}');
-    print('Raw content: $content');
-
-    // Extract span tags with background-color
-    final spanRegex = RegExp(
-        r'<span style="background-color:#([0-9A-Fa-f]+);">(.*?)</span>',
-        dotAll: true);
-    final spanMatches = spanRegex.allMatches(content);
-
-    print('\n=== SPAN MATCHES ===');
-    print('Found ${spanMatches.length} span matches');
-    for (final match in spanMatches) {
-      final colorHex = match.group(1);
-      final text = match.group(2);
-      print('\nProcessing span match:');
-      print('Full match: "${match.group(0)}"');
-      print('Color hex: $colorHex');
-      print('Raw text: "$text"');
-
-      if (colorHex != null && text != null) {
-        try {
-          final color = _parseHexColor(colorHex);
-          final cleanText = TextUtils.parseHtmlString(text);
-          print('Parsed color: $color');
-          print('Cleaned text: "$cleanText"');
-
-          if (cleanText.isNotEmpty) {
-            final link = EditedParagraphLink(
-              color: color,
-              text: cleanText,
-            );
-            print('✅ Created link successfully');
-            result.add(link);
-          } else {
-            print('⚠️ Skipping: cleaned text was empty');
-          }
-        } catch (e, stack) {
-          print('❌ Error creating span link: $e');
-          print('Stack trace: $stack');
-        }
-      }
-    }
-
-    // Extract u tags with text-decoration-color
-    final uRegex = RegExp(
-        r'<u style="text-decoration-color:#([0-9A-Fa-f]+);">(.*?)</u>',
-        dotAll: true);
-    final uMatches = uRegex.allMatches(content);
-
-    print('\n=== UNDERLINE MATCHES ===');
-    print('Found ${uMatches.length} underline matches');
-    for (final match in uMatches) {
-      final colorHex = match.group(1);
-      final text = match.group(2);
-      print('\nProcessing underline match:');
-      print('Full match: "${match.group(0)}"');
-      print('Color hex: $colorHex');
-      print('Raw text: "$text"');
-
-      if (colorHex != null && text != null) {
-        try {
-          final color = _parseHexColor(colorHex);
-          final cleanText = TextUtils.parseHtmlString(text);
-          print('Parsed color: $color');
-          print('Cleaned text: "$cleanText"');
-
-          if (cleanText.isNotEmpty) {
-            final link = EditedParagraphLink(
-              color: color,
-              text: cleanText,
-            );
-            print('✅ Created link successfully');
-            result.add(link);
-          } else {
-            print('⚠️ Skipping: cleaned text was empty');
-          }
-        } catch (e, stack) {
-          print('❌ Error creating underline link: $e');
-          print('Stack trace: $stack');
-        }
-      }
-    }
-
-    print('\n=== EXTRACTION SUMMARY ===');
-    print('Total extracted links: ${result.length}');
-    for (var i = 0; i < result.length; i++) {
-      print('Link $i:');
-      print('  Text: "${result[i].text}"');
-      print('  Color: ${result[i].color}');
-    }
-    print('=== EXTRACTING LINKS END ===');
-
-    return result;
-  }
-
-  // Helper method to parse hex color from string
-  Color _parseHexColor(String hexString) {
     try {
-      final hex = hexString.replaceFirst('#', '');
-      if (hex.length == 6) {
-        return Color(int.parse('FF$hex', radix: 16));
-      } else if (hex.length == 8) {
-        return Color(int.parse(hex, radix: 16));
-      }
-      return Colors.yellow; // Default color
-    } catch (e) {
-      return Colors.yellow; // Default color
+      print('=== DELETE NOTE BY ID ===');
+      print('Paragraph ID: $paragraphId');
+
+      final conn = await _dbProvider.connection;
+      print('✅ Database connection established');
+
+      await conn.query(
+        'DELETE FROM user_paragraph_edits WHERE original_id = $paragraphId',
+      );
+
+      print('✅ Note deleted successfully for paragraph ID: $paragraphId');
+    } catch (e, stackTrace) {
+      print('❌ ERROR deleting note by ID:');
+      print('Error: $e');
+      print('Stack trace: $stackTrace');
+      print('Paragraph ID: $paragraphId');
+      rethrow;
     }
   }
 
-  // Helper method to remove specific formatting
-  String _removeSpecificFormatting(String content, EditedParagraphLink link) {
-    // This is a simplified version - in a real app you'd want more sophisticated HTML manipulation
-    final linkText = link.text;
-    final colorHex = link.color.value
-        .toRadixString(16)
-        .padLeft(8, '0')
-        .substring(2)
-        .toUpperCase();
+  // Helper methods for extracting and managing formatted links
+  List<EditedParagraphLink> _extractEditedParagraphLinks(String content) {
+    print('=== EXTRACTING EDITED PARAGRAPH LINKS ===');
+    print('Content length: ${content.length}');
+    print(
+        'Content preview: "${content.substring(0, content.length > 200 ? 200 : content.length)}..."');
 
-    // Remove the specific span tag for this text and color
-    final spanPattern =
-        '<span style="background-color:#$colorHex;">$linkText</span>';
-    final spanPattern2 =
-        '<span[^>]*background-color:#$colorHex[^>]*>$linkText</span>';
+    final links = <EditedParagraphLink>[];
 
-    // Remove the specific u tag for this text and color
-    final underlinePattern =
-        '<u style="text-decoration-color:#$colorHex;">$linkText</u>';
-    final underlinePattern2 =
-        '<u[^>]*text-decoration-color:#$colorHex[^>]*>$linkText</u>';
+    // Extract highlighted text (span tags with background-color)
+    final spanRegex = RegExp(
+        r'<span[^>]*style="[^"]*background-color:\s*([^;"]+)[^"]*"[^>]*>([^<]+)</span>');
+    final spanMatches = spanRegex.allMatches(content);
+    print('Found ${spanMatches.length} span matches');
 
-    String result = content.replaceAll(spanPattern, linkText);
-    result = result.replaceAll(RegExp(spanPattern2), linkText);
-    result = result.replaceAll(underlinePattern, linkText);
-    result = result.replaceAll(RegExp(underlinePattern2), linkText);
+    for (final match in spanMatches) {
+      final colorHex = match.group(1)?.trim();
+      final text = match.group(2)?.trim();
 
-    return result;
+      if (colorHex != null && text != null && text.isNotEmpty) {
+        try {
+          final color = _parseColor(colorHex);
+          links.add(EditedParagraphLink(text: text, color: color));
+          print('Found highlighted text: "$text" with color: $colorHex');
+        } catch (e) {
+          print('Error parsing color: $colorHex');
+        }
+      }
+    }
+
+    // Extract underlined text (u tags with text-decoration-color)
+    final underlineRegex = RegExp(
+        r'<u[^>]*style="[^"]*text-decoration-color:\s*([^;"]+)[^"]*"[^>]*>([^<]+)</u>');
+    final underlineMatches = underlineRegex.allMatches(content);
+    print('Found ${underlineMatches.length} underline matches');
+
+    for (final match in underlineMatches) {
+      final colorHex = match.group(1)?.trim();
+      final text = match.group(2)?.trim();
+
+      if (colorHex != null && text != null && text.isNotEmpty) {
+        try {
+          final color = _parseColor(colorHex);
+          links.add(EditedParagraphLink(text: text, color: color));
+          print('Found underlined text: "$text" with color: $colorHex');
+        } catch (e) {
+          print('Error parsing color: $colorHex');
+        }
+      }
+    }
+
+    print('Total formatted links found: ${links.length}');
+    return links;
   }
 
-  // Helper method to check if content still has formatting
+  Color _parseColor(String colorHex) {
+    if (colorHex.startsWith('#')) {
+      colorHex = colorHex.substring(1);
+    }
+    if (colorHex.length == 6) {
+      return Color(int.parse('FF$colorHex', radix: 16));
+    }
+    throw FormatException('Invalid color format: $colorHex');
+  }
+
+  String _removeSpecificFormatting(String content, EditedParagraphLink link) {
+    // Remove highlighted text (span tags)
+    final spanRegex = RegExp(
+        r'<span[^>]*style="[^"]*background-color:\s*([^;"]+)[^"]*"[^>]*>([^<]+)</span>');
+    content = content.replaceAllMapped(spanRegex, (match) {
+      final colorHex = match.group(1)?.trim();
+      final text = match.group(2)?.trim();
+
+      if (text == link.text) {
+        try {
+          final color = _parseColor(colorHex!);
+          if (color.value == link.color.value) {
+            return text ?? ''; // Remove the span, keep only the text
+          }
+        } catch (e) {
+          // If color parsing fails, keep the original
+        }
+      }
+      return match.group(0) ?? ''; // Keep the original span
+    });
+
+    // Remove underlined text (u tags)
+    final underlineRegex = RegExp(
+        r'<u[^>]*style="[^"]*text-decoration-color:\s*([^;"]+)[^"]*"[^>]*>([^<]+)</u>');
+    content = content.replaceAllMapped(underlineRegex, (match) {
+      final colorHex = match.group(1)?.trim();
+      final text = match.group(2)?.trim();
+
+      if (text == link.text) {
+        try {
+          final color = _parseColor(colorHex!);
+          if (color.value == link.color.value) {
+            return text ?? ''; // Remove the u tag, keep only the text
+          }
+        } catch (e) {
+          // If color parsing fails, keep the original
+        }
+      }
+      return match.group(0) ?? ''; // Keep the original u tag
+    });
+
+    return content;
+  }
+
   bool _hasAnyFormatting(String content) {
-    return content.contains(RegExp(r'<span[^>]*background-color:[^>]*>')) ||
-        content.contains(RegExp(r'<u[^>]*text-decoration-color:[^>]*>')) ||
-        content.contains('<span') ||
-        content.contains('<u') ||
-        content.contains('<mark');
+    return content.contains('<span') || content.contains('<u>');
   }
 }

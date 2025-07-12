@@ -9,7 +9,6 @@ import '../pages/chapter/chapter_view.dart';
 import '../pages/table_of_contents/table_of_contents_page.dart';
 import '../pages/notes/notes_view.dart';
 import '../../data/repositories/data_regulation_repository.dart';
-import '../../data/helpers/database_helper.dart';
 
 class AppNavigator {
   static void navigateToSearch(
@@ -47,7 +46,7 @@ class AppNavigator {
           scrollToParagraphId: scrollToParagraphId,
           settingsRepository: settingsRepository,
           ttsRepository: ttsRepository,
-          regulationRepository: DataRegulationRepository(DatabaseHelper()),
+          regulationRepository: DataRegulationRepository(),
         ),
       ),
     );

@@ -1,293 +1,267 @@
-import "../../domain/entities/chapter.dart";
+import "package:flutter/material.dart";
 import "../../domain/entities/regulation.dart";
+import "../../domain/entities/chapter.dart";
 import "../../domain/entities/paragraph.dart";
 import "../../domain/repositories/regulation_repository.dart";
 import "../../domain/entities/search_result.dart";
-import "../helpers/database_helper.dart";
-import "../../app/utils/text_utils.dart";
+import "../helpers/duckdb_provider.dart";
+
 import "dart:async";
 
 class DataRegulationRepository implements RegulationRepository {
-  final DatabaseHelper _db;
+  final DuckDBProvider _dbProvider = DuckDBProvider.instance;
 
-  DataRegulationRepository(this._db);
+  DataRegulationRepository() {
+    _dbProvider.initialize();
+  }
 
   @override
   Future<List<Regulation>> getRegulations() async {
-    return _db.getRegulations();
+    throw UnimplementedError(
+        "Read operations should be handled by StaticRegulationRepository");
   }
 
   @override
   Future<Regulation> getRegulation(int id) async {
-    final regulations = await getRegulations();
-    final regulation = regulations.firstWhere(
-      (r) => r.id == id,
-      orElse: () => throw Exception('Regulation not found'),
-    );
-    return regulation;
+    throw UnimplementedError(
+        "Read operations should be handled by StaticRegulationRepository");
   }
 
   @override
   Future<void> toggleFavorite(int regulationId) async {
-    await _db.toggleFavorite(regulationId);
+    // This functionality might need to be re-evaluated with DuckDB.
+    // For now, it's a no-op as it modifies the static data.
   }
 
   @override
   Future<List<Regulation>> getFavorites() async {
-    final db = await _db.database;
-    final List<Map<String, dynamic>> maps = await db.query(
-      "regulations",
-      where: "isFavorite = ?",
-      whereArgs: [1],
-    );
-    return Future.wait(maps.map((map) async {
-      final chapters = await _getChapters(map["id"]);
-      return Regulation(
-        id: map["id"],
-        title: map["title"],
-        description: map["description"],
-        lastUpdated: DateTime.parse(map["lastUpdated"]),
-        isDownloaded: map["isDownloaded"] == 1,
-        isFavorite: true,
-        chapters: chapters,
-      );
-    }).toList());
+    throw UnimplementedError(
+        "Read operations should be handled by StaticRegulationRepository");
   }
 
   @override
   Future<void> downloadRegulation(int regulationId) async {
-    await _db.downloadRegulation(regulationId);
+    // This functionality might need to be re-evaluated with DuckDB.
+    // For now, it's a no-op as it modifies the static data.
   }
 
   @override
   Future<void> deleteRegulation(int regulationId) async {
-    await _db.deleteRegulation(regulationId);
+    // This functionality might need to be re-evaluated with DuckDB.
+    // For now, it's a no-op as it modifies the static data.
   }
 
   @override
   Future<List<Regulation>> searchRegulations(String query) async {
-    final db = await _db.database;
-    final List<Map<String, dynamic>> maps = await db.query(
-      "regulations",
-      where: "title LIKE ? OR description LIKE ?",
-      whereArgs: ["%$query%", "%$query%"],
-    );
-
-    return Future.wait(maps.map((map) async {
-      final chapters = await _getChapters(map["id"]);
-      return Regulation(
-        id: map["id"],
-        title: map["title"],
-        description: map["description"],
-        lastUpdated: DateTime.parse(map["lastUpdated"]),
-        isDownloaded: map["isDownloaded"] == 1,
-        isFavorite: map["isFavorite"] == 1,
-        chapters: chapters,
-      );
-    }).toList());
-  }
-
-  Future<List<Chapter>> _getChapters(int regulationId) async {
-    final db = await _db.database;
-    final List<Map<String, dynamic>> maps = await db.query(
-      "chapters",
-      where: "regulationId = ?",
-      whereArgs: [regulationId],
-      orderBy: "order_num ASC",
-    );
-
-    return Future.wait(maps.map((map) async {
-      return Chapter(
-        id: map["id"],
-        regulationId: regulationId,
-        title: map["title"],
-        content: map["content"],
-        level: map["order_num"] ?? 0,
-      );
-    }).toList());
+    throw UnimplementedError(
+        "Read operations should be handled by StaticRegulationRepository");
   }
 
   @override
   Future<Map<String, dynamic>> getChapter(int id) async {
-    final db = await _db.database;
-    final List<Map<String, dynamic>> maps = await db.query(
-      "chapters",
-      where: "id = ?",
-      whereArgs: [id],
-    );
-    if (maps.isEmpty) {
-      throw Exception('Chapter not found');
-    }
-    return maps.first;
+    throw UnimplementedError(
+        "Read operations should be handled by StaticRegulationRepository");
   }
 
   @override
   Future<List<Chapter>> getChapters(int regulationId) async {
-    return _db.getChapters(regulationId);
+    throw UnimplementedError(
+        "Read operations should be handled by StaticRegulationRepository");
   }
 
   @override
   Future<List<Chapter>> getChaptersByParentId(int parentId) async {
-    final db = await _db.database;
-    final List<Map<String, dynamic>> maps = await db.query(
-      "chapters",
-      where: "parentId = ?",
-      whereArgs: [parentId],
-      orderBy: "order_num ASC",
-    );
-    return maps
-        .map((map) => Chapter(
-              id: map["id"],
-              regulationId: map["regulationId"],
-              title: map["title"],
-              content: map["content"],
-              level: map["level"],
-            ))
-        .toList();
+    throw UnimplementedError(
+        "Read operations should be handled by StaticRegulationRepository");
   }
 
   @override
   Future<List<Paragraph>> getParagraphsByChapterOrderNum(
       int regulationId, int chapterOrderNum) async {
-    final db = await _db.database;
-
-    // First find the chapter by order number
-    final List<Map<String, dynamic>> chapterMaps = await db.query(
-      "chapters",
-      where: "regulationId = ? AND order_num = ?",
-      whereArgs: [regulationId, chapterOrderNum],
-    );
-
-    if (chapterMaps.isEmpty) {
-      return [];
-    }
-
-    final chapterId = chapterMaps.first['id'];
-    final paragraphMaps = await _db.getParagraphs(chapterId);
-
-    return paragraphMaps.map((map) => Paragraph.fromMap(map)).toList();
-  }
-
-  Future<List<Paragraph>> getParagraphsByChapterId(int chapterId) async {
-    final paragraphMaps = await _db.getParagraphs(chapterId);
-    return paragraphMaps.map((map) => Paragraph.fromMap(map)).toList();
+    throw UnimplementedError(
+        "Read operations should be handled by StaticRegulationRepository");
   }
 
   @override
   Future<List<Map<String, dynamic>>> getTableOfContents() async {
-    return await _db.query('chapters', orderBy: 'order_num');
+    throw UnimplementedError(
+        "Read operations should be handled by StaticRegulationRepository");
   }
 
   @override
   Future<List<Map<String, dynamic>>> searchChapters(String query) async {
-    // First search in chapters
-    final chapterResults = await _db.query(
-      'chapters',
-      where: 'title LIKE ? OR content LIKE ?',
-      whereArgs: ['%$query%', '%$query%'],
-    );
-
-    // Then search in paragraphs
-    final paragraphResults = await _db.searchParagraphs(query);
-    final chapterIds = paragraphResults.map((p) => p['chapter_id']).toSet();
-
-    final additionalChapters = await Future.wait(
-      chapterIds.map((id) async {
-        final chapters = await _db.query(
-          'chapters',
-          where: 'id = ?',
-          whereArgs: [id],
-        );
-        return chapters.isNotEmpty ? chapters.first : null;
-      }),
-    );
-
-    final allResults = <Map<String, dynamic>>[
-      ...chapterResults,
-      ...additionalChapters
-          .where((c) => c != null)
-          .cast<Map<String, dynamic>>(),
-    ];
-
-    // Remove duplicates based on id
-    final uniqueResults = <int, Map<String, dynamic>>{};
-    for (final result in allResults) {
-      uniqueResults[result['id']] = result;
-    }
-
-    return uniqueResults.values.toList();
+    throw UnimplementedError(
+        "Read operations should be handled by StaticRegulationRepository");
   }
 
   @override
   Future<void> saveNote(int chapterId, String note) async {
-    await _db.insert('notes', {
-      'chapter_id': chapterId,
-      'note': note,
-      'created_at': DateTime.now().toIso8601String(),
-    });
+    throw UnimplementedError("Use saveParagraphNote instead");
   }
 
   @override
   Future<List<Map<String, dynamic>>> getNotes() async {
-    return await _db.query('notes');
+    throw UnimplementedError("Handled by DataNotesRepository");
   }
 
   @override
   Future<void> deleteNote(int noteId) async {
-    await _db.delete('notes', where: 'id = ?', whereArgs: [noteId]);
+    throw UnimplementedError("Handled by DataNotesRepository");
   }
 
   @override
   Future<void> updateParagraph(
       int paragraphId, Map<String, dynamic> data) async {
-    await _db.updateParagraph(paragraphId, data);
+    try {
+      print('=== UPDATE PARAGRAPH ===');
+      print('Paragraph ID: $paragraphId');
+      print('Data: $data');
+
+      // This is a generic update, let's implement it for DuckDB
+      final conn = await _dbProvider.connection;
+      // This is risky without knowing what's in `data`.
+      // A better approach is specific methods like saveParagraphNote.
+      // For now, we assume it contains 'content' or 'note'.
+      final content = data['content'];
+      final note = data['note'];
+
+      print('Content: $content');
+      print('Note: $note');
+
+      await conn.query(
+        '''
+        INSERT INTO user_paragraph_edits (original_id, content, note, updated_at)
+        VALUES ($paragraphId, '$content', '$note', NOW())
+        ON CONFLICT (original_id) DO UPDATE SET
+          content = EXCLUDED.content,
+          note = EXCLUDED.note,
+          updated_at = NOW();
+        ''',
+      );
+
+      print('✅ Paragraph updated successfully');
+    } catch (e, stackTrace) {
+      print('❌ ERROR updating paragraph:');
+      print('Error: $e');
+      print('Stack trace: $stackTrace');
+      print('Paragraph ID: $paragraphId');
+      print('Data: $data');
+      rethrow;
+    }
   }
 
   @override
   Future<void> saveParagraphEdit(int paragraphId, String editedContent) async {
-    await _db.saveParagraphEdit(paragraphId, editedContent);
+    try {
+      print('=== SAVE PARAGRAPH EDIT ===');
+      print('Paragraph ID: $paragraphId');
+      print('Edited content length: ${editedContent.length}');
+      print(
+          'Content preview: "${editedContent.substring(0, editedContent.length > 100 ? 100 : editedContent.length)}..."');
+
+      await saveEditedParagraph(paragraphId, editedContent,
+          Paragraph(id: 0, originalId: 0, chapterId: 0, num: 0, content: ''));
+
+      print('✅ Paragraph edit saved successfully');
+    } catch (e, stackTrace) {
+      print('❌ ERROR saving paragraph edit:');
+      print('Error: $e');
+      print('Stack trace: $stackTrace');
+      print('Paragraph ID: $paragraphId');
+      print('Content length: ${editedContent.length}');
+      rethrow;
+    }
   }
 
   @override
   Future<void> saveParagraphNote(int paragraphId, String note) async {
-    await _db.saveParagraphNote(paragraphId, note);
+    try {
+      print('=== SAVE PARAGRAPH NOTE ===');
+      print('Paragraph ID: $paragraphId');
+      print('Note: "$note"');
+      print('Note length: ${note.length}');
+
+      final conn = await _dbProvider.connection;
+      await conn.query(
+        '''
+        INSERT INTO user_paragraph_edits (original_id, note, updated_at)
+        VALUES ($paragraphId, '$note', NOW())
+        ON CONFLICT (original_id) DO UPDATE SET
+          note = EXCLUDED.note,
+          updated_at = NOW();
+        ''',
+      );
+
+      print('✅ Paragraph note saved successfully');
+    } catch (e, stackTrace) {
+      print('❌ ERROR saving paragraph note:');
+      print('Error: $e');
+      print('Stack trace: $stackTrace');
+      print('Paragraph ID: $paragraphId');
+      print('Note: "$note"');
+      rethrow;
+    }
   }
 
   @override
   Future<void> updateParagraphHighlight(
       int paragraphId, String highlightData) async {
-    await _db.updateParagraphHighlight(paragraphId, highlightData);
+    try {
+      print('=== UPDATE PARAGRAPH HIGHLIGHT ===');
+      print('Paragraph ID: $paragraphId');
+      print('Highlight data: "$highlightData"');
+      print('Highlight data length: ${highlightData.length}');
+
+      // The `highlight_data` column can be used for this.
+      // This method seems to be from an older implementation.
+      // We will assume it saves the highlight data as a string.
+      final conn = await _dbProvider.connection;
+      await conn.query(
+        '''
+        INSERT INTO user_paragraph_edits (original_id, highlight_data, updated_at)
+        VALUES ($paragraphId, '$highlightData', NOW())
+        ON CONFLICT (original_id) DO UPDATE SET
+          highlight_data = EXCLUDED.highlight_data,
+          updated_at = NOW();
+        ''',
+      );
+
+      print('✅ Paragraph highlight updated successfully');
+    } catch (e, stackTrace) {
+      print('❌ ERROR updating paragraph highlight:');
+      print('Error: $e');
+      print('Stack trace: $stackTrace');
+      print('Paragraph ID: $paragraphId');
+      print('Highlight data: "$highlightData"');
+      rethrow;
+    }
   }
 
   // Method to get saved paragraph edits and apply them to original paragraphs
   Future<List<Paragraph>> applyParagraphEdits(
       List<Paragraph> originalParagraphs) async {
-    if (originalParagraphs.isEmpty) return originalParagraphs;
-
-    final stopwatch = Stopwatch()..start();
     print(
         '🔄 Применение форматирования для ${originalParagraphs.length} параграфов...');
 
-    final db = await _db.database;
+    final conn = await _dbProvider.connection;
     final List<Paragraph> updatedParagraphs = [];
 
     // Получаем все original_id для одного запроса
     final originalIds = originalParagraphs.map((p) => p.originalId).toList();
 
     // Делаем один запрос для всех параграфов
-    final List<Map<String, dynamic>> savedEdits = await db.query(
-      'paragraphs',
-      where:
-          'original_id IN (${List.filled(originalIds.length, '?').join(',')}) AND updated_at IS NOT NULL',
-      whereArgs: originalIds,
+    final result = await conn.query(
+      'SELECT original_id, content, note FROM user_paragraph_edits WHERE original_id IN (${originalIds.join(',')})',
     );
+    final savedEdits = result.fetchAll();
 
-    print('📊 Найдено ${savedEdits.length} сохраненных форматирований');
+    print(
+        '📊 Найдено ${savedEdits.length} сохраненных форматирований в DuckDB');
 
     // Создаем Map для быстрого поиска
     final Map<int, Map<String, dynamic>> editsMap = {};
-    for (final edit in savedEdits) {
-      editsMap[edit['original_id'] as int] = edit;
+    for (final row in savedEdits) {
+      editsMap[row[0] as int] = {'content': row[1], 'note': row[2]};
     }
 
     // Применяем форматирование
@@ -297,8 +271,8 @@ class DataRegulationRepository implements RegulationRepository {
       if (savedEdit != null) {
         // Apply the saved formatting/content
         updatedParagraphs.add(paragraph.copyWith(
-          content: savedEdit['content'],
-          note: savedEdit['note'],
+          content: savedEdit['content'] ?? paragraph.content,
+          note: savedEdit['note'] ?? paragraph.note,
         ));
       } else {
         // No saved edits, use original
@@ -306,98 +280,36 @@ class DataRegulationRepository implements RegulationRepository {
       }
     }
 
-    stopwatch.stop();
-    print('✅ Форматирование применено за ${stopwatch.elapsedMilliseconds}ms');
-
+    print(
+        '✅ Форматирование применено к ${updatedParagraphs.length} параграфам');
     return updatedParagraphs;
   }
 
   // Method to check if a paragraph has saved edits
   Future<bool> hasParagraphEdits(int originalParagraphId) async {
-    final db = await _db.database;
-    final List<Map<String, dynamic>> savedEdits = await db.query(
-      'paragraphs',
-      where: 'original_id = ? AND updated_at IS NOT NULL',
-      whereArgs: [originalParagraphId],
-    );
-    return savedEdits.isNotEmpty;
+    final conn = await _dbProvider.connection;
+    final result = await conn.query(
+        'SELECT 1 FROM user_paragraph_edits WHERE original_id = $originalParagraphId');
+    return result.fetchAll().isNotEmpty;
   }
 
   // Method to get saved edit for a specific paragraph
   Future<Map<String, dynamic>?> getParagraphEdit(
       int originalParagraphId) async {
-    final db = await _db.database;
-    final List<Map<String, dynamic>> savedEdits = await db.query(
-      'paragraphs',
-      where: 'original_id = ? AND updated_at IS NOT NULL',
-      whereArgs: [originalParagraphId],
-    );
-    return savedEdits.isNotEmpty ? savedEdits.first : null;
-  }
-
-  // Save paragraph edit by originalId, handling both create and update cases
-  Future<void> saveParagraphEditByOriginalId(
-      int originalId, String content, Paragraph originalParagraph) async {
-    print('=== SAVE PARAGRAPH EDIT BY ORIGINAL ID ===');
-    print('Original ID: $originalId');
-    print('New content: "$content"');
-    print('Chapter ID: ${originalParagraph.chapterId}');
-
-    final db = await _db.database;
-
-    // Check if entry exists
-    final existing = await db.query(
-      'paragraphs',
-      where: 'original_id = ?',
-      whereArgs: [originalId],
-    );
-
-    print(
-        'Found ${existing.length} existing entries for originalId $originalId');
-
-    if (existing.isNotEmpty) {
-      // Update existing entry
-      print('Updating existing entry...');
-      final updateResult = await db.update(
-        'paragraphs',
-        {
-          'content': content,
-          'updated_at': DateTime.now().toIso8601String(),
-        },
-        where: 'original_id = ?',
-        whereArgs: [originalId],
-      );
-      print('✅ Updated $updateResult rows for originalId: $originalId');
-    } else {
-      // Create new entry
-      print('Creating new entry...');
-      final insertResult = await db.insert('paragraphs', {
-        'original_id': originalId,
-        'chapter_id': originalParagraph.chapterId,
-        'num': originalParagraph.num,
-        'content': content,
-        'text_to_speech': originalParagraph.textToSpeech,
-        'is_table': originalParagraph.isTable ? 1 : 0,
-        'is_nft': originalParagraph.isNft ? 1 : 0,
-        'paragraph_class': originalParagraph.paragraphClass ?? '',
-        'note': originalParagraph.note,
-        'updated_at': DateTime.now().toIso8601String(),
-      });
-      print(
-          '✅ Created new paragraph edit with ID: $insertResult for originalId: $originalId');
+    final conn = await _dbProvider.connection;
+    final result = await conn.query(
+        'SELECT original_id, content, note, updated_at FROM user_paragraph_edits WHERE original_id = $originalParagraphId');
+    final rows = result.fetchAll();
+    if (rows.isNotEmpty) {
+      final row = rows.first;
+      return {
+        'original_id': row[0],
+        'content': row[1],
+        'note': row[2],
+        'updated_at': row[3],
+      };
     }
-
-    // Verify the save
-    final verification = await db.query(
-      'paragraphs',
-      where: 'original_id = ? AND updated_at IS NOT NULL',
-      whereArgs: [originalId],
-    );
-    print(
-        'Verification: Found ${verification.length} entries with formatting for originalId $originalId');
-    if (verification.isNotEmpty) {
-      print('Saved content: "${verification.first['content']}"');
-    }
+    return null;
   }
 
   @override
@@ -406,110 +318,54 @@ class DataRegulationRepository implements RegulationRepository {
     required String query,
   }) async {
     if (query.isEmpty) return [];
-
-    final results = <SearchResult>[];
-    final chapters = await getChapters(regulationId);
-    int searchResultId = 0;
-
-    for (var chapter in chapters) {
-      for (var paragraph in chapter.paragraphs) {
-        final text = TextUtils.parseHtmlString(paragraph.content);
-        final lowerText = text.toLowerCase();
-        final lowerQuery = query.toLowerCase();
-
-        int startIndex = lowerText.indexOf(lowerQuery);
-        while (startIndex != -1) {
-          // Get context around the found text
-          int contextStart = startIndex - 50;
-          if (contextStart < 0) contextStart = 0;
-
-          int contextEnd = startIndex + query.length + 50;
-          if (contextEnd > text.length) contextEnd = text.length;
-
-          final contextText = text.substring(contextStart, contextEnd);
-          final matchStartInContext = startIndex - contextStart;
-          final matchEndInContext = matchStartInContext + query.length;
-
-          results.add(SearchResult(
-            id: searchResultId++,
-            paragraphId: paragraph.id,
-            chapterOrderNum: chapter.level,
-            text: contextText,
-            matchStart: matchStartInContext,
-            matchEnd: matchEndInContext,
-          ));
-
-          // Find next occurrence
-          startIndex = lowerText.indexOf(lowerQuery, startIndex + 1);
-        }
-      }
-    }
-
-    return results;
+    throw UnimplementedError("Search should be handled by Static repository");
   }
 
   @override
   Future<void> saveEditedParagraph(int paragraphId, String editedContent,
       Paragraph originalParagraph) async {
-    print('=== SAVE EDITED PARAGRAPH ===');
-    print('Paragraph ID: $paragraphId');
-    print('New content: "$editedContent"');
-    print('Chapter ID: ${originalParagraph.chapterId}');
+    await saveParagraphEditByOriginalId(
+        paragraphId, editedContent, originalParagraph);
+  }
 
-    final db = await _db.database;
-
-    // Check if entry exists
-    final existing = await db.query(
-      'paragraphs',
-      where: 'original_id = ?',
-      whereArgs: [paragraphId],
-    );
-
-    print(
-        'Found ${existing.length} existing entries for paragraphId $paragraphId');
-
-    if (existing.isNotEmpty) {
-      // Update existing entry
-      print('Updating existing entry...');
-      final updateResult = await db.update(
-        'paragraphs',
-        {
-          'content': editedContent,
-          'updated_at': DateTime.now().toIso8601String(),
-        },
-        where: 'original_id = ?',
-        whereArgs: [paragraphId],
-      );
-      print('✅ Updated $updateResult rows for paragraphId: $paragraphId');
-    } else {
-      // Create new entry
-      print('Creating new entry...');
-      final insertResult = await db.insert('paragraphs', {
-        'original_id': paragraphId,
-        'chapter_id': originalParagraph.chapterId,
-        'num': originalParagraph.num,
-        'content': editedContent,
-        'text_to_speech': originalParagraph.textToSpeech,
-        'is_table': originalParagraph.isTable ? 1 : 0,
-        'is_nft': originalParagraph.isNft ? 1 : 0,
-        'paragraph_class': originalParagraph.paragraphClass ?? '',
-        'note': originalParagraph.note,
-        'updated_at': DateTime.now().toIso8601String(),
-      });
+  // Save paragraph edit by originalId, handling both create and update cases
+  Future<void> saveParagraphEditByOriginalId(
+      int originalId, String content, Paragraph originalParagraph) async {
+    try {
+      print('=== SAVE PARAGRAPH EDIT BY ORIGINAL ID ===');
+      print('Original ID: $originalId');
+      print('Content length: ${content.length}');
       print(
-          '✅ Created new paragraph edit with ID: $insertResult for paragraphId: $paragraphId');
-    }
+          'Content preview: "${content.substring(0, content.length > 200 ? 200 : content.length)}..."');
+      print('Chapter ID: ${originalParagraph.chapterId}');
+      print('Paragraph ID: ${originalParagraph.id}');
 
-    // Verify the save
-    final verification = await db.query(
-      'paragraphs',
-      where: 'original_id = ? AND updated_at IS NOT NULL',
-      whereArgs: [paragraphId],
-    );
-    print(
-        'Verification: Found ${verification.length} entries with edits for paragraphId $paragraphId');
-    if (verification.isNotEmpty) {
-      print('Saved content: "${verification.first['content']}"');
+      final conn = await _dbProvider.connection;
+      print('✅ Database connection established');
+
+      final query = '''
+        INSERT INTO user_paragraph_edits (original_id, content, updated_at)
+        VALUES ($originalId, '$content', NOW())
+        ON CONFLICT (original_id) DO UPDATE SET
+          content = EXCLUDED.content,
+          updated_at = NOW();
+      ''';
+
+      print('Executing query: $query');
+      await conn.query(query);
+
+      print('✅ Сохранено в DuckDB для originalId: $originalId');
+    } catch (e, stackTrace) {
+      print('❌ ERROR saving paragraph edit by original ID:');
+      print('Error: $e');
+      print('Stack trace: $stackTrace');
+      print('Original ID: $originalId');
+      print('Content length: ${content.length}');
+      print(
+          'Content preview: "${content.substring(0, content.length > 200 ? 200 : content.length)}..."');
+      print('Chapter ID: ${originalParagraph.chapterId}');
+      print('Paragraph ID: ${originalParagraph.id}');
+      rethrow;
     }
   }
 }

@@ -1,57 +1,99 @@
+import 'dart:io';
+
+import 'package:flutter/services.dart';
+import 'package:poteu/domain/entities/chapter.dart';
+import 'package:poteu/domain/entities/paragraph.dart';
+import 'package:dart_duckdb/dart_duckdb.dart';
+
 import '../../domain/entities/regulation.dart';
-import '../../domain/entities/chapter.dart' as domain;
-import '../../domain/entities/paragraph.dart' as domain;
+
 import '../../domain/repositories/regulation_repository.dart';
-import '../static/regulation.dart' as static_data;
-import '../static/chapter.dart' as static_model;
-import '../static/paragraph.dart' as static_model;
+
 import '../../domain/entities/search_result.dart';
 import '../../app/utils/text_utils.dart';
+import 'package:path_provider/path_provider.dart';
+import '../helpers/duckdb_provider.dart';
 
 class StaticRegulationRepository implements RegulationRepository {
-  // Маппер static->domain для параграфа
-  domain.Paragraph _mapParagraph(static_model.Paragraph p, int chapterId) {
-    return domain.Paragraph(
-      id: p.id,
-      originalId: p.id,
-      chapterId: chapterId,
-      num: p.num,
-      content: p.content,
-      textToSpeech:
-          p.textToSpeech.isNotEmpty ? p.textToSpeech.join('\n') : null,
-      isTable: p.isTable,
-      isNft: p.isNFT,
-      paragraphClass: p.paragraphClass.isNotEmpty ? p.paragraphClass : null,
-      note: null,
-    );
-  }
+  final DuckDBProvider _dbProvider = DuckDBProvider.instance;
+  bool _isInitialized = false;
 
-  // Маппер static->domain для главы
-  domain.Chapter _mapChapter(static_model.Chapter c) {
-    return domain.Chapter(
-      id: c.id,
-      regulationId: 1,
-      title: c.num.isNotEmpty ? '${c.num}. ${c.name}' : c.name,
-      content: '',
-      level: c.orderNum,
-      subChapters: const [],
-      paragraphs: c.paragraphs.map((p) => _mapParagraph(p, c.id)).toList(),
-    );
+  /// Инициализация базы данных при первом использовании репозитория
+  Future<void> _ensureInitialized() async {
+    if (!_isInitialized) {
+      await _dbProvider.initialize();
+      _isInitialized = true;
+    }
   }
 
   @override
   Future<List<Regulation>> getRegulations() async {
-    return [
-      Regulation(
-        id: static_data.Regulation.id,
-        title: static_data.Regulation.name,
-        description: '',
-        lastUpdated: DateTime(2023, 1, 1),
-        isDownloaded: true,
-        isFavorite: false,
-        chapters: static_data.Regulation.chapters.map(_mapChapter).toList(),
-      ),
-    ];
+    await _ensureInitialized();
+    return await _dbProvider.executeTransaction((conn) async {
+      // 3. Чтение правил
+      final rulesRs =
+          await conn.query('SELECT id, name, abbreviation FROM rules');
+      final rules = rulesRs.fetchAll();
+
+      final regs = <Regulation>[];
+      for (final row in rules) {
+        final ruleId = row[0] as int;
+        final title = row[1] as String;
+        final description = row[2] as String;
+
+        // 4. Чтение глав
+        final chRs = await conn.query(
+            'SELECT id, name, orderNum FROM chapters WHERE rule_id = $ruleId ORDER BY orderNum');
+        final chapters = <Chapter>[];
+        for (final ch in chRs.fetchAll()) {
+          final chapId = ch[0] as int;
+          final chapName = ch[1] as String;
+          final chapOrderNum = ch[2] as int;
+
+          // 5. Чтение параграфов
+          final pRs = await conn.query(
+              'SELECT id, num, content, text_to_speech, isTable, isNFT, paragraphClass '
+              'FROM paragraphs WHERE chapterID = $chapId ORDER BY num');
+          final paras = pRs
+              .fetchAll()
+              .map((p) => Paragraph.fromMap({
+                    'id': p[0],
+                    'original_id': p[0],
+                    'chapter_id': chapId,
+                    'num': p[1],
+                    'content': p[2],
+                    'text_to_speech': p[3],
+                    'is_table': (p[4] as bool) ? 1 : 0,
+                    'is_nft': (p[5] as bool) ? 1 : 0,
+                    'paragraph_class': p[6],
+                    'note': '',
+                  }))
+              .toList();
+
+          chapters.add(Chapter(
+            id: chapId,
+            regulationId: ruleId,
+            title: chapName,
+            content: '',
+            level: chapOrderNum,
+            subChapters: const [],
+            paragraphs: paras,
+          ));
+        }
+
+        regs.add(Regulation(
+          id: ruleId,
+          title: title,
+          description: description,
+          lastUpdated: DateTime.now(),
+          isDownloaded: true,
+          isFavorite: false,
+          chapters: chapters,
+        ));
+      }
+
+      return regs;
+    });
   }
 
   @override
@@ -81,9 +123,86 @@ class StaticRegulationRepository implements RegulationRepository {
   }
 
   @override
-  Future<List<domain.Chapter>> getChapters(int regulationId) async {
+  Future<List<Chapter>> getChapters(int regulationId) async {
     final reg = await getRegulation(regulationId);
     return reg.chapters;
+  }
+
+  /// Загружает только список глав (ID, номер, название) без их содержимого
+  Future<List<ChapterInfo>> getChapterList(int regulationId) async {
+    await _ensureInitialized();
+    return await _dbProvider.executeTransaction((conn) async {
+      // 3. Чтение только списка глав без параграфов
+      final chRs = await conn.query(
+          'SELECT id, name, orderNum FROM chapters WHERE rule_id = $regulationId ORDER BY orderNum');
+
+      final chapters = <ChapterInfo>[];
+      for (final ch in chRs.fetchAll()) {
+        final chapId = ch[0] as int;
+        final chapName = ch[1] as String;
+        final chapOrderNum = ch[2] as int;
+
+        chapters.add(ChapterInfo(
+          id: chapId,
+          orderNum: chapOrderNum,
+          name: chapName,
+          regulationId: regulationId,
+        ));
+      }
+
+      return chapters;
+    });
+  }
+
+  /// Загружает полное содержимое (все параграфы) только для одной конкретной главы по ее ID
+  Future<Chapter> getChapterContent(int chapterId) async {
+    await _ensureInitialized();
+    return await _dbProvider.executeTransaction((conn) async {
+      // 3. Чтение информации о главе
+      final chRs = await conn.query(
+          'SELECT id, rule_id, name, orderNum FROM chapters WHERE id = $chapterId');
+
+      if (chRs.fetchAll().isEmpty) {
+        throw Exception('Chapter not found: $chapterId');
+      }
+
+      final ch = chRs.fetchAll().first;
+      final chapId = ch[0] as int;
+      final ruleId = ch[1] as int;
+      final chapName = ch[2] as String;
+      final chapOrderNum = ch[3] as int;
+
+      // 4. Чтение параграфов для этой главы
+      final pRs = await conn.query(
+          'SELECT id, num, content, text_to_speech, isTable, isNFT, paragraphClass '
+          'FROM paragraphs WHERE chapterID = $chapId ORDER BY num');
+
+      final paras = pRs
+          .fetchAll()
+          .map((p) => Paragraph.fromMap({
+                'id': p[0],
+                'original_id': p[0],
+                'chapter_id': chapId,
+                'num': p[1],
+                'content': p[2],
+                'text_to_speech': p[3],
+                'is_table': (p[4] as bool) ? 1 : 0,
+                'is_nft': (p[5] as bool) ? 1 : 0,
+                'paragraph_class': p[6],
+                'note': '',
+              }))
+          .toList();
+
+      return Chapter(
+        id: chapId,
+        regulationId: ruleId,
+        title: chapName,
+        content: '',
+        level: chapOrderNum,
+        subChapters: const [],
+        paragraphs: paras,
+      );
+    });
   }
 
   @override
@@ -105,7 +224,7 @@ class StaticRegulationRepository implements RegulationRepository {
   }
 
   @override
-  Future<List<domain.Paragraph>> getParagraphsByChapterOrderNum(
+  Future<List<Paragraph>> getParagraphsByChapterOrderNum(
       int regulationId, int chapterOrderNum) async {
     final chapters = await getChapters(regulationId);
     final chapter = chapters.firstWhere((c) => c.level == chapterOrderNum);
@@ -146,7 +265,7 @@ class StaticRegulationRepository implements RegulationRepository {
   Future<void> deleteNote(int noteId) async {}
 
   @override
-  Future<List<domain.Chapter>> getChaptersByParentId(int parentId) async => [];
+  Future<List<Chapter>> getChaptersByParentId(int parentId) async => [];
 
   @override
   Future<void> saveNote(int chapterId, String note) async {}
@@ -155,7 +274,7 @@ class StaticRegulationRepository implements RegulationRepository {
   Future<List<Map<String, dynamic>>> getNotes() async => [];
 
   // Добавляем метод для получения главы по номеру порядка
-  Future<domain.Chapter?> getChapterByOrderNum(int orderNum) async {
+  Future<Chapter?> getChapterByOrderNum(int orderNum) async {
     final regs = await getRegulations();
     for (final reg in regs) {
       for (final chapter in reg.chapters) {
@@ -194,8 +313,8 @@ class StaticRegulationRepository implements RegulationRepository {
   }
 
   @override
-  Future<List<domain.Paragraph>> applyParagraphEdits(
-      List<domain.Paragraph> originalParagraphs) async {
+  Future<List<Paragraph>> applyParagraphEdits(
+      List<Paragraph> originalParagraphs) async {
     // Static repository - just return original paragraphs unchanged
     return originalParagraphs;
   }
@@ -214,15 +333,15 @@ class StaticRegulationRepository implements RegulationRepository {
   }
 
   @override
-  Future<void> saveParagraphEditByOriginalId(int originalId, String content,
-      domain.Paragraph originalParagraph) async {
+  Future<void> saveParagraphEditByOriginalId(
+      int originalId, String content, Paragraph originalParagraph) async {
     // Static repository - editing not supported
     throw UnsupportedError('Editing not supported in static repository');
   }
 
   @override
   Future<void> saveEditedParagraph(int paragraphId, String editedContent,
-      domain.Paragraph originalParagraph) async {
+      Paragraph originalParagraph) async {
     // StaticRegulationRepository is for read-only data
     // For saving edits, use DataRegulationRepository instead
     throw UnimplementedError(
@@ -236,44 +355,62 @@ class StaticRegulationRepository implements RegulationRepository {
   }) async {
     if (query.isEmpty) return [];
 
-    final results = <SearchResult>[];
-    final chapters = await getChapters(regulationId);
-    int searchResultId = 0;
+    await _ensureInitialized();
+    return await _dbProvider.executeTransaction((conn) async {
+      final results = <SearchResult>[];
+      int searchResultId = 0;
 
-    for (var chapter in chapters) {
-      for (var paragraph in chapter.paragraphs) {
-        final text = TextUtils.parseHtmlString(paragraph.content);
-        final lowerText = text.toLowerCase();
-        final lowerQuery = query.toLowerCase();
+      // Получаем все главы для данного regulation
+      final chRs = await conn.query(
+          'SELECT id, orderNum FROM chapters WHERE rule_id = $regulationId ORDER BY orderNum');
+      final chapters = chRs.fetchAll();
 
-        int startIndex = lowerText.indexOf(lowerQuery);
-        while (startIndex != -1) {
-          // Get context around the found text
-          int contextStart = startIndex - 50;
-          if (contextStart < 0) contextStart = 0;
+      for (final ch in chapters) {
+        final chapterId = ch[0] as int;
+        final chapterOrderNum = ch[1] as int;
 
-          int contextEnd = startIndex + query.length + 50;
-          if (contextEnd > text.length) contextEnd = text.length;
+        // Получаем параграфы для главы
+        final pRs = await conn.query(
+            'SELECT id, content FROM paragraphs WHERE chapterID = $chapterId ORDER BY num');
+        final paragraphs = pRs.fetchAll();
 
-          final contextText = text.substring(contextStart, contextEnd);
-          final matchStartInContext = startIndex - contextStart;
-          final matchEndInContext = matchStartInContext + query.length;
+        for (final p in paragraphs) {
+          final paragraphId = p[0] as int;
+          final content = p[1] as String;
 
-          results.add(SearchResult(
-            id: searchResultId++,
-            paragraphId: paragraph.id,
-            chapterOrderNum: chapter.level,
-            text: contextText,
-            matchStart: matchStartInContext,
-            matchEnd: matchEndInContext,
-          ));
+          final text = TextUtils.parseHtmlString(content);
+          final lowerText = text.toLowerCase();
+          final lowerQuery = query.toLowerCase();
 
-          // Find next occurrence
-          startIndex = lowerText.indexOf(lowerQuery, startIndex + 1);
+          int startIndex = lowerText.indexOf(lowerQuery);
+          while (startIndex != -1) {
+            // Get context around the found text
+            int contextStart = startIndex - 50;
+            if (contextStart < 0) contextStart = 0;
+
+            int contextEnd = startIndex + query.length + 50;
+            if (contextEnd > text.length) contextEnd = text.length;
+
+            final contextText = text.substring(contextStart, contextEnd);
+            final matchStartInContext = startIndex - contextStart;
+            final matchEndInContext = matchStartInContext + query.length;
+
+            results.add(SearchResult(
+              id: searchResultId++,
+              paragraphId: paragraphId,
+              chapterOrderNum: chapterOrderNum,
+              text: contextText,
+              matchStart: matchStartInContext,
+              matchEnd: matchEndInContext,
+            ));
+
+            // Find next occurrence
+            startIndex = lowerText.indexOf(lowerQuery, startIndex + 1);
+          }
         }
       }
-    }
 
-    return results;
+      return results;
+    });
   }
 }

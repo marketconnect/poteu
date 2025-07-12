@@ -8,7 +8,6 @@ import '../../../domain/entities/tts_state.dart';
 import '../../../domain/usecases/tts_usecase.dart';
 import '../../../data/repositories/static_regulation_repository.dart';
 import '../../../data/repositories/data_regulation_repository.dart';
-import '../../../data/helpers/database_helper.dart';
 import '../../../domain/repositories/settings_repository.dart';
 import '../../../domain/repositories/tts_repository.dart';
 import '../../../domain/repositories/regulation_repository.dart';
@@ -22,9 +21,8 @@ class ChapterController extends Controller {
   final int _initialChapterOrderNum;
   final int? _scrollToParagraphId;
   final StaticRegulationRepository _repository = StaticRegulationRepository();
-  final DataRegulationRepository _dataRepository = DataRegulationRepository(
-    DatabaseHelper(),
-  );
+  final DataRegulationRepository _dataRepository =
+      DataRegulationRepository(); // No longer needs DatabaseHelper
   final TTSUseCase _ttsUseCase;
   late SearchPresenter _searchPresenter;
 
@@ -54,7 +52,7 @@ class ChapterController extends Controller {
   int _selectionStart = 0;
   int _selectionEnd = 0;
   String _lastSelectedText = '';
-  List<int> _colorsList = [
+  final List<int> _colorsList = [
     0xFFFFFF00, // Yellow
     0xFFFF8C00, // Orange
     0xFF00FF00, // Green
@@ -185,6 +183,7 @@ class ChapterController extends Controller {
       text: initialChapterOrderNum.toString(),
     );
 
+    // Загружаем главы при создании контроллера
     loadAllChapters();
 
     // Subscribe to TTS state changes
@@ -258,7 +257,7 @@ class ChapterController extends Controller {
       },
       onError: (error) {
         _loadingError =
-            'TTS Error:  {error.toString()}'; // <--- set loading error for TTS
+            'TTS Error:  ${error.toString()}'; // <--- set loading error for TTS
         _ttsState = TtsState.error;
         _stopRequested = false; // Сбрасываем флаг при ошибке
         _isPlayingChapter = false; // Сбрасываем флаг воспроизведения главы
@@ -299,8 +298,9 @@ class ChapterController extends Controller {
     refreshUI();
 
     try {
-      final chapters = await _repository.getChapters(_regulationId);
-      _totalChapters = chapters.length;
+      // Use the new optimized method to get chapter list
+      final chapterList = await _repository.getChapterList(_regulationId);
+      _totalChapters = chapterList.length;
       print('📚 Найдено глав: $_totalChapters');
 
       // Загружаем только текущую главу и соседние для быстрой загрузки
@@ -334,38 +334,62 @@ class ChapterController extends Controller {
     final stopwatch = Stopwatch()..start();
     print('🔄 Загрузка главы $chapterOrderNum и соседних...');
 
-    final chapters = await _repository.getChapters(_regulationId);
+    // Get chapter list to find chapter IDs
+    final chapterList = await _repository.getChapterList(_regulationId);
 
-    // Загружаем текущую главу
-    await _loadChapterData(chapters[chapterOrderNum - 1]);
+    // Подготавливаем список задач для параллельной загрузки
+    final List<Future<void>> loadTasks = [];
 
-    // Загружаем предыдущую главу если есть
+    // Добавляем задачу загрузки текущей главы
+    final targetChapterInfo = chapterList.firstWhere(
+      (ch) => ch.orderNum == chapterOrderNum,
+      orElse: () => throw Exception('Chapter $chapterOrderNum not found'),
+    );
+    loadTasks.add(_loadChapterDataById(targetChapterInfo.id, chapterOrderNum));
+
+    // Добавляем задачу загрузки предыдущей главы если есть
     if (chapterOrderNum > 1) {
-      await _loadChapterData(chapters[chapterOrderNum - 2]);
+      final prevChapterInfo = chapterList.firstWhere(
+        (ch) => ch.orderNum == chapterOrderNum - 1,
+        orElse: () => throw Exception('Previous chapter not found'),
+      );
+      loadTasks
+          .add(_loadChapterDataById(prevChapterInfo.id, chapterOrderNum - 1));
     }
 
-    // Загружаем следующую главу если есть
-    if (chapterOrderNum < chapters.length) {
-      await _loadChapterData(chapters[chapterOrderNum]);
+    // Добавляем задачу загрузки следующей главы если есть
+    if (chapterOrderNum < chapterList.length) {
+      final nextChapterInfo = chapterList.firstWhere(
+        (ch) => ch.orderNum == chapterOrderNum + 1,
+        orElse: () => throw Exception('Next chapter not found'),
+      );
+      loadTasks
+          .add(_loadChapterDataById(nextChapterInfo.id, chapterOrderNum + 1));
     }
+
+    // Выполняем все задачи параллельно
+    await Future.wait(loadTasks);
 
     stopwatch.stop();
     print(
-        '✅ Загрузка соседних глав завершена за ${stopwatch.elapsedMilliseconds}ms');
+        '✅ Загрузка соседних глав завершена за ${stopwatch.elapsedMilliseconds}ms (параллельно)');
   }
 
-  // Загружает данные конкретной главы
-  Future<void> _loadChapterData(Chapter chapter) async {
-    if (_chaptersData.containsKey(chapter.level)) {
+  // Загружает данные конкретной главы по ID
+  Future<void> _loadChapterDataById(int chapterId, int chapterOrderNum) async {
+    if (_chaptersData.containsKey(chapterOrderNum)) {
       return; // Уже загружена
     }
 
     final stopwatch = Stopwatch()..start();
-    print('📖 Загрузка главы ${chapter.level}: ${chapter.title}');
+    print('📖 Загрузка главы $chapterOrderNum (ID: $chapterId)...');
+
+    // Use the new optimized method to get chapter content
+    final chapter = await _repository.getChapterContent(chapterId);
 
     // Применяем форматирование только для текущей главы
     List<Paragraph> updatedParagraphs;
-    if (chapter.level == _currentChapterOrderNum) {
+    if (chapterOrderNum == _currentChapterOrderNum) {
       updatedParagraphs =
           await _dataRepository.applyParagraphEdits(chapter.paragraphs);
       print(
@@ -375,7 +399,7 @@ class ChapterController extends Controller {
       updatedParagraphs = chapter.paragraphs;
     }
 
-    _chaptersData[chapter.level] = {
+    _chaptersData[chapterOrderNum] = {
       'id': chapter.id,
       'title': chapter.title,
       'content': chapter.content,
@@ -384,7 +408,7 @@ class ChapterController extends Controller {
 
     stopwatch.stop();
     print(
-        '✅ Глава ${chapter.level} загружена за ${stopwatch.elapsedMilliseconds}ms');
+        '✅ Глава $chapterOrderNum загружена за ${stopwatch.elapsedMilliseconds}ms');
   }
 
   // Загружает главу по требованию при переключении
@@ -393,9 +417,17 @@ class ChapterController extends Controller {
       return; // Уже загружена
     }
 
-    final chapters = await _repository.getChapters(_regulationId);
-    if (chapterOrderNum > 0 && chapterOrderNum <= chapters.length) {
-      await _loadChapterData(chapters[chapterOrderNum - 1]);
+    try {
+      // Get chapter list to find chapter ID
+      final chapterList = await _repository.getChapterList(_regulationId);
+      final chapterInfo = chapterList.firstWhere(
+        (ch) => ch.orderNum == chapterOrderNum,
+        orElse: () => throw Exception('Chapter $chapterOrderNum not found'),
+      );
+
+      await _loadChapterDataById(chapterInfo.id, chapterOrderNum);
+    } catch (e) {
+      print('❌ Error loading chapter $chapterOrderNum: $e');
     }
   }
 
@@ -419,21 +451,46 @@ class ChapterController extends Controller {
   // Загружает соседние главы в фоне
   void _loadNeighborChaptersInBackground(int chapterOrderNum) {
     Future.microtask(() async {
-      final chapters = await _repository.getChapters(_regulationId);
+      try {
+        // Get chapter list to find chapter IDs
+        final chapterList = await _repository.getChapterList(_regulationId);
 
-      // Загружаем предыдущую главу если есть
-      if (chapterOrderNum > 1) {
-        await _loadChapterData(chapters[chapterOrderNum - 2]);
-      }
+        // Подготавливаем список задач для параллельной загрузки
+        final List<Future<void>> loadTasks = [];
 
-      // Загружаем следующую главу если есть
-      if (chapterOrderNum < chapters.length) {
-        await _loadChapterData(chapters[chapterOrderNum]);
+        // Добавляем задачу загрузки предыдущей главы если есть
+        if (chapterOrderNum > 1) {
+          final prevChapterInfo = chapterList.firstWhere(
+            (ch) => ch.orderNum == chapterOrderNum - 1,
+            orElse: () => throw Exception('Previous chapter not found'),
+          );
+          loadTasks.add(
+              _loadChapterDataById(prevChapterInfo.id, chapterOrderNum - 1));
+        }
+
+        // Добавляем задачу загрузки следующей главы если есть
+        if (chapterOrderNum < chapterList.length) {
+          final nextChapterInfo = chapterList.firstWhere(
+            (ch) => ch.orderNum == chapterOrderNum + 1,
+            orElse: () => throw Exception('Next chapter not found'),
+          );
+          loadTasks.add(
+              _loadChapterDataById(nextChapterInfo.id, chapterOrderNum + 1));
+        }
+
+        // Выполняем все задачи параллельно
+        if (loadTasks.isNotEmpty) {
+          await Future.wait(loadTasks);
+          print('🔄 Соседние главы загружены в фоне (параллельно)');
+        }
+      } catch (e) {
+        print('❌ Error loading neighbor chapters: $e');
       }
     });
   }
 
   void goToChapter(int chapterOrderNum) {
+    print('goToChapter: $chapterOrderNum');
     if (chapterOrderNum >= 1 && chapterOrderNum <= _totalChapters) {
       if (pageController.hasClients) {
         pageController.animateToPage(
@@ -474,11 +531,117 @@ class ChapterController extends Controller {
   }
 
   void goToParagraph(int paragraphId) {
-    // First, try to find the paragraph by ID to get its order number
-    int? targetChapterOrderNum;
-    int?
-        paragraphOrderNum; // This will be the order number in the chapter (1-based)
+    // Ищем параграф только в текущей главе
+    final result =
+        _findParagraphInChapter(_currentChapterOrderNum, paragraphId);
 
+    if (result != null) {
+      // Параграф найден в текущей главе
+      _scrollToParagraphInCurrentChapter(_currentChapterOrderNum, result);
+      return;
+    }
+
+    // Если не найден в текущей главе, ищем во всех загруженных главах
+    // (это может быть нужно для обратной совместимости)
+    final globalResult = _findParagraphInAllChapters(paragraphId);
+
+    if (globalResult != null) {
+      final targetChapter = globalResult['chapterOrderNum'] as int;
+      final paragraphOrderNum = globalResult['paragraphOrderNum'] as int;
+
+      // Переходим на главу и скроллим к параграфу
+      if (_currentChapterOrderNum == targetChapter) {
+        _scrollToParagraphInCurrentChapter(targetChapter, paragraphOrderNum);
+      } else {
+        goToChapter(targetChapter);
+        Future.delayed(const Duration(milliseconds: 1200), () {
+          if (_currentChapterOrderNum == targetChapter) {
+            _scrollToParagraphInCurrentChapter(
+                targetChapter, paragraphOrderNum);
+          }
+        });
+      }
+    } else {
+      print('❌ Paragraph $paragraphId not found in any loaded chapter');
+    }
+  }
+
+  /// Ищет параграф в конкретной главе
+  int? _findParagraphInChapter(int chapterOrderNum, int paragraphId) {
+    final chapterData = _chaptersData[chapterOrderNum];
+    if (chapterData == null) return null;
+
+    final paragraphs = chapterData['paragraphs'] as List<Paragraph>;
+
+    for (int i = 0; i < paragraphs.length; i++) {
+      final paragraph = paragraphs[i];
+
+      // Try matching by different ID types
+      bool found = false;
+
+      // Check database IDs
+      if (paragraph.originalId == paragraphId ||
+          paragraph.id == paragraphId ||
+          paragraph.num == paragraphId) {
+        found = true;
+      }
+
+      // Also check HTML anchor IDs in content
+      if (!found && paragraph.content.isNotEmpty) {
+        // Look for anchor tags with matching ID
+        final anchorRegex = RegExp('<a\\s+id=["\']([0-9]+)["\']');
+        final matches = anchorRegex.allMatches(paragraph.content);
+
+        for (final match in matches) {
+          final anchorId = int.tryParse(match.group(1) ?? '');
+          if (anchorId == paragraphId) {
+            found = true;
+            break;
+          }
+        }
+
+        // Also try matching paragraph numbers in content (like "1.1", "2.3", etc.)
+        if (!found) {
+          final numberRegex = RegExp(r'(\d+)\.(\d+)');
+          final numberMatches = numberRegex.allMatches(paragraph.content);
+          for (final match in numberMatches) {
+            final fullNumber = '${match.group(1)}${match.group(2)}';
+            if (int.tryParse(fullNumber) == paragraphId) {
+              found = true;
+              break;
+            }
+          }
+        }
+
+        // Try matching formatted paragraph numbers like "6.14" directly
+        if (!found) {
+          final simpleNumberRegex = RegExp(r'(\d+)\.(\d+)');
+          final numberMatches = simpleNumberRegex.allMatches(paragraph.content);
+          for (final match in numberMatches) {
+            final chapterNum = int.tryParse(match.group(1) ?? '');
+            final paragraphNum = int.tryParse(match.group(2) ?? '');
+
+            if (chapterNum != null && paragraphNum != null) {
+              final combinedNumber = int.tryParse('$chapterNum$paragraphNum');
+              if (combinedNumber == paragraphId) {
+                found = true;
+                break;
+              }
+            }
+          }
+        }
+      }
+
+      if (found) {
+        return i + 1; // 1-based order number in chapter
+      }
+    }
+
+    return null;
+  }
+
+  /// Ищет параграф во всех загруженных главах (для обратной совместимости)
+  Map<String, dynamic>? _findParagraphInAllChapters(int paragraphId) {
     for (final MapEntry<int, Map<String, dynamic>> entry
         in _chaptersData.entries) {
       final chapterOrderNum = entry.key;
@@ -497,7 +660,6 @@ class ChapterController extends Controller {
             paragraph.id == paragraphId ||
             paragraph.num == paragraphId) {
           found = true;
-          paragraphOrderNum = i + 1; // 1-based order number in chapter
         }
 
         // Also check HTML anchor IDs in content
@@ -510,7 +672,6 @@ class ChapterController extends Controller {
             final anchorId = int.tryParse(match.group(1) ?? '');
             if (anchorId == paragraphId) {
               found = true;
-              paragraphOrderNum = i + 1; // 1-based order number in chapter
               break;
             }
           }
@@ -523,7 +684,6 @@ class ChapterController extends Controller {
               final fullNumber = '${match.group(1)}${match.group(2)}';
               if (int.tryParse(fullNumber) == paragraphId) {
                 found = true;
-                paragraphOrderNum = i + 1; // 1-based order number in chapter
                 break;
               }
             }
@@ -531,7 +691,6 @@ class ChapterController extends Controller {
 
           // Try matching formatted paragraph numbers like "6.14" directly
           if (!found) {
-            // Look for patterns like "6.14" in the content after anchor tags
             final simpleNumberRegex = RegExp(r'(\d+)\.(\d+)');
             final numberMatches =
                 simpleNumberRegex.allMatches(paragraph.content);
@@ -539,12 +698,10 @@ class ChapterController extends Controller {
               final chapterNum = int.tryParse(match.group(1) ?? '');
               final paragraphNum = int.tryParse(match.group(2) ?? '');
 
-              // Create combined number like 614 from "6.14"
               if (chapterNum != null && paragraphNum != null) {
                 final combinedNumber = int.tryParse('$chapterNum$paragraphNum');
                 if (combinedNumber == paragraphId) {
                   found = true;
-                  paragraphOrderNum = i + 1; // 1-based order number in chapter
                   break;
                 }
               }
@@ -553,61 +710,15 @@ class ChapterController extends Controller {
         }
 
         if (found) {
-          targetChapterOrderNum = chapterOrderNum;
-          break;
+          return {
+            'chapterOrderNum': chapterOrderNum,
+            'paragraphOrderNum': i + 1, // 1-based order number in chapter
+          };
         }
       }
-
-      if (targetChapterOrderNum != null) break;
     }
 
-    if (targetChapterOrderNum == null || paragraphOrderNum == null) {
-      final currentChapterData = _chaptersData[_currentChapterOrderNum];
-      if (currentChapterData != null) {
-        final paragraphs = currentChapterData['paragraphs'] as List<Paragraph>;
-        for (int i = 0; i < paragraphs.length && i < 10; i++) {
-          // Show first 10
-          final p = paragraphs[i];
-
-          // Also show anchor IDs
-          final anchorRegex = RegExp('<a\\s+id=["\']([0-9]+)["\']');
-          final matches = anchorRegex.allMatches(p.content);
-          final anchorIds = matches.map((m) => m.group(1)).toList();
-          if (anchorIds.isNotEmpty) {}
-        }
-        if (paragraphs.length > 10) {}
-      }
-      return;
-    }
-
-    // Save final values after null check
-    final finalTargetChapter = targetChapterOrderNum;
-    final finalParagraphOrderNum = paragraphOrderNum;
-
-    // Check if we're already on the target chapter
-    if (_currentChapterOrderNum == finalTargetChapter) {
-      _scrollToParagraphInCurrentChapter(
-          finalTargetChapter, finalParagraphOrderNum);
-    } else {
-      // Navigate to the chapter first
-      goToChapter(finalTargetChapter);
-
-      // Then scroll to the paragraph after the page transition completes
-      Future.delayed(const Duration(milliseconds: 1200), () {
-        // Double-check we're on the right chapter before scrolling
-        if (_currentChapterOrderNum == finalTargetChapter) {
-          _scrollToParagraphInCurrentChapter(
-              finalTargetChapter, finalParagraphOrderNum);
-        } else {
-          Future.delayed(const Duration(milliseconds: 500), () {
-            if (_currentChapterOrderNum == finalTargetChapter) {
-              _scrollToParagraphInCurrentChapter(
-                  finalTargetChapter, finalParagraphOrderNum);
-            } else {}
-          });
-        }
-      });
-    }
+    return null;
   }
 
   void _scrollToParagraphInCurrentChapter(
@@ -1504,7 +1615,7 @@ class ChapterController extends Controller {
       print('🎵 _createTextChunks: Final chunk content: "${currentChunk}"');
     }
 
-    print('🎵 _createTextChunks: Created ${chunks.length} total chunks');
+    print('�� _createTextChunks: Created ${chunks.length} total chunks');
     return chunks;
   }
 
@@ -1626,6 +1737,7 @@ class ChapterController extends Controller {
     _isPlayingChapter = false;
 
     _searchPresenter.dispose();
+
     super.onDisposed();
   }
 

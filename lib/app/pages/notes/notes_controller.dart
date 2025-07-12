@@ -4,7 +4,6 @@ import '../../../domain/entities/note.dart';
 import '../../../domain/usecases/get_notes_usecase.dart';
 import '../../../domain/usecases/delete_note_usecase.dart';
 import '../../../domain/repositories/notes_repository.dart';
-import '../../../data/helpers/database_helper.dart';
 
 class NotesController extends Controller {
   final NotesRepository _notesRepository;

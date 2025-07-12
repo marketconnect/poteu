@@ -1,20 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_tts/flutter_tts.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-// import 'package:sentry_flutter/sentry_flutter.dart';
-import 'dart:async';
-
-import 'data/repositories/static_regulation_repository.dart';
+import 'package:flutter_clean_architecture/flutter_clean_architecture.dart';
 import 'data/repositories/data_settings_repository.dart';
 import 'data/repositories/data_tts_repository.dart';
 import 'data/repositories/data_notes_repository.dart';
-import 'data/helpers/database_helper.dart';
 
 import 'app/theme/dynamic_theme.dart';
 import 'app/router/app_router.dart';
 import 'domain/entities/settings.dart';
+import 'domain/repositories/settings_repository.dart';
+import 'domain/repositories/tts_repository.dart';
+import 'domain/repositories/notes_repository.dart';
 import 'domain/repositories/regulation_repository.dart';
+import 'data/repositories/static_regulation_repository.dart';
+import 'data/repositories/data_regulation_repository.dart';
+import 'data/migration/migration_service.dart';
+import 'package:flutter_tts/flutter_tts.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+// import 'package:sentry_flutter/sentry_flutter.dart';
+import 'dart:async';
 
 const String sentryDsn =
     ''; // Set to empty for development, replace with your actual Sentry DSN
@@ -135,12 +139,17 @@ void main() async {
   final regulationRepository = StaticRegulationRepository();
   final ttsRepository = DataTTSRepository(settingsRepository, FlutterTts());
 
-  // Initialize database first
-  final databaseHelper = DatabaseHelper();
-  // Wait for database to be ready
-  await databaseHelper.database;
+  final notesRepository = DataNotesRepository();
 
-  final notesRepository = DataNotesRepository(databaseHelper);
+  // === ЗАПУСК МИГРАЦИИ ===
+  final dataRegulationRepository = DataRegulationRepository();
+  final migrationService = MigrationService(
+    staticRepo: regulationRepository,
+    dataRepo: dataRegulationRepository, // Передаем его
+  );
+  await migrationService.migrateIfNeeded();
+  // =======================
+
   final settings = await settingsRepository.getSettings();
 
   print('Initial settings loaded - isDarkMode: ${settings.isDarkMode}');
