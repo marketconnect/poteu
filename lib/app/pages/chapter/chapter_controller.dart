@@ -14,6 +14,7 @@ import '../../utils/text_utils.dart';
 import 'search_presenter.dart';
 import '../../../domain/entities/search_result.dart';
 import 'dart:async';
+import 'dart:developer' as dev;
 
 class ChapterController extends Controller {
   final int _regulationId;
@@ -30,16 +31,16 @@ class ChapterController extends Controller {
   late TextEditingController pageTextController;
 
   // ScrollController for each chapter
-  Map<int, ScrollController> _chapterScrollControllers = {};
+  final Map<int, ScrollController> _chapterScrollControllers = {};
 
   // ItemScrollController for precise scrolling (like original implementation)
-  Map<int, ItemScrollController> _itemScrollControllers = {};
+  final Map<int, ItemScrollController> _itemScrollControllers = {};
 
   // GlobalKeys for precise scrolling to paragraphs
-  Map<int, Map<int, GlobalKey>> _paragraphKeys =
+  final Map<int, Map<int, GlobalKey>> _paragraphKeys =
       {}; // chapterOrderNum -> paragraphIndex -> GlobalKey
 
-  Map<int, Map<String, dynamic>> _chaptersData = {};
+  final Map<int, Map<String, dynamic>> _chaptersData = {};
   int _currentChapterOrderNum = 1;
   int _totalChapters = 0;
   bool _isLoading = true;
@@ -204,24 +205,25 @@ class ChapterController extends Controller {
     _ttsStateSubscription = _ttsUseCase.stateStream.listen(
       (TtsState state) {
         _ttsState = state;
-        print('🎵 TTS state changed to: $state');
+        dev.log('🎵 TTS state changed to: $state');
 
         // Обрабатываем переходы состояний
         switch (state) {
           case TtsState.stopped:
             // Очищаем параграф только если это была запрошенная остановка
             if (_stopRequested) {
-              print('🎵 TTS stopped as requested - clearing current paragraph');
+              dev.log(
+                  '🎵 TTS stopped as requested - clearing current paragraph');
               _currentTTSParagraph = null;
             } else {
-              print(
+              dev.log(
                   '🎵 TTS stopped naturally - keeping current paragraph highlighted for 3 seconds');
               // Автоматически очищаем выделение через 3 секунды после естественного завершения
               Future.delayed(Duration(seconds: 3), () {
                 if (_currentTTSParagraph != null &&
                     !_isPlayingChapter &&
                     _ttsState == TtsState.stopped) {
-                  print(
+                  dev.log(
                       '🎵 Auto-clearing paragraph highlight after natural completion');
                   _currentTTSParagraph = null;
                   refreshUI();
@@ -232,19 +234,19 @@ class ChapterController extends Controller {
             // Сбрасываем флаг остановки когда воспроизведение главы завершено
             if (!_isPlayingChapter) {
               _stopRequested = false;
-              print(
+              dev.log(
                   '🎵 TTS state changed to $state - resetting stop flag (chapter playback finished)');
             }
             break;
           case TtsState.error:
             // При ошибке всегда очищаем
-            print('🎵 TTS error - clearing current paragraph');
+            dev.log('🎵 TTS error - clearing current paragraph');
             _currentTTSParagraph = null;
             break;
           case TtsState.paused:
             // Если запрошена остановка во время паузы, принудительно останавливаем
             if (_stopRequested) {
-              print('🎵 Stop requested while paused, forcing stop...');
+              dev.log('🎵 Stop requested while paused, forcing stop...');
               stopTTS();
             }
             break;
@@ -261,7 +263,7 @@ class ChapterController extends Controller {
         _stopRequested = false; // Сбрасываем флаг при ошибке
         _isPlayingChapter = false; // Сбрасываем флаг воспроизведения главы
         _currentTTSParagraph = null; // Очищаем при ошибке
-        print('🎵 TTS error in stream - clearing current paragraph');
+        dev.log('🎵 TTS error in stream - clearing current paragraph');
         refreshUI();
       },
     );
@@ -290,7 +292,7 @@ class ChapterController extends Controller {
 
   Future<void> loadAllChapters() async {
     final stopwatch = Stopwatch()..start();
-    print('🔄 Начало загрузки глав...');
+    dev.log('🔄 Начало загрузки глав...');
 
     _isLoading = true;
     _loadingError = null; // <--- clear loading error
@@ -300,7 +302,7 @@ class ChapterController extends Controller {
       // Use the new optimized method to get chapter list
       final chapterList = await _repository.getChapterList(_regulationId);
       _totalChapters = chapterList.length;
-      print('📚 Найдено глав: $_totalChapters');
+      dev.log('📚 Найдено глав: $_totalChapters');
 
       // Загружаем только текущую главу и соседние для быстрой загрузки
       await _loadChapterWithNeighbors(_initialChapterOrderNum);
@@ -310,7 +312,7 @@ class ChapterController extends Controller {
       refreshUI();
 
       stopwatch.stop();
-      print('✅ Загрузка завершена за ${stopwatch.elapsedMilliseconds}ms');
+      dev.log('✅ Загрузка завершена за ${stopwatch.elapsedMilliseconds}ms');
 
       // Delay navigation until after the PageView is built
       if (_scrollToParagraphId != null) {
@@ -320,7 +322,7 @@ class ChapterController extends Controller {
       }
     } catch (e) {
       stopwatch.stop();
-      print('❌ Ошибка загрузки за ${stopwatch.elapsedMilliseconds}ms: $e');
+      dev.log('❌ Ошибка загрузки за ${stopwatch.elapsedMilliseconds}ms: $e');
       _isLoading = false;
       _loadingError =
           'Ошибка загрузки: ${e.toString()}'; // <--- set loading error
@@ -331,7 +333,7 @@ class ChapterController extends Controller {
   // Загружает главу и соседние главы
   Future<void> _loadChapterWithNeighbors(int chapterOrderNum) async {
     final stopwatch = Stopwatch()..start();
-    print('🔄 Загрузка главы $chapterOrderNum и соседних...');
+    dev.log('🔄 Загрузка главы $chapterOrderNum и соседних...');
 
     // Get chapter list to find chapter IDs
     final chapterList = await _repository.getChapterList(_regulationId);
@@ -370,7 +372,7 @@ class ChapterController extends Controller {
     await Future.wait(loadTasks);
 
     stopwatch.stop();
-    print(
+    dev.log(
         '✅ Загрузка соседних глав завершена за ${stopwatch.elapsedMilliseconds}ms (параллельно)');
   }
 
@@ -381,22 +383,16 @@ class ChapterController extends Controller {
     }
 
     final stopwatch = Stopwatch()..start();
-    print('📖 Загрузка главы $chapterOrderNum (ID: $chapterId)...');
+    dev.log('📖 Загрузка главы $chapterOrderNum (ID: $chapterId)...');
 
     // Use the new optimized method to get chapter content
     final chapter = await _repository.getChapterContent(chapterId);
 
-    // Применяем форматирование только для текущей главы
-    List<Paragraph> updatedParagraphs;
-    if (chapterOrderNum == _currentChapterOrderNum) {
-      updatedParagraphs =
-          await _dataRepository.applyParagraphEdits(chapter.paragraphs);
-      print(
-          '🎨 Применено форматирование для ${updatedParagraphs.length} параграфов');
-    } else {
-      // Для соседних глав пока используем оригинальные параграфы
-      updatedParagraphs = chapter.paragraphs;
-    }
+    // Применяем форматирование ко всем главам
+    List<Paragraph> updatedParagraphs =
+        await _dataRepository.applyParagraphEdits(chapter.paragraphs);
+    dev.log(
+        '🎨 Применено форматирование для ${updatedParagraphs.length} параграфов в главе $chapterOrderNum');
 
     _chaptersData[chapterOrderNum] = {
       'id': chapter.id,
@@ -406,7 +402,7 @@ class ChapterController extends Controller {
     };
 
     stopwatch.stop();
-    print(
+    dev.log(
         '✅ Глава $chapterOrderNum загружена за ${stopwatch.elapsedMilliseconds}ms');
   }
 
@@ -426,7 +422,7 @@ class ChapterController extends Controller {
 
       await _loadChapterDataById(chapterInfo.id, chapterOrderNum);
     } catch (e) {
-      print('❌ Error loading chapter $chapterOrderNum: $e');
+      dev.log('❌ Error loading chapter $chapterOrderNum: $e');
     }
   }
 
@@ -480,10 +476,10 @@ class ChapterController extends Controller {
         // Выполняем все задачи параллельно
         if (loadTasks.isNotEmpty) {
           await Future.wait(loadTasks);
-          print('🔄 Соседние главы загружены в фоне (параллельно)');
+          dev.log('🔄 Соседние главы загружены в фоне (параллельно)');
         }
       } catch (e) {
-        print('❌ Error loading neighbor chapters: $e');
+        dev.log('❌ Error loading neighbor chapters: $e');
       }
     });
   }
@@ -561,7 +557,7 @@ class ChapterController extends Controller {
         });
       }
     } else {
-      print('❌ Paragraph $paragraphId not found in any loaded chapter');
+      dev.log('❌ Paragraph $paragraphId not found in any loaded chapter');
     }
   }
 
@@ -1787,11 +1783,36 @@ class ChapterController extends Controller {
         }
       }
 
+      // Обновляем форматирование в текущей главе
+      await _refreshCurrentChapterFormatting();
+
       _error = null;
       refreshUI();
     } catch (e) {
       _error = 'Ошибка сохранения: ${e.toString()}';
       refreshUI();
+    }
+  }
+
+  // Обновляет форматирование в текущей главе
+  Future<void> _refreshCurrentChapterFormatting() async {
+    try {
+      final chapterData = getChapterData(_currentChapterOrderNum);
+      if (chapterData != null) {
+        final originalParagraphs = chapterData['paragraphs'] as List<Paragraph>;
+        final updatedParagraphs =
+            await _dataRepository.applyParagraphEdits(originalParagraphs);
+
+        _chaptersData[_currentChapterOrderNum] = {
+          ...chapterData,
+          'paragraphs': updatedParagraphs,
+        };
+
+        dev.log(
+            '🔄 Форматирование обновлено для главы $_currentChapterOrderNum');
+      }
+    } catch (e) {
+      dev.log('❌ Ошибка обновления форматирования: $e');
     }
   }
 }
