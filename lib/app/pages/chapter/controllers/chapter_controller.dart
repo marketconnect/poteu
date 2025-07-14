@@ -15,8 +15,8 @@ import 'chapter_search_controller.dart';
 
 class ChapterController extends Controller {
   final int _regulationId;
-  final int _initialChapterOrderNum;
-  final int? _scrollToParagraphId;
+  // final int _initialChapterOrderNum;
+  // final int? _scrollToParagraphId;
 
   // Specialized controllers
   late ChapterPagingController _pagingController;
@@ -31,9 +31,10 @@ class ChapterController extends Controller {
     required TTSRepository ttsRepository,
     required RegulationRepository regulationRepository,
     int? scrollToParagraphId,
-  })  : _regulationId = regulationId,
-        _initialChapterOrderNum = initialChapterOrderNum,
-        _scrollToParagraphId = scrollToParagraphId {
+  }) : _regulationId = regulationId
+  // _initialChapterOrderNum = initialChapterOrderNum,
+  // _scrollToParagraphId = scrollToParagraphId
+  {
     // Initialize specialized controllers
     _pagingController = ChapterPagingController(
       regulationId: regulationId,

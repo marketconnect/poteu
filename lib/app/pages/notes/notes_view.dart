@@ -1,3 +1,4 @@
+import 'dart:developer' as dev;
 import 'package:flutter/material.dart' hide View;
 import 'package:flutter_clean_architecture/flutter_clean_architecture.dart';
 
@@ -18,6 +19,7 @@ class NotesView extends View {
 
   @override
   NotesViewState createState() =>
+      // ignore: no_logic_in_create_state
       NotesViewState(NotesController(notesRepository));
 }
 
@@ -384,9 +386,9 @@ class NotesViewState extends ViewState<NotesView, NotesController> {
   }
 
   void _navigateToChapter(Note note) {
-    print('=== NAVIGATING TO CHAPTER ===');
-    print('Note chapterOrderNum: ${note.chapterOrderNum}');
-    print('Note originalParagraphId: ${note.originalParagraphId}');
+    dev.log('=== NAVIGATING TO CHAPTER ===');
+    dev.log('Note chapterOrderNum: ${note.chapterOrderNum}');
+    dev.log('Note originalParagraphId: ${note.originalParagraphId}');
 
     // Navigate to chapter with specific paragraph using ChapterArguments
     Navigator.pushNamed(

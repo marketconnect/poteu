@@ -3,7 +3,7 @@ import "package:flutter_tts/flutter_tts.dart";
 import "../../domain/repositories/tts_repository.dart";
 import '../../domain/entities/tts_state.dart';
 import '../../domain/repositories/settings_repository.dart';
-import '../../domain/entities/settings.dart';
+import 'dart:developer' as dev;
 
 class DataTTSRepository implements TTSRepository {
   final FlutterTts _flutterTts;
@@ -25,7 +25,7 @@ class DataTTSRepository implements TTSRepository {
 
   void _log(String message) {
     if (_enableTtsLogging) {
-      print('[TTS] $message');
+      dev.log('[TTS] $message');
     }
   }
 
@@ -118,7 +118,7 @@ class DataTTSRepository implements TTSRepository {
       // чтобы избежать конфликтов и "перескакивания"
       _log('Stopping any current speech before starting new...');
       await _flutterTts.stop();
-      await Future.delayed(Duration(milliseconds: 100));
+      await Future.delayed(const Duration(milliseconds: 100));
 
       // Сохраняем текст для возможности возобновления
       _currentText = text;
@@ -197,7 +197,7 @@ class DataTTSRepository implements TTSRepository {
         // Дополнительная проверка: убедимся что голос действительно установлен
         try {
           await Future.delayed(
-              Duration(milliseconds: 100)); // Небольшая задержка
+              const Duration(milliseconds: 100)); // Небольшая задержка
           final currentVoice = await _flutterTts.getDefaultVoice;
           final currentVoiceName = currentVoice?['name']?.toString() ?? '';
 
@@ -209,7 +209,7 @@ class DataTTSRepository implements TTSRepository {
             await _flutterTts.setVoice(voiceMap);
 
             // Финальная проверка
-            await Future.delayed(Duration(milliseconds: 100));
+            await Future.delayed(const Duration(milliseconds: 100));
             final finalVoice = await _flutterTts.getDefaultVoice;
             final finalVoiceName = finalVoice?['name']?.toString() ?? '';
             _log('Final verification: requested=$voice, final=$finalVoiceName');
@@ -236,7 +236,7 @@ class DataTTSRepository implements TTSRepository {
         // Принудительно останавливаем TTS
         await _flutterTts.stop();
         // Небольшая задержка для обработки остановки
-        await Future.delayed(Duration(milliseconds: 100));
+        await Future.delayed(const Duration(milliseconds: 100));
       } catch (e) {
         _log('Error forcing stop from paused state: $e');
       }
@@ -294,7 +294,7 @@ class DataTTSRepository implements TTSRepository {
         await _flutterTts.stop();
 
         // Небольшая задержка для полной остановки
-        await Future.delayed(Duration(milliseconds: 100));
+        await Future.delayed(const Duration(milliseconds: 100));
 
         _isPaused = true;
         _stateController.add(TtsState.paused);
@@ -321,7 +321,7 @@ class DataTTSRepository implements TTSRepository {
         await _flutterTts.stop();
 
         // Небольшая задержка для полной остановки
-        await Future.delayed(Duration(milliseconds: 200));
+        await Future.delayed(const Duration(milliseconds: 200));
 
         // Сбрасываем флаг паузы
         _isPaused = false;

@@ -6,9 +6,9 @@ import '../../../domain/usecases/get_table_of_contents.dart';
 
 class TableOfContentsPresenter extends Presenter {
   final RegulationRepository _regulationRepository;
-  final SettingsRepository _settingsRepository;
-  final TTSRepository _ttsRepository;
-  final int _regulationId;
+  // final SettingsRepository _settingsRepository;
+  // final TTSRepository _ttsRepository;
+  // final int _regulationId;
 
   Function(List<Map<String, dynamic>>)? onChaptersLoaded;
   Function(dynamic)? onError;
@@ -18,10 +18,10 @@ class TableOfContentsPresenter extends Presenter {
     required SettingsRepository settingsRepository,
     required TTSRepository ttsRepository,
     required int regulationId,
-  })  : _regulationRepository = regulationRepository,
-        _settingsRepository = settingsRepository,
-        _ttsRepository = ttsRepository,
-        _regulationId = regulationId;
+  }) : _regulationRepository = regulationRepository;
+  // _settingsRepository = settingsRepository,
+  // _ttsRepository = ttsRepository,
+  // _regulationId = regulationId;
 
   void getChapters() {
     final useCase = GetTableOfContents(_regulationRepository);

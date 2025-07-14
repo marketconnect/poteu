@@ -219,7 +219,7 @@ class ChapterController extends Controller {
               dev.log(
                   '🎵 TTS stopped naturally - keeping current paragraph highlighted for 3 seconds');
               // Автоматически очищаем выделение через 3 секунды после естественного завершения
-              Future.delayed(Duration(seconds: 3), () {
+              Future.delayed(const Duration(seconds: 3), () {
                 if (_currentTTSParagraph != null &&
                     !_isPlayingChapter &&
                     _ttsState == TtsState.stopped) {
@@ -485,7 +485,7 @@ class ChapterController extends Controller {
   }
 
   void goToChapter(int chapterOrderNum) {
-    print('goToChapter: $chapterOrderNum');
+    dev.log('goToChapter: $chapterOrderNum');
     if (chapterOrderNum >= 1 && chapterOrderNum <= _totalChapters) {
       if (pageController.hasClients) {
         pageController.animateToPage(
@@ -746,7 +746,9 @@ class ChapterController extends Controller {
       try {
         itemScrollController.jumpTo(index: targetItemIndex);
         return;
-      } catch (e) {}
+      } catch (e) {
+        dev.log('❌ Error jumping to paragraph: $e');
+      }
     } else {
       Future.delayed(const Duration(milliseconds: 300), () {
         _scrollToParagraphInCurrentChapter(chapterOrderNum, paragraphOrderNum);
@@ -911,10 +913,10 @@ class ChapterController extends Controller {
       // Show first 20
       final p = paragraphs[i];
 
-      final plainText = TextUtils.parseHtmlString(p.content);
-      final preview = plainText.length > 50
-          ? '${plainText.substring(0, 50)}...'
-          : plainText;
+      // final plainText = TextUtils.parseHtmlString(p.content);
+      // final preview = plainText.length > 50
+      //     ? '${plainText.substring(0, 50)}...'
+      //     : plainText;
 
       // Look for anchor IDs
       final anchorRegex = RegExp('<a\\s+id=["\']([0-9]+)["\']');
@@ -923,12 +925,12 @@ class ChapterController extends Controller {
       if (anchorIds.isNotEmpty) {}
 
       // Look for number patterns
-      final numberRegex = RegExp(r'(\d+)\.(\d+)');
-      final numberMatches = numberRegex.allMatches(p.content);
-      if (numberMatches.isNotEmpty) {
-        final numbers =
-            numberMatches.map((m) => '${m.group(1)}.${m.group(2)}').toList();
-      }
+      // final numberRegex = RegExp(r'(\d+)\.(\d+)');
+      // final numberMatches = numberRegex.allMatches(p.content);
+      // if (numberMatches.isNotEmpty) {
+      //   final numbers =
+      //       numberMatches.map((m) => '${m.group(1)}.${m.group(2)}').toList();
+      // }
     }
 
     if (paragraphs.length > 20) {}
@@ -1229,8 +1231,8 @@ class ChapterController extends Controller {
   // ========== TTS METHODS ==========
 
   // Maximum text length for TTS (in characters) - very conservative limit
-  static const int _maxTtsTextLength =
-      1500; // Reduced from 3000 to be much more conservative
+  // static const int _maxTtsTextLength =
+  //     1500; // Reduced from 3000 to be much more conservative
 
   Future<void> playTTS(Paragraph paragraph) async {
     try {
@@ -1238,7 +1240,7 @@ class ChapterController extends Controller {
       _stopRequested = false;
 
       // Убираем установку текущего параграфа для одиночного воспроизведения
-      print('🎵 TTS: Playing single paragraph ID: ${paragraph.id}');
+      dev.log('🎵 TTS: Playing single paragraph ID: ${paragraph.id}');
 
       String textToSpeak = '';
 
@@ -1264,7 +1266,7 @@ class ChapterController extends Controller {
     } catch (e) {
       _error = e.toString();
       _currentTTSParagraph = null; // Очищаем при ошибке
-      print('🎵 TTS: Error occurred, clearing current paragraph');
+      dev.log('🎵 TTS: Error occurred, clearing current paragraph');
       refreshUI();
     }
   }
@@ -1280,7 +1282,7 @@ class ChapterController extends Controller {
             .where((p) => !p.isTable)
             .toList();
 
-        print(
+        dev.log(
             '🎵 Starting TTS for chapter $_currentChapterOrderNum with ${paragraphs.length} paragraphs');
 
         // Создаем структуру для хранения информации о чанках
@@ -1290,7 +1292,7 @@ class ChapterController extends Controller {
           final paragraph = paragraphs[i];
           String textToSpeak = '';
 
-          print(
+          dev.log(
               '📝 Processing paragraph ${i + 1}/${paragraphs.length} (ID: ${paragraph.id})');
 
           if (paragraph.textToSpeech != null &&
@@ -1313,7 +1315,7 @@ class ChapterController extends Controller {
         }
 
         if (chunksInfo.isEmpty) {
-          print('❌ No text to speak');
+          dev.log('❌ No text to speak');
           return;
         }
 
@@ -1321,7 +1323,7 @@ class ChapterController extends Controller {
         await _playChapterInChunks(chunksInfo);
       }
     } catch (e) {
-      print('❌ Error in playChapterTTS: $e');
+      dev.log('❌ Error in playChapterTTS: $e');
       _error = e.toString();
       refreshUI();
     }
@@ -1330,7 +1332,8 @@ class ChapterController extends Controller {
   /// Extracts readable text from table HTML content
   String _extractTableText(String htmlContent) {
     try {
-      print('📊 Extracting table text from HTML (${htmlContent.length} chars)');
+      dev.log(
+          '📊 Extracting table text from HTML (${htmlContent.length} chars)');
 
       // Remove complex table structure but preserve cell content
       String text = htmlContent;
@@ -1360,7 +1363,7 @@ class ChapterController extends Controller {
 
       // If we still have no meaningful text, try a more aggressive approach
       if (text.isEmpty || text.length < 10) {
-        print('📊 Table text too short, trying aggressive extraction');
+        dev.log('📊 Table text too short, trying aggressive extraction');
 
         // Try to extract text from anchor tags and other elements
         final anchorRegex = RegExp(r'<a[^>]*>([^<]*)</a>');
@@ -1372,15 +1375,15 @@ class ChapterController extends Controller {
 
         if (anchorTexts.isNotEmpty) {
           text = anchorTexts.join(' ');
-          print('📊 Extracted text from anchors: "$text"');
+          dev.log('📊 Extracted text from anchors: "$text"');
         }
       }
 
-      print(
+      dev.log(
           '📊 Final extracted table text: "${text.substring(0, text.length > 100 ? 100 : text.length)}..."');
       return text;
     } catch (e) {
-      print('📊 Error extracting table text: $e');
+      dev.log('📊 Error extracting table text: $e');
       // Fallback to simple HTML parsing
       return TextUtils.parseHtmlString(htmlContent);
     }
@@ -1389,16 +1392,17 @@ class ChapterController extends Controller {
   Future<void> _playChapterInChunks(
       List<Map<String, dynamic>> chunksInfo) async {
     try {
-      print('🎵 _playChapterInChunks: Starting chapter playback');
+      dev.log('🎵 _playChapterInChunks: Starting chapter playback');
 
       if (_stopRequested || !_isPlayingChapter) {
-        print('🎵 _playChapterInChunks: Playback stopped before starting');
+        dev.log('🎵 _playChapterInChunks: Playback stopped before starting');
         return;
       }
 
       for (int i = 0; i < chunksInfo.length; i++) {
         if (_stopRequested || !_isPlayingChapter) {
-          print('🎵 _playChapterInChunks: Playback stopped at chunk ${i + 1}');
+          dev.log(
+              '🎵 _playChapterInChunks: Playback stopped at chunk ${i + 1}');
           return;
         }
 
@@ -1406,7 +1410,7 @@ class ChapterController extends Controller {
         final text = chunkInfo['text'] as String;
         final paragraph = chunkInfo['paragraph'] as Paragraph;
 
-        print(
+        dev.log(
             '🎵 Playing chunk ${i + 1}/${chunksInfo.length} for paragraph ID: ${paragraph.id}');
 
         // Устанавливаем текущий параграф для выделения
@@ -1415,12 +1419,12 @@ class ChapterController extends Controller {
 
         // Останавливаем предыдущий TTS если он еще играет
         if (_ttsState == TtsState.playing) {
-          print('🎵 Stopping previous TTS before starting new chunk');
+          dev.log('🎵 Stopping previous TTS before starting new chunk');
           await stopTTS();
           await Future.delayed(const Duration(milliseconds: 500));
 
           if (_stopRequested || !_isPlayingChapter) {
-            print(
+            dev.log(
                 '🎵 _playChapterInChunks: Playback stopped after stopping previous TTS');
             return;
           }
@@ -1434,13 +1438,13 @@ class ChapterController extends Controller {
         await _waitForTTSCompletion();
 
         if (_stopRequested || !_isPlayingChapter) {
-          print(
+          dev.log(
               '🎵 _playChapterInChunks: Playback stopped after TTS completion');
           return;
         }
 
         if (_ttsState == TtsState.error) {
-          print('❌ TTS chunk ${i + 1} failed with error');
+          dev.log('❌ TTS chunk ${i + 1} failed with error');
           _error = 'Ошибка воспроизведения TTS';
           _isPlayingChapter = false;
           refreshUI();
@@ -1453,12 +1457,12 @@ class ChapterController extends Controller {
         }
       }
 
-      print('🎵 All chunks completed successfully');
+      dev.log('🎵 All chunks completed successfully');
       // Очищаем выделение после завершения всей главы
       _currentTTSParagraph = null;
       refreshUI();
     } catch (e) {
-      print('❌ Error in _playChapterInChunks: $e');
+      dev.log('❌ Error in _playChapterInChunks: $e');
       _error = 'Ошибка воспроизведения главы: ${e.toString()}';
       _isPlayingChapter = false;
       refreshUI();
@@ -1468,65 +1472,65 @@ class ChapterController extends Controller {
   /// Waits for TTS to complete by monitoring the state stream
   Future<void> _waitForTTSCompletion() async {
     try {
-      print('🎵 _waitForTTSCompletion: Starting wait for TTS completion');
+      dev.log('🎵 _waitForTTSCompletion: Starting wait for TTS completion');
 
       // Проверяем остановку перед началом ожидания
       if (_stopRequested || !_isPlayingChapter) {
-        print('🎵 _waitForTTSCompletion: Playback stopped before waiting');
+        dev.log('🎵 _waitForTTSCompletion: Playback stopped before waiting');
         return;
       }
 
       // Ждем начала воспроизведения
-      print('🎵 _waitForTTSCompletion: Waiting for TTS to start playing...');
+      dev.log('🎵 _waitForTTSCompletion: Waiting for TTS to start playing...');
       final startedPlaying = await _waitForTTSState([TtsState.playing]);
       if (!startedPlaying) {
-        print('❌ _waitForTTSCompletion: TTS failed to start playing');
+        dev.log('❌ _waitForTTSCompletion: TTS failed to start playing');
         return;
       }
-      print('🎵 _waitForTTSCompletion: TTS started playing');
+      dev.log('🎵 _waitForTTSCompletion: TTS started playing');
 
       // Проверяем остановку после начала воспроизведения
       if (_stopRequested || !_isPlayingChapter) {
-        print('🎵 _waitForTTSCompletion: Playback stopped after TTS started');
+        dev.log('🎵 _waitForTTSCompletion: Playback stopped after TTS started');
         return;
       }
 
       // Ждем завершения TTS
-      print('🎵 _waitForTTSCompletion: Waiting for TTS to complete...');
+      dev.log('🎵 _waitForTTSCompletion: Waiting for TTS to complete...');
       final completed =
           await _waitForTTSState([TtsState.stopped, TtsState.error]);
-      print('🎵 _waitForTTSCompletion: TTS completed, result: $completed');
+      dev.log('🎵 _waitForTTSCompletion: TTS completed, result: $completed');
 
       // Проверяем остановку после завершения
       if (_stopRequested || !_isPlayingChapter) {
-        print(
+        dev.log(
             '🎵 _waitForTTSCompletion: Playback stopped after TTS completion');
         return;
       }
 
       // Проверяем ошибку
       if (_ttsState == TtsState.error) {
-        print('❌ _waitForTTSCompletion: TTS ended with error');
+        dev.log('❌ _waitForTTSCompletion: TTS ended with error');
       } else {
-        print('🎵 _waitForTTSCompletion: TTS completed successfully');
+        dev.log('🎵 _waitForTTSCompletion: TTS completed successfully');
       }
     } catch (e) {
-      print('⚠️ _waitForTTSCompletion: Error or timeout: $e');
+      dev.log('⚠️ _waitForTTSCompletion: Error or timeout: $e');
     }
   }
 
   /// Waits for TTS to reach any of the target states
   Future<bool> _waitForTTSState(List<TtsState> targetStates) async {
-    print('🎵 _waitForTTSState: Waiting for states: $targetStates');
+    dev.log('🎵 _waitForTTSState: Waiting for states: $targetStates');
     final completer = Completer<bool>();
     StreamSubscription<TtsState>? subscription;
 
     subscription = _ttsUseCase.stateStream.listen((state) {
-      print('🎵 _waitForTTSState: Received state: $state');
+      dev.log('🎵 _waitForTTSState: Received state: $state');
 
       // Проверяем остановку
       if (_stopRequested || !_isPlayingChapter) {
-        print('🎵 _waitForTTSState: Playback stopped, completing with false');
+        dev.log('🎵 _waitForTTSState: Playback stopped, completing with false');
         subscription?.cancel();
         if (!completer.isCompleted) {
           completer.complete(false);
@@ -1536,7 +1540,7 @@ class ChapterController extends Controller {
 
       // Проверяем достижение целевого состояния
       if (targetStates.contains(state)) {
-        print('🎵 _waitForTTSState: Target state reached: $state');
+        dev.log('🎵 _waitForTTSState: Target state reached: $state');
         subscription?.cancel();
         if (!completer.isCompleted) {
           completer.complete(true);
@@ -1545,123 +1549,121 @@ class ChapterController extends Controller {
     });
 
     final result = await completer.future;
-    print('🎵 _waitForTTSState: Wait completed with result: $result');
+    dev.log('🎵 _waitForTTSState: Wait completed with result: $result');
     return result;
   }
 
   /// Creates text chunks that fit within TTS limits
-  List<String> _createTextChunks(List<String> texts) {
-    print('🎵 _createTextChunks: Creating chunks from ${texts.length} texts');
-    final chunks = <String>[];
-    String currentChunk = '';
+  // List<String> _createTextChunks(List<String> texts) {
+  //   dev.log('🎵 _createTextChunks: Creating chunks from ${texts.length} texts');
+  //   final chunks = <String>[];
+  //   String currentChunk = '';
 
-    for (int i = 0; i < texts.length; i++) {
-      final text = texts[i];
-      print(
-          '🎵 _createTextChunks: Processing text ${i + 1}/${texts.length} (${text.length} chars)');
-      print('🎵 _createTextChunks: Text content: "${text}"');
+  //   for (int i = 0; i < texts.length; i++) {
+  //     final text = texts[i];
+  //     dev.log(
+  //         '🎵 _createTextChunks: Processing text ${i + 1}/${texts.length} (${text.length} chars)');
+  //     dev.log('🎵 _createTextChunks: Text content: "$text"');
 
-      final potentialChunk =
-          currentChunk.isEmpty ? text : '$currentChunk. $text';
+  //     final potentialChunk =
+  //         currentChunk.isEmpty ? text : '$currentChunk. $text';
 
-      print(
-          '🎵 _createTextChunks: Potential chunk length: ${potentialChunk.length} (max: $_maxTtsTextLength)');
-      print(
-          '🎵 _createTextChunks: Potential chunk content: "${potentialChunk}"');
+  //     dev.log(
+  //         '🎵 _createTextChunks: Potential chunk content: "$potentialChunk"');
 
-      if (potentialChunk.length <= _maxTtsTextLength) {
-        currentChunk = potentialChunk;
-        print('🎵 _createTextChunks: Added to current chunk');
-      } else {
-        // Current chunk is full, save it and start a new one
-        if (currentChunk.isNotEmpty) {
-          chunks.add(currentChunk);
-          print(
-              '🎵 _createTextChunks: Saved chunk ${chunks.length} (${currentChunk.length} chars)');
-          print('🎵 _createTextChunks: Saved chunk content: "${currentChunk}"');
-        }
+  //     if (potentialChunk.length <= _maxTtsTextLength) {
+  //       currentChunk = potentialChunk;
+  //       dev.log('🎵 _createTextChunks: Added to current chunk');
+  //     } else {
+  //       // Current chunk is full, save it and start a new one
+  //       if (currentChunk.isNotEmpty) {
+  //         chunks.add(currentChunk);
+  //         dev.log(
+  //             '🎵 _createTextChunks: Saved chunk ${chunks.length} (${currentChunk.length} chars)');
+  //         dev.log('🎵 _createTextChunks: Saved chunk content: "$currentChunk"');
+  //       }
 
-        // Check if the current text is too long to fit in a single chunk
-        if (text.length > _maxTtsTextLength) {
-          print(
-              '🎵 _createTextChunks: Text ${i + 1} is too long (${text.length} chars), will be split');
-          // Split the long text into smaller pieces
-          final textChunks = _splitLongText(text);
-          for (final textChunk in textChunks) {
-            chunks.add(textChunk);
-            print(
-                '🎵 _createTextChunks: Saved split chunk ${chunks.length} (${textChunk.length} chars)');
-            print('🎵 _createTextChunks: Split chunk content: "${textChunk}"');
-          }
-          currentChunk = '';
-        } else {
-          // Start a new chunk with the current text
-          currentChunk = text;
-          print('🎵 _createTextChunks: Started new chunk with text ${i + 1}');
-        }
-      }
-    }
+  //       // Check if the current text is too long to fit in a single chunk
+  //       if (text.length > _maxTtsTextLength) {
+  //         dev.log(
+  //             '🎵 _createTextChunks: Text ${i + 1} is too long (${text.length} chars), will be split');
+  //         // Split the long text into smaller pieces
+  //         final textChunks = _splitLongText(text);
+  //         for (final textChunk in textChunks) {
+  //           chunks.add(textChunk);
+  //           dev.log(
+  //               '🎵 _createTextChunks: Saved split chunk ${chunks.length} (${textChunk.length} chars)');
+  //           dev.log('🎵 _createTextChunks: Split chunk content: "$textChunk"');
+  //         }
+  //         currentChunk = '';
+  //       } else {
+  //         // Start a new chunk with the current text
+  //         currentChunk = text;
+  //         dev.log('🎵 _createTextChunks: Started new chunk with text ${i + 1}');
+  //       }
+  //     }
+  //   }
 
-    // Add the last chunk if it's not empty
-    if (currentChunk.isNotEmpty) {
-      chunks.add(currentChunk);
-      print(
-          '🎵 _createTextChunks: Saved final chunk ${chunks.length} (${currentChunk.length} chars)');
-      print('🎵 _createTextChunks: Final chunk content: "${currentChunk}"');
-    }
+  //   // Add the last chunk if it's not empty
+  //   if (currentChunk.isNotEmpty) {
+  //     chunks.add(currentChunk);
+  //     dev.log(
+  //         '🎵 _createTextChunks: Saved final chunk ${chunks.length} (${currentChunk.length} chars)');
+  //     dev.log('🎵 _createTextChunks: Final chunk content: "$currentChunk"');
+  //   }
 
-    print('�� _createTextChunks: Created ${chunks.length} total chunks');
-    return chunks;
-  }
+  //   dev.log('🎵 _createTextChunks: Created ${chunks.length} total chunks');
+  //   return chunks;
+  // }
 
   /// Splits a long text into smaller chunks that fit within TTS limits
-  List<String> _splitLongText(String text) {
-    final chunks = <String>[];
-    int startIndex = 0;
+  // List<String> _splitLongText(String text) {
+  //   final chunks = <String>[];
+  //   int startIndex = 0;
 
-    while (startIndex < text.length) {
-      int endIndex = startIndex + _maxTtsTextLength;
+  //   while (startIndex < text.length) {
+  //     int endIndex = startIndex + _maxTtsTextLength;
 
-      // If we're not at the end, try to find a good break point
-      if (endIndex < text.length) {
-        // Look for sentence endings (., !, ?) or paragraph breaks
-        int lastGoodBreak = startIndex;
-        for (int i = startIndex; i < endIndex; i++) {
-          if (text[i] == '.' ||
-              text[i] == '!' ||
-              text[i] == '?' ||
-              text[i] == '\n') {
-            lastGoodBreak = i + 1;
-          }
-        }
+  //     // If we're not at the end, try to find a good break point
+  //     if (endIndex < text.length) {
+  //       // Look for sentence endings (., !, ?) or paragraph breaks
+  //       int lastGoodBreak = startIndex;
+  //       for (int i = startIndex; i < endIndex; i++) {
+  //         if (text[i] == '.' ||
+  //             text[i] == '!' ||
+  //             text[i] == '?' ||
+  //             text[i] == '\n') {
+  //           lastGoodBreak = i + 1;
+  //         }
+  //       }
 
-        // If we found a good break point, use it
-        if (lastGoodBreak > startIndex) {
-          endIndex = lastGoodBreak;
-        }
-      } else {
-        endIndex = text.length;
-      }
+  //       // If we found a good break point, use it
+  //       if (lastGoodBreak > startIndex) {
+  //         endIndex = lastGoodBreak;
+  //       }
+  //     } else {
+  //       endIndex = text.length;
+  //     }
 
-      final chunk = text.substring(startIndex, endIndex).trim();
-      if (chunk.isNotEmpty) {
-        chunks.add(chunk);
-      }
+  //     final chunk = text.substring(startIndex, endIndex).trim();
+  //     if (chunk.isNotEmpty) {
+  //       chunks.add(chunk);
+  //     }
 
-      startIndex = endIndex;
-    }
+  //     startIndex = endIndex;
+  //   }
 
-    return chunks;
-  }
+  //   return chunks;
+  // }
 
   Future<void> stopTTS() async {
     try {
-      print(
+      dev.log(
           '🎵 STOP TTS CALLED - Setting stop flag and stopping chapter playback');
       _stopRequested = true; // Устанавливаем флаг остановки
       _isPlayingChapter = false; // Останавливаем воспроизведение главы
       _currentTTSParagraph = null; // Очищаем текущий читаемый параграф
-      print('🎵 TTS: Clearing current paragraph in stopTTS');
+      dev.log('🎵 TTS: Clearing current paragraph in stopTTS');
       refreshUI(); // Обновляем UI для снятия выделения
 
       // Вызываем stop() в TTS репозитории
@@ -1669,22 +1671,23 @@ class ChapterController extends Controller {
 
       // Дополнительная проверка: если TTS все еще в состоянии paused, принудительно останавливаем
       if (_ttsState == TtsState.paused) {
-        print('🎵 TTS still paused after stop call, forcing stop again...');
-        await Future.delayed(Duration(milliseconds: 200)); // Небольшая задержка
+        dev.log('🎵 TTS still paused after stop call, forcing stop again...');
+        await Future.delayed(
+            const Duration(milliseconds: 200)); // Небольшая задержка
         _ttsUseCase.execute(_TTSUseCaseObserver(this), TTSUseCaseParams.stop());
       }
     } catch (e) {
-      print('🎵 Error in stopTTS(): $e');
+      dev.log('🎵 Error in stopTTS(): $e');
       _error = e.toString();
       _currentTTSParagraph = null; // Очищаем при ошибке
-      print('🎵 TTS: Clearing current paragraph due to error in stopTTS');
+      dev.log('🎵 TTS: Clearing current paragraph due to error in stopTTS');
       refreshUI();
     }
   }
 
   Future<void> pauseTTS() async {
     try {
-      print('🎵 PAUSE TTS CALLED');
+      dev.log('🎵 PAUSE TTS CALLED');
       _ttsUseCase.execute(_TTSUseCaseObserver(this), TTSUseCaseParams.pause());
     } catch (e) {
       _error = e.toString();
@@ -1694,7 +1697,7 @@ class ChapterController extends Controller {
 
   Future<void> resumeTTS() async {
     try {
-      print('🎵 RESUME TTS CALLED');
+      dev.log('🎵 RESUME TTS CALLED');
       _ttsUseCase.execute(_TTSUseCaseObserver(this), TTSUseCaseParams.resume());
     } catch (e) {
       _error = e.toString();
@@ -1704,7 +1707,7 @@ class ChapterController extends Controller {
 
   @override
   void refreshUI() {
-    print(
+    dev.log(
         '🔄 RefreshUI called - currentTTSParagraph: ${_currentTTSParagraph?.id ?? "null"}');
     super.refreshUI();
   }
@@ -1824,7 +1827,7 @@ class _TTSUseCaseObserver extends Observer<void> {
 
   @override
   void onComplete() {
-    print(
+    dev.log(
         '🎵 TTS Observer: onComplete called - NOT clearing current paragraph');
     // НЕ очищаем текущий читаемый параграф при завершении TTS
     // Пусть пользователь сам остановит или это сделает stopTTS()
@@ -1833,16 +1836,16 @@ class _TTSUseCaseObserver extends Observer<void> {
 
   @override
   void onError(e) {
-    print('❌ TTS Observer: onError called with: $e');
+    dev.log('❌ TTS Observer: onError called with: $e');
     _controller._error = e.toString();
     // Очищаем текущий читаемый параграф только при ошибке TTS
     _controller._currentTTSParagraph = null;
-    print('🎵 TTS Observer: Clearing current paragraph in onError');
+    dev.log('🎵 TTS Observer: Clearing current paragraph in onError');
     _controller.refreshUI();
   }
 
   @override
   void onNext(_) {
-    print('🎵 TTS Observer: onNext called');
+    dev.log('🎵 TTS Observer: onNext called');
   }
 }

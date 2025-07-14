@@ -1,16 +1,12 @@
 // lib/data/migration/migration_service.dart
 
-import 'dart:io';
-
 import 'package:path/path.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite/sqflite.dart' as old_db; // Keep for reading old db
 import 'package:poteu/data/repositories/data_regulation_repository.dart';
 import 'package:poteu/data/repositories/static_regulation_repository.dart';
 import 'package:poteu/domain/entities/paragraph.dart';
-import 'package:poteu/domain/entities/chapter.dart';
-import 'package:poteu/domain/entities/regulation.dart';
-import 'package:poteu/app/utils/text_utils.dart';
+import 'dart:developer' as dev;
 
 // Временная модель для десериализации данных из старой базы SQLite.
 // Поля названы в точности как в старой таблице.
@@ -44,13 +40,14 @@ class OldEditedParagraph {
 }
 
 class MigrationService {
-  final StaticRegulationRepository _staticRepo;
+  // final StaticRegulationRepository _staticRepo;
   final DataRegulationRepository _dataRepo; // Репозиторий для записи данных
 
   MigrationService({
     required StaticRegulationRepository staticRepo,
     required DataRegulationRepository dataRepo, // Добавляем зависимость
-  })  : _staticRepo = staticRepo,
+  }) :
+        // _staticRepo = staticRepo,
         _dataRepo = dataRepo;
 
   Future<void> migrateIfNeeded() async {
@@ -58,18 +55,18 @@ class MigrationService {
     final prefs = await SharedPreferences.getInstance();
 
     if (prefs.getBool(migrationFlagKey) ?? false) {
-      print('[MIGRATION_LOG] Миграция уже была выполнена. Пропускаем.');
+      dev.log('[MIGRATION_LOG] Миграция уже была выполнена. Пропускаем.');
       return;
     }
 
-    print('[MIGRATION_LOG] 🚀 Запуск миграции данных из SQLite...');
+    dev.log('[MIGRATION_LOG] 🚀 Запуск миграции данных из SQLite...');
 
     try {
       final oldDbPath = join(await old_db.getDatabasesPath(), 'paragraphs.db');
-      print('[MIGRATION_LOG] ℹ️ Путь к старой базе: $oldDbPath');
+      dev.log('[MIGRATION_LOG] ℹ️ Путь к старой базе: $oldDbPath');
 
       if (!await old_db.databaseExists(oldDbPath)) {
-        print(
+        dev.log(
             '[MIGRATION_LOG] 🟡 Старая база данных не найдена. Миграция не требуется.');
         await prefs.setBool(migrationFlagKey, true);
         return;
@@ -81,21 +78,21 @@ class MigrationService {
       await db.close();
 
       if (oldParagraphsJson.isEmpty) {
-        print(
+        dev.log(
             '[MIGRATION_LOG] 🟡 В старой базе данных нет данных для миграции.');
         await prefs.setBool(migrationFlagKey, true);
         return;
       }
 
-      print(
+      dev.log(
           '[MIGRATION_LOG] 🔍 Найдено ${oldParagraphsJson.length} записей для миграции.');
 
       for (final oldDataJson in oldParagraphsJson) {
         final oldParagraph = OldEditedParagraph.fromJson(oldDataJson);
 
-        print(
+        dev.log(
             '[MIGRATION_LOG] --- Мигрируем параграф ID: ${oldParagraph.paragraphId}');
-        print('[MIGRATION_LOG] --- Старый контент: ${oldParagraph.text}');
+        dev.log('[MIGRATION_LOG] --- Старый контент: ${oldParagraph.text}');
 
         // Создаем временный объект Paragraph, который требует метод сохранения.
         // Нам важны только ID для правильного поиска и сохранения.
@@ -115,15 +112,15 @@ class MigrationService {
           tempParagraph, // Вспомогательный объект
         );
 
-        print(
+        dev.log(
             '[MIGRATION_LOG] --- Запись для параграфа ${oldParagraph.paragraphId} успешно сохранена.');
       }
 
       await prefs.setBool(migrationFlagKey, true);
-      print('[MIGRATION_LOG] ✅✅✅ Миграция успешно завершена!');
+      dev.log('[MIGRATION_LOG] ✅✅✅ Миграция успешно завершена!');
     } catch (e, stackTrace) {
-      print('[MIGRATION_LOG] ❌❌❌ КРИТИЧЕСКАЯ ОШИБКА МИГРАЦИИ: $e');
-      print(stackTrace);
+      dev.log('[MIGRATION_LOG] ❌❌❌ КРИТИЧЕСКАЯ ОШИБКА МИГРАЦИИ: $e');
+      dev.log(stackTrace.toString());
     }
   }
 }

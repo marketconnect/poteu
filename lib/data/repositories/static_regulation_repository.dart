@@ -1,9 +1,5 @@
-import 'dart:io';
-
-import 'package:flutter/services.dart';
 import 'package:poteu/domain/entities/chapter.dart';
 import 'package:poteu/domain/entities/paragraph.dart';
-import 'package:dart_duckdb/dart_duckdb.dart';
 
 import '../../domain/entities/regulation.dart';
 
@@ -11,7 +7,6 @@ import '../../domain/repositories/regulation_repository.dart';
 
 import '../../domain/entities/search_result.dart';
 import '../../app/utils/text_utils.dart';
-import 'package:path_provider/path_provider.dart';
 import '../helpers/duckdb_provider.dart';
 
 class StaticRegulationRepository implements RegulationRepository {

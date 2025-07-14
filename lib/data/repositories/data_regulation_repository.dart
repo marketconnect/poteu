@@ -1,11 +1,10 @@
-import "package:flutter/material.dart";
 import "../../domain/entities/regulation.dart";
 import "../../domain/entities/chapter.dart";
 import "../../domain/entities/paragraph.dart";
 import "../../domain/repositories/regulation_repository.dart";
 import "../../domain/entities/search_result.dart";
 import "../helpers/duckdb_provider.dart";
-
+import 'dart:developer' as dev;
 import "dart:async";
 
 class DataRegulationRepository implements RegulationRepository {
@@ -113,9 +112,9 @@ class DataRegulationRepository implements RegulationRepository {
   Future<void> updateParagraph(
       int paragraphId, Map<String, dynamic> data) async {
     try {
-      print('=== UPDATE PARAGRAPH ===');
-      print('Paragraph ID: $paragraphId');
-      print('Data: $data');
+      dev.log('=== UPDATE PARAGRAPH ===');
+      dev.log('Paragraph ID: $paragraphId');
+      dev.log('Data: $data');
 
       // This is a generic update, let's implement it for DuckDB
       final conn = await _dbProvider.connection;
@@ -125,8 +124,8 @@ class DataRegulationRepository implements RegulationRepository {
       final content = data['content'];
       final note = data['note'];
 
-      print('Content: $content');
-      print('Note: $note');
+      dev.log('Content: $content');
+      dev.log('Note: $note');
 
       await conn.query(
         '''
@@ -139,13 +138,13 @@ class DataRegulationRepository implements RegulationRepository {
         ''',
       );
 
-      print('✅ Paragraph updated successfully');
+      dev.log('✅ Paragraph updated successfully');
     } catch (e, stackTrace) {
-      print('❌ ERROR updating paragraph:');
-      print('Error: $e');
-      print('Stack trace: $stackTrace');
-      print('Paragraph ID: $paragraphId');
-      print('Data: $data');
+      dev.log('❌ ERROR updating paragraph:');
+      dev.log('Error: $e');
+      dev.log('Stack trace: $stackTrace');
+      dev.log('Paragraph ID: $paragraphId');
+      dev.log('Data: $data');
       rethrow;
     }
   }
@@ -153,22 +152,22 @@ class DataRegulationRepository implements RegulationRepository {
   @override
   Future<void> saveParagraphEdit(int paragraphId, String editedContent) async {
     try {
-      print('=== SAVE PARAGRAPH EDIT ===');
-      print('Paragraph ID: $paragraphId');
-      print('Edited content length: ${editedContent.length}');
-      print(
+      dev.log('=== SAVE PARAGRAPH EDIT ===');
+      dev.log('Paragraph ID: $paragraphId');
+      dev.log('Edited content length: ${editedContent.length}');
+      dev.log(
           'Content preview: "${editedContent.substring(0, editedContent.length > 100 ? 100 : editedContent.length)}..."');
 
       await saveEditedParagraph(paragraphId, editedContent,
           Paragraph(id: 0, originalId: 0, chapterId: 0, num: 0, content: ''));
 
-      print('✅ Paragraph edit saved successfully');
+      dev.log('✅ Paragraph edit saved successfully');
     } catch (e, stackTrace) {
-      print('❌ ERROR saving paragraph edit:');
-      print('Error: $e');
-      print('Stack trace: $stackTrace');
-      print('Paragraph ID: $paragraphId');
-      print('Content length: ${editedContent.length}');
+      dev.log('❌ ERROR saving paragraph edit:');
+      dev.log('Error: $e');
+      dev.log('Stack trace: $stackTrace');
+      dev.log('Paragraph ID: $paragraphId');
+      dev.log('Content length: ${editedContent.length}');
       rethrow;
     }
   }
@@ -176,10 +175,10 @@ class DataRegulationRepository implements RegulationRepository {
   @override
   Future<void> saveParagraphNote(int paragraphId, String note) async {
     try {
-      print('=== SAVE PARAGRAPH NOTE ===');
-      print('Paragraph ID: $paragraphId');
-      print('Note: "$note"');
-      print('Note length: ${note.length}');
+      dev.log('=== SAVE PARAGRAPH NOTE ===');
+      dev.log('Paragraph ID: $paragraphId');
+      dev.log('Note: "$note"');
+      dev.log('Note length: ${note.length}');
 
       final conn = await _dbProvider.connection;
       await conn.query(
@@ -192,13 +191,13 @@ class DataRegulationRepository implements RegulationRepository {
         ''',
       );
 
-      print('✅ Paragraph note saved successfully');
+      dev.log('✅ Paragraph note saved successfully');
     } catch (e, stackTrace) {
-      print('❌ ERROR saving paragraph note:');
-      print('Error: $e');
-      print('Stack trace: $stackTrace');
-      print('Paragraph ID: $paragraphId');
-      print('Note: "$note"');
+      dev.log('❌ ERROR saving paragraph note:');
+      dev.log('Error: $e');
+      dev.log('Stack trace: $stackTrace');
+      dev.log('Paragraph ID: $paragraphId');
+      dev.log('Note: "$note"');
       rethrow;
     }
   }
@@ -207,10 +206,10 @@ class DataRegulationRepository implements RegulationRepository {
   Future<void> updateParagraphHighlight(
       int paragraphId, String highlightData) async {
     try {
-      print('=== UPDATE PARAGRAPH HIGHLIGHT ===');
-      print('Paragraph ID: $paragraphId');
-      print('Highlight data: "$highlightData"');
-      print('Highlight data length: ${highlightData.length}');
+      dev.log('=== UPDATE PARAGRAPH HIGHLIGHT ===');
+      dev.log('Paragraph ID: $paragraphId');
+      dev.log('Highlight data: "$highlightData"');
+      dev.log('Highlight data length: ${highlightData.length}');
 
       // The `highlight_data` column can be used for this.
       // This method seems to be from an older implementation.
@@ -226,21 +225,22 @@ class DataRegulationRepository implements RegulationRepository {
         ''',
       );
 
-      print('✅ Paragraph highlight updated successfully');
+      dev.log('✅ Paragraph highlight updated successfully');
     } catch (e, stackTrace) {
-      print('❌ ERROR updating paragraph highlight:');
-      print('Error: $e');
-      print('Stack trace: $stackTrace');
-      print('Paragraph ID: $paragraphId');
-      print('Highlight data: "$highlightData"');
+      dev.log('❌ ERROR updating paragraph highlight:');
+      dev.log('Error: $e');
+      dev.log('Stack trace: $stackTrace');
+      dev.log('Paragraph ID: $paragraphId');
+      dev.log('Highlight data: "$highlightData"');
       rethrow;
     }
   }
 
   // Method to get saved paragraph edits and apply them to original paragraphs
+  @override
   Future<List<Paragraph>> applyParagraphEdits(
       List<Paragraph> originalParagraphs) async {
-    print(
+    dev.log(
         '🔄 Применение форматирования для ${originalParagraphs.length} параграфов...');
 
     final conn = await _dbProvider.connection;
@@ -255,7 +255,7 @@ class DataRegulationRepository implements RegulationRepository {
     );
     final savedEdits = result.fetchAll();
 
-    print(
+    dev.log(
         '📊 Найдено ${savedEdits.length} сохраненных форматирований в DuckDB');
 
     // Создаем Map для быстрого поиска
@@ -280,12 +280,13 @@ class DataRegulationRepository implements RegulationRepository {
       }
     }
 
-    print(
+    dev.log(
         '✅ Форматирование применено к ${updatedParagraphs.length} параграфам');
     return updatedParagraphs;
   }
 
   // Method to check if a paragraph has saved edits
+  @override
   Future<bool> hasParagraphEdits(int originalParagraphId) async {
     final conn = await _dbProvider.connection;
     final result = await conn.query(
@@ -294,6 +295,7 @@ class DataRegulationRepository implements RegulationRepository {
   }
 
   // Method to get saved edit for a specific paragraph
+  @override
   Future<Map<String, dynamic>?> getParagraphEdit(
       int originalParagraphId) async {
     final conn = await _dbProvider.connection;
@@ -329,19 +331,20 @@ class DataRegulationRepository implements RegulationRepository {
   }
 
   // Save paragraph edit by originalId, handling both create and update cases
+  @override
   Future<void> saveParagraphEditByOriginalId(
       int originalId, String content, Paragraph originalParagraph) async {
     try {
-      print('=== SAVE PARAGRAPH EDIT BY ORIGINAL ID ===');
-      print('Original ID: $originalId');
-      print('Content length: ${content.length}');
-      print(
+      dev.log('=== SAVE PARAGRAPH EDIT BY ORIGINAL ID ===');
+      dev.log('Original ID: $originalId');
+      dev.log('Content length: ${content.length}');
+      dev.log(
           'Content preview: "${content.substring(0, content.length > 200 ? 200 : content.length)}..."');
-      print('Chapter ID: ${originalParagraph.chapterId}');
-      print('Paragraph ID: ${originalParagraph.id}');
+      dev.log('Chapter ID: ${originalParagraph.chapterId}');
+      dev.log('Paragraph ID: ${originalParagraph.id}');
 
       final conn = await _dbProvider.connection;
-      print('✅ Database connection established');
+      dev.log('✅ Database connection established');
 
       final query = '''
         INSERT INTO user_paragraph_edits (original_id, content, updated_at)
@@ -351,20 +354,20 @@ class DataRegulationRepository implements RegulationRepository {
           updated_at = NOW();
       ''';
 
-      print('Executing query: $query');
+      dev.log('Executing query: $query');
       await conn.query(query);
 
-      print('✅ Сохранено в DuckDB для originalId: $originalId');
+      dev.log('✅ Сохранено в DuckDB для originalId: $originalId');
     } catch (e, stackTrace) {
-      print('❌ ERROR saving paragraph edit by original ID:');
-      print('Error: $e');
-      print('Stack trace: $stackTrace');
-      print('Original ID: $originalId');
-      print('Content length: ${content.length}');
-      print(
+      dev.log('❌ ERROR saving paragraph edit by original ID:');
+      dev.log('Error: $e');
+      dev.log('Stack trace: $stackTrace');
+      dev.log('Original ID: $originalId');
+      dev.log('Content length: ${content.length}');
+      dev.log(
           'Content preview: "${content.substring(0, content.length > 200 ? 200 : content.length)}..."');
-      print('Chapter ID: ${originalParagraph.chapterId}');
-      print('Paragraph ID: ${originalParagraph.id}');
+      dev.log('Chapter ID: ${originalParagraph.chapterId}');
+      dev.log('Paragraph ID: ${originalParagraph.id}');
       rethrow;
     }
   }

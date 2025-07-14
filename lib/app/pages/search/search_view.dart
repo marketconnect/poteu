@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart' hide View, SearchController;
 import 'package:flutter_clean_architecture/flutter_clean_architecture.dart';
-import 'package:flutter_widget_from_html/flutter_widget_from_html.dart';
 
 import '../../../domain/repositories/regulation_repository.dart';
 import '../../../domain/repositories/settings_repository.dart';
@@ -22,6 +21,7 @@ class SearchView extends View {
   }) : super(key: key);
 
   @override
+  // ignore: no_logic_in_create_state
   SearchViewState createState() => SearchViewState(
         SearchPageController(
           regulationRepository: regulationRepository,

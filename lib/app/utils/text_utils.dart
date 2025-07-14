@@ -1,3 +1,5 @@
+import 'dart:developer' as dev;
+
 import '../../domain/entities/formatting.dart';
 
 class TextUtils {
@@ -19,9 +21,9 @@ class TextUtils {
         break;
     }
 
-    print('=== CREATE OPEN TAG ===');
-    print('Tag: $tag, Color: $color, ColorHex: $colorHex');
-    print('Result: $result');
+    dev.log('=== CREATE OPEN TAG ===');
+    dev.log('Tag: $tag, Color: $color, ColorHex: $colorHex');
+    dev.log('Result: $result');
 
     return result;
   }
@@ -41,12 +43,12 @@ class TextUtils {
   /// Adds formatting tags to text at specified positions
   static String addFormatting(
       String originalText, Tag tag, int color, int start, int end) {
-    print('=== ADD FORMATTING ===');
-    print('Original: "$originalText"');
-    print('Tag: $tag, Color: $color, Start: $start, End: $end');
+    dev.log('=== ADD FORMATTING ===');
+    dev.log('Original: "$originalText"');
+    dev.log('Tag: $tag, Color: $color, Start: $start, End: $end');
 
     if (start >= end || start < 0 || end > originalText.length) {
-      print('Invalid parameters, returning original text');
+      dev.log('Invalid parameters, returning original text');
       return originalText;
     }
 
@@ -56,7 +58,7 @@ class TextUtils {
     if (tag == Tag.c) {
       // For clear tag, remove all formatting
       String result = removeAllFormatting(originalText);
-      print('Clear formatting result: "$result"');
+      dev.log('Clear formatting result: "$result"');
       return result;
     }
 
@@ -65,7 +67,7 @@ class TextUtils {
     String after = originalText.substring(end);
 
     String result = before + openTag + selected + closeTag + after;
-    print('Formatted result: "$result"');
+    dev.log('Formatted result: "$result"');
     return result;
   }
 
@@ -101,12 +103,12 @@ class TextUtils {
       // Then remove HTML tags while preserving text content
       String result = decoded.replaceAll(RegExp(r'<[^>]*>'), '').trim();
 
-      print('parseHtmlString input: "$htmlString"');
-      print('parseHtmlString output: "$result"');
+      dev.log('parseHtmlString input: "$htmlString"');
+      dev.log('parseHtmlString output: "$result"');
 
       return result;
     } catch (e) {
-      print('parseHtmlString error: $e');
+      dev.log('parseHtmlString error: $e');
       return htmlString; // Return original if parsing fails
     }
   }
@@ -130,7 +132,7 @@ class TextUtils {
           end: end,
           selectedText: plainText.substring(start, end));
     } catch (e) {
-      print('getTextSelection error: $e');
+      dev.log('getTextSelection error: $e');
       return TextSelection(start: 0, end: 0, selectedText: '');
     }
   }

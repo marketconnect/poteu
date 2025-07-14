@@ -1,8 +1,8 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_clean_architecture/flutter_clean_architecture.dart';
 import '../../../../domain/entities/search_result.dart';
 import '../../../../data/repositories/static_regulation_repository.dart';
 import '../search_presenter.dart';
+import 'dart:developer' as dev;
 
 class ChapterSearchController extends Controller {
   final SearchPresenter _searchPresenter;
@@ -73,7 +73,7 @@ class ChapterSearchController extends Controller {
   void goToSearchResult(SearchResult result) {
     // This method will be called by the main controller to navigate to the result
     // The actual navigation logic is handled by the paging controller
-    print('🔍 Navigating to search result: ${result.paragraphId}');
+    dev.log('🔍 Navigating to search result: ${result.paragraphId}');
 
     // Clear search results after navigation
     _searchResults = [];

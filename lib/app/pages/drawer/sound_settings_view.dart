@@ -16,6 +16,7 @@ class SoundSettingsView extends fca.View {
 
   @override
   State<StatefulWidget> createState() =>
+      // ignore: no_logic_in_create_state
       _SoundSettingsViewState(settingsRepository, ttsRepository);
 }
 

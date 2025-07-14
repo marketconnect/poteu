@@ -6,15 +6,15 @@ import '../../../domain/entities/search_result.dart';
 import '../../../domain/repositories/regulation_repository.dart';
 import '../../../domain/repositories/settings_repository.dart';
 import '../../../domain/repositories/tts_repository.dart';
-import '../../navigation/app_navigator.dart';
+import 'dart:developer' as dev;
 
 class SearchPageController extends Controller {
   final RegulationRepository _regulationRepository;
-  final SettingsRepository _settingsRepository;
-  final TTSRepository _ttsRepository;
+  // final SettingsRepository _settingsRepository;
+  // final TTSRepository _ttsRepository;
   final TextEditingController _searchController;
-  final List<String> _searchQueries = [];
-  int _searchQueriesIndex = 0;
+  // final List<String> _searchQueries = [];
+  // int _searchQueriesIndex = 0;
   Timer? _debounceTimer;
   bool _isLoading = false;
   List<SearchResult> _searchResults = [];
@@ -27,8 +27,8 @@ class SearchPageController extends Controller {
     required SettingsRepository settingsRepository,
     required TTSRepository ttsRepository,
   })  : _regulationRepository = regulationRepository,
-        _settingsRepository = settingsRepository,
-        _ttsRepository = ttsRepository,
+        // _settingsRepository = settingsRepository,
+        // _ttsRepository = ttsRepository,
         _searchController = TextEditingController();
 
   TextEditingController get searchController => _searchController;
@@ -57,7 +57,7 @@ class SearchPageController extends Controller {
           query: _searchController.text,
         );
       } catch (e) {
-        print('Search error: $e');
+        dev.log('Search error: $e');
         _searchResults = [];
       }
 

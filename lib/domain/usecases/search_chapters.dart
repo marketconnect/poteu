@@ -1,6 +1,4 @@
 import 'dart:async';
-import 'package:flutter_clean_architecture/flutter_clean_architecture.dart';
-import '../entities/chapter.dart';
 import '../repositories/regulation_repository.dart';
 
 class SearchChapters {

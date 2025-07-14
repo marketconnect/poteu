@@ -1,10 +1,10 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_clean_architecture/flutter_clean_architecture.dart';
 import 'dart:async';
 import '../../../../domain/entities/paragraph.dart';
 import '../../../../domain/entities/tts_state.dart';
 import '../../../../domain/usecases/tts_usecase.dart';
 import '../../../../domain/repositories/tts_repository.dart';
+import 'dart:developer' as dev;
 
 class TtsController extends Controller {
   final TTSUseCase _ttsUseCase;
@@ -32,24 +32,25 @@ class TtsController extends Controller {
     _ttsStateSubscription = _ttsUseCase.stateStream.listen(
       (TtsState state) {
         _ttsState = state;
-        print('🎵 TTS state changed to: $state');
+        dev.log('🎵 TTS state changed to: $state');
 
         // Обрабатываем переходы состояний
         switch (state) {
           case TtsState.stopped:
             // Очищаем параграф только если это была запрошенная остановка
             if (_stopRequested) {
-              print('🎵 TTS stopped as requested - clearing current paragraph');
+              dev.log(
+                  '🎵 TTS stopped as requested - clearing current paragraph');
               _currentTTSParagraph = null;
             } else {
-              print(
+              dev.log(
                   '🎵 TTS stopped naturally - keeping current paragraph highlighted for 3 seconds');
               // Автоматически очищаем выделение через 3 секунды после естественного завершения
-              Future.delayed(Duration(seconds: 3), () {
+              Future.delayed(const Duration(seconds: 3), () {
                 if (_currentTTSParagraph != null &&
                     !_isPlayingChapter &&
                     _ttsState == TtsState.stopped) {
-                  print(
+                  dev.log(
                       '🎵 Auto-clearing paragraph highlight after natural completion');
                   _currentTTSParagraph = null;
                   refreshUI();
@@ -60,19 +61,19 @@ class TtsController extends Controller {
             // Сбрасываем флаг остановки когда воспроизведение главы завершено
             if (!_isPlayingChapter) {
               _stopRequested = false;
-              print(
+              dev.log(
                   '🎵 TTS state changed to $state - resetting stop flag (chapter playback finished)');
             }
             break;
           case TtsState.error:
             // При ошибке всегда очищаем
-            print('🎵 TTS error - clearing current paragraph');
+            dev.log('🎵 TTS error - clearing current paragraph');
             _currentTTSParagraph = null;
             break;
           case TtsState.paused:
             // Если запрошена остановка во время паузы, принудительно останавливаем
             if (_stopRequested) {
-              print('🎵 Stop requested while paused, forcing stop...');
+              dev.log('🎵 Stop requested while paused, forcing stop...');
               stopTTS();
             }
             break;
@@ -88,7 +89,7 @@ class TtsController extends Controller {
         _stopRequested = false;
         _isPlayingChapter = false;
         _currentTTSParagraph = null;
-        print('🎵 TTS error in stream - clearing current paragraph');
+        dev.log('🎵 TTS error in stream - clearing current paragraph');
         refreshUI();
       },
     );
@@ -102,7 +103,7 @@ class TtsController extends Controller {
   // TTS Control Methods
   Future<void> playText(String text) async {
     try {
-      print(
+      dev.log(
           '🎵 PLAY TTS CALLED with text: ${text.substring(0, text.length > 50 ? 50 : text.length)}...');
       _error = null;
       _ttsUseCase.execute(
@@ -115,7 +116,7 @@ class TtsController extends Controller {
 
   Future<void> playParagraph(Paragraph paragraph) async {
     try {
-      print('🎵 PLAY PARAGRAPH TTS CALLED for paragraph: ${paragraph.id}');
+      dev.log('🎵 PLAY PARAGRAPH TTS CALLED for paragraph: ${paragraph.id}');
       _currentTTSParagraph = paragraph;
       _error = null;
       refreshUI();
@@ -134,7 +135,7 @@ class TtsController extends Controller {
   Future<void> playChapter(List<Paragraph> paragraphs,
       {int startIndex = 0}) async {
     try {
-      print(
+      dev.log(
           '🎵 PLAY CHAPTER TTS CALLED with ${paragraphs.length} paragraphs starting from index $startIndex');
       _isPlayingChapter = true;
       _stopRequested = false;
@@ -153,12 +154,12 @@ class TtsController extends Controller {
       List<Paragraph> paragraphs, int startIndex) async {
     for (int i = startIndex; i < paragraphs.length; i++) {
       if (_stopRequested || !_isPlayingChapter) {
-        print('🎵 Chapter playback stopped at paragraph $i');
+        dev.log('🎵 Chapter playback stopped at paragraph $i');
         break;
       }
 
       final paragraph = paragraphs[i];
-      print(
+      dev.log(
           '🎵 Playing paragraph ${i + 1}/${paragraphs.length}: ${paragraph.id}');
 
       // Set current paragraph for UI highlighting
@@ -173,13 +174,13 @@ class TtsController extends Controller {
 
       // Small delay between paragraphs
       if (i < paragraphs.length - 1 && !_stopRequested) {
-        await Future.delayed(Duration(milliseconds: 500));
+        await Future.delayed(const Duration(milliseconds: 500));
       }
     }
 
     // Chapter playback completed
     _isPlayingChapter = false;
-    print('🎵 Chapter playback completed');
+    dev.log('🎵 Chapter playback completed');
     refreshUI();
   }
 
@@ -193,19 +194,19 @@ class TtsController extends Controller {
       _ttsUseCase.execute(observer, TTSUseCaseParams.speak(text));
       await completer.future;
     } catch (e) {
-      print('🎵 Error playing text: $e');
+      dev.log('🎵 Error playing text: $e');
       completer.complete();
     }
   }
 
   Future<void> stopTTS() async {
     try {
-      print(
+      dev.log(
           '🎵 STOP TTS CALLED - Setting stop flag and stopping chapter playback');
       _stopRequested = true;
       _isPlayingChapter = false;
       _currentTTSParagraph = null;
-      print('🎵 TTS: Clearing current paragraph in stopTTS');
+      dev.log('🎵 TTS: Clearing current paragraph in stopTTS');
       refreshUI();
 
       // Вызываем stop() в TTS репозитории
@@ -213,22 +214,22 @@ class TtsController extends Controller {
 
       // Дополнительная проверка: если TTS все еще в состоянии paused, принудительно останавливаем
       if (_ttsState == TtsState.paused) {
-        print('🎵 TTS still paused after stop call, forcing stop again...');
-        await Future.delayed(Duration(milliseconds: 200));
+        dev.log('🎵 TTS still paused after stop call, forcing stop again...');
+        await Future.delayed(const Duration(milliseconds: 200));
         _ttsUseCase.execute(_TTSUseCaseObserver(this), TTSUseCaseParams.stop());
       }
     } catch (e) {
-      print('🎵 Error in stopTTS(): $e');
+      dev.log('🎵 Error in stopTTS(): $e');
       _error = e.toString();
       _currentTTSParagraph = null;
-      print('🎵 TTS: Clearing current paragraph due to error in stopTTS');
+      dev.log('🎵 TTS: Clearing current paragraph due to error in stopTTS');
       refreshUI();
     }
   }
 
   Future<void> pauseTTS() async {
     try {
-      print('🎵 PAUSE TTS CALLED');
+      dev.log('🎵 PAUSE TTS CALLED');
       _ttsUseCase.execute(_TTSUseCaseObserver(this), TTSUseCaseParams.pause());
     } catch (e) {
       _error = e.toString();
@@ -238,7 +239,7 @@ class TtsController extends Controller {
 
   Future<void> resumeTTS() async {
     try {
-      print('🎵 RESUME TTS CALLED');
+      dev.log('🎵 RESUME TTS CALLED');
       _ttsUseCase.execute(_TTSUseCaseObserver(this), TTSUseCaseParams.resume());
     } catch (e) {
       _error = e.toString();
@@ -265,48 +266,48 @@ class TtsController extends Controller {
     return plainText;
   }
 
-  List<String> _splitTextIntoChunks(String text, {int maxChunkSize = 500}) {
-    if (text.length <= maxChunkSize) {
-      return [text];
-    }
+  // List<String> _splitTextIntoChunks(String text, {int maxChunkSize = 500}) {
+  //   if (text.length <= maxChunkSize) {
+  //     return [text];
+  //   }
 
-    final List<String> chunks = [];
-    int startIndex = 0;
+  //   final List<String> chunks = [];
+  //   int startIndex = 0;
 
-    while (startIndex < text.length) {
-      int endIndex = startIndex + maxChunkSize;
+  //   while (startIndex < text.length) {
+  //     int endIndex = startIndex + maxChunkSize;
 
-      // If we're not at the end, try to find a good break point
-      if (endIndex < text.length) {
-        // Look for sentence endings (., !, ?) or paragraph breaks
-        int lastGoodBreak = startIndex;
-        for (int i = startIndex; i < endIndex; i++) {
-          if (text[i] == '.' ||
-              text[i] == '!' ||
-              text[i] == '?' ||
-              text[i] == '\n') {
-            lastGoodBreak = i + 1;
-          }
-        }
+  //     // If we're not at the end, try to find a good break point
+  //     if (endIndex < text.length) {
+  //       // Look for sentence endings (., !, ?) or paragraph breaks
+  //       int lastGoodBreak = startIndex;
+  //       for (int i = startIndex; i < endIndex; i++) {
+  //         if (text[i] == '.' ||
+  //             text[i] == '!' ||
+  //             text[i] == '?' ||
+  //             text[i] == '\n') {
+  //           lastGoodBreak = i + 1;
+  //         }
+  //       }
 
-        // If we found a good break point, use it
-        if (lastGoodBreak > startIndex) {
-          endIndex = lastGoodBreak;
-        }
-      } else {
-        endIndex = text.length;
-      }
+  //       // If we found a good break point, use it
+  //       if (lastGoodBreak > startIndex) {
+  //         endIndex = lastGoodBreak;
+  //       }
+  //     } else {
+  //       endIndex = text.length;
+  //     }
 
-      final chunk = text.substring(startIndex, endIndex).trim();
-      if (chunk.isNotEmpty) {
-        chunks.add(chunk);
-      }
+  //     final chunk = text.substring(startIndex, endIndex).trim();
+  //     if (chunk.isNotEmpty) {
+  //       chunks.add(chunk);
+  //     }
 
-      startIndex = endIndex;
-    }
+  //     startIndex = endIndex;
+  //   }
 
-    return chunks;
-  }
+  //   return chunks;
+  // }
 
   void setCurrentTTSParagraph(Paragraph? paragraph) {
     _currentTTSParagraph = paragraph;
@@ -335,26 +336,28 @@ class _TTSUseCaseObserver extends Observer<void> {
 
   @override
   void onComplete() {
-    print(
+    dev.log(
         '🎵 TTS Observer: onComplete called - NOT clearing current paragraph');
     // НЕ очищаем текущий читаемый параграф при завершении TTS
     // Пусть пользователь сам остановит или это сделает stopTTS()
+    // ignore: invalid_use_of_protected_member
     _controller.refreshUI();
   }
 
   @override
   void onError(e) {
-    print('❌ TTS Observer: onError called with: $e');
+    dev.log('❌ TTS Observer: onError called with: $e');
     _controller._error = e.toString();
     // Очищаем текущий читаемый параграф только при ошибке TTS
     _controller._currentTTSParagraph = null;
-    print('🎵 TTS Observer: Clearing current paragraph in onError');
+    dev.log('🎵 TTS Observer: Clearing current paragraph in onError');
+    // ignore: invalid_use_of_protected_member
     _controller.refreshUI();
   }
 
   @override
   void onNext(_) {
-    print('🎵 TTS Observer: onNext called');
+    dev.log('🎵 TTS Observer: onNext called');
   }
 }
 

@@ -1,3 +1,5 @@
+import 'dart:developer' as dev;
+
 import 'package:flutter/material.dart';
 import '../../domain/entities/settings.dart';
 import '../../domain/repositories/settings_repository.dart';
@@ -23,7 +25,7 @@ class _FontSizeSettingsWidgetState extends State<FontSizeSettingsWidget> {
       final newSettings = currentSettings.copyWith(fontSize: fontSize);
       FontManager().updateSettings(newSettings);
     } catch (e) {
-      print('Error updating font size: $e');
+      dev.log('Error updating font size: $e');
     }
   }
 

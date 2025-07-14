@@ -1,3 +1,5 @@
+import 'dart:developer' as dev;
+
 import 'package:flutter/material.dart' hide View;
 import 'package:flutter_clean_architecture/flutter_clean_architecture.dart';
 import 'package:flutter_widget_from_html/flutter_widget_from_html.dart';
@@ -33,6 +35,7 @@ class ChapterView extends View {
   }) : super(key: key);
 
   @override
+  // ignore: no_logic_in_create_state
   ChapterViewState createState() => ChapterViewState(
         ChapterController(
           regulationId: regulationId,
@@ -425,7 +428,7 @@ class ChapterViewState extends ViewState<ChapterView, ChapterController> {
 
     // Debug info for TTS highlighting - только если есть TTS параграф
     if (controller.currentTTSParagraph != null && isCurrentTTSParagraph) {
-      print('🎵 UI: TTS highlighting paragraph ${paragraph.id}');
+      dev.log('🎵 UI: TTS highlighting paragraph ${paragraph.id}');
     }
 
     // If bottom bar is expanded or paragraph is table/NFT, don't show context menu
@@ -434,20 +437,20 @@ class ChapterViewState extends ViewState<ChapterView, ChapterController> {
       BoxDecoration? decoration;
 
       if (isCurrentTTSParagraph) {
-        cardColor =
-            Colors.green.withOpacity(0.2); // Приятный зелёный цвет для TTS
+        cardColor = Colors.green
+            .withValues(alpha: 0.2); // Приятный зелёный цвет для TTS
         decoration = BoxDecoration(
           border: Border.all(color: Colors.green, width: 3), // Зелёная рамка
           borderRadius: BorderRadius.circular(4),
         );
       } else if (isSelected) {
-        cardColor = Theme.of(context).primaryColor.withOpacity(0.1);
+        cardColor = Theme.of(context).primaryColor.withValues(alpha: 0.1);
         decoration = BoxDecoration(
           border: Border.all(color: Theme.of(context).primaryColor, width: 2),
           borderRadius: BorderRadius.circular(4),
         );
       } else if (hasFormatting) {
-        cardColor = Colors.yellow.withOpacity(0.1);
+        cardColor = Colors.yellow.withValues(alpha: 0.1);
         decoration = BoxDecoration(borderRadius: BorderRadius.circular(4));
       } else {
         cardColor = Theme.of(context).scaffoldBackgroundColor;
@@ -531,7 +534,7 @@ class ChapterViewState extends ViewState<ChapterView, ChapterController> {
                       borderRadius: BorderRadius.circular(12),
                     ),
                     padding: const EdgeInsets.all(4.0),
-                    child: Icon(
+                    child: const Icon(
                       Icons.volume_up,
                       color: Colors.white,
                       size: 20,
@@ -626,10 +629,10 @@ class ChapterViewState extends ViewState<ChapterView, ChapterController> {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Theme.of(context).primaryColor.withOpacity(0.1),
+        color: Theme.of(context).primaryColor.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
-          color: Theme.of(context).primaryColor.withOpacity(0.3),
+          color: Theme.of(context).primaryColor.withValues(alpha: 0.3),
         ),
       ),
       child: HtmlWidget(
@@ -710,7 +713,7 @@ class ChapterViewState extends ViewState<ChapterView, ChapterController> {
       child: Container(
         decoration: BoxDecoration(
           borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
-          color: Colors.black.withOpacity(0.8),
+          color: Colors.black.withValues(alpha: 0.8),
         ),
         width: MediaQuery.of(context).size.width,
         height: height,
@@ -827,7 +830,8 @@ class ChapterViewState extends ViewState<ChapterView, ChapterController> {
         height: size,
         width: size,
         decoration: BoxDecoration(
-          border: Border.all(color: Colors.white.withOpacity(0.3), width: 1),
+          border:
+              Border.all(color: Colors.white.withValues(alpha: 0.3), width: 1),
           borderRadius: BorderRadius.circular(8),
         ),
         child: Center(
@@ -845,7 +849,7 @@ class ChapterViewState extends ViewState<ChapterView, ChapterController> {
     return Container(
       height: height,
       width: 1,
-      color: Colors.white.withOpacity(0.3),
+      color: Colors.white.withValues(alpha: 0.3),
     );
   }
 
@@ -1177,19 +1181,19 @@ class ChapterViewState extends ViewState<ChapterView, ChapterController> {
 
     if (isCurrentTTSParagraph) {
       cardColor =
-          Colors.green.withOpacity(0.2); // Приятный зелёный цвет для TTS
+          Colors.green.withValues(alpha: 0.2); // Приятный зелёный цвет для TTS
       decoration = BoxDecoration(
         border: Border.all(color: Colors.green, width: 3), // Зелёная рамка
         borderRadius: BorderRadius.circular(4),
       );
     } else if (isSelected) {
-      cardColor = Theme.of(context).primaryColor.withOpacity(0.1);
+      cardColor = Theme.of(context).primaryColor.withValues(alpha: 0.1);
       decoration = BoxDecoration(
         border: Border.all(color: Theme.of(context).primaryColor, width: 2),
         borderRadius: BorderRadius.circular(4),
       );
     } else if (hasFormatting) {
-      cardColor = Colors.yellow.withOpacity(0.1);
+      cardColor = Colors.yellow.withValues(alpha: 0.1);
       decoration = BoxDecoration(borderRadius: BorderRadius.circular(4));
     } else {
       cardColor = Theme.of(context).scaffoldBackgroundColor;
@@ -1389,7 +1393,7 @@ class ChapterViewState extends ViewState<ChapterView, ChapterController> {
   Future<bool> _handleInternalLink(
       String url, ChapterController controller) async {
     try {
-      print('url: $url');
+      dev.log('url: $url');
 
       // Handle new format: documentId/chapterNumber/paragraphNumber
       if (url.contains('/')) {
@@ -1426,7 +1430,7 @@ class ChapterViewState extends ViewState<ChapterView, ChapterController> {
             } else {
               // TODO: Handle navigation to different document
               // This would require loading the new document first
-              print(
+              dev.log(
                   'Navigation to different document not yet implemented: $documentId');
             }
             return true;
@@ -1465,7 +1469,7 @@ class ChapterViewState extends ViewState<ChapterView, ChapterController> {
 
       return true; // Prevent default behavior for any other internal-looking links
     } catch (e) {
-      print('Error handling internal link: $e');
+      dev.log('Error handling internal link: $e');
       return false;
     }
   }

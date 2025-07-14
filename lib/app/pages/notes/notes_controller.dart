@@ -1,9 +1,9 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_clean_architecture/flutter_clean_architecture.dart';
 import '../../../domain/entities/note.dart';
 import '../../../domain/usecases/get_notes_usecase.dart';
 import '../../../domain/usecases/delete_note_usecase.dart';
 import '../../../domain/repositories/notes_repository.dart';
+import 'dart:developer' as dev;
 
 class NotesController extends Controller {
   final NotesRepository _notesRepository;
@@ -24,38 +24,38 @@ class NotesController extends Controller {
   bool get hasNotes => _notes.isNotEmpty;
 
   NotesController(this._notesRepository) {
-    print('=== NOTES CONTROLLER INITIALIZATION ===');
-    print('Creating use cases...');
+    dev.log('=== NOTES CONTROLLER INITIALIZATION ===');
+    dev.log('Creating use cases...');
     _getNotesUseCase = GetNotesUseCase(_notesRepository);
     _deleteNoteUseCase = DeleteNoteUseCase(_notesRepository);
-    print('Use cases created successfully');
-    print('Starting initial notes load...');
+    dev.log('Use cases created successfully');
+    dev.log('Starting initial notes load...');
     refreshNotes();
   }
 
   Future<void> _loadNotes() async {
-    print('\n=== LOADING NOTES ===');
-    print('Current state:');
-    print('  Loading: $_isLoading');
-    print('  Error: $_error');
-    print('  Sort by color: $_sortByColor');
-    print('  Current notes count: ${_notes.length}');
+    dev.log('\n=== LOADING NOTES ===');
+    dev.log('Current state:');
+    dev.log('  Loading: $_isLoading');
+    dev.log('  Error: $_error');
+    dev.log('  Sort by color: $_sortByColor');
+    dev.log('  Current notes count: ${_notes.length}');
 
     _isLoading = true;
     _error = null;
     refreshUI();
 
     try {
-      print('Executing GetNotesUseCase...');
+      dev.log('Executing GetNotesUseCase...');
       _getNotesUseCase.execute(
         _GetNotesObserver(this),
         GetNotesParams(sortByColor: _sortByColor),
       );
-      print('GetNotesUseCase execution started');
+      dev.log('GetNotesUseCase execution started');
     } catch (e, stack) {
-      print('❌ Error loading notes:');
-      print('Error: $e');
-      print('Stack trace: $stack');
+      dev.log('❌ Error loading notes:');
+      dev.log('Error: $e');
+      dev.log('Stack trace: $stack');
       _error = e.toString();
       _isLoading = false;
       refreshUI();
@@ -63,28 +63,28 @@ class NotesController extends Controller {
   }
 
   Future<void> toggleSortMode() async {
-    print('=== TOGGLE SORT MODE ===');
-    print('Before: sortByColor = $_sortByColor');
+    dev.log('=== TOGGLE SORT MODE ===');
+    dev.log('Before: sortByColor = $_sortByColor');
     _sortByColor = !_sortByColor;
-    print('After: sortByColor = $_sortByColor');
+    dev.log('After: sortByColor = $_sortByColor');
     await _loadNotes();
   }
 
   Future<void> setSortByDate() async {
-    print('=== SET SORT BY DATE ===');
+    dev.log('=== SET SORT BY DATE ===');
     _sortByColor = false;
     await _loadNotes();
   }
 
   Future<void> setSortByColor() async {
-    print('=== SET SORT BY COLOR ===');
+    dev.log('=== SET SORT BY COLOR ===');
     _sortByColor = true;
     await _loadNotes();
   }
 
   Future<void> deleteNote(Note note) async {
-    print('=== DELETE NOTE ===');
-    print('Deleting note: ${note.link.text}');
+    dev.log('=== DELETE NOTE ===');
+    dev.log('Deleting note: ${note.link.text}');
 
     try {
       _deleteNoteUseCase.execute(
@@ -92,20 +92,20 @@ class NotesController extends Controller {
         DeleteNoteParams(note: note),
       );
     } catch (e) {
-      print('Error deleting note: $e');
+      dev.log('Error deleting note: $e');
       _error = 'Ошибка удаления заметки: ${e.toString()}';
       refreshUI();
     }
   }
 
   Future<void> refreshNotes() async {
-    print('=== REFRESH NOTES ===');
+    dev.log('=== REFRESH NOTES ===');
     await _loadNotes();
   }
 
   void _onNotesLoaded(List<Note> notes) {
-    print('=== NOTES LOADED ===');
-    print('Loaded ${notes.length} notes');
+    dev.log('=== NOTES LOADED ===');
+    dev.log('Loaded ${notes.length} notes');
     _notes = notes;
     _isLoading = false;
     _error = null;
@@ -113,22 +113,22 @@ class NotesController extends Controller {
   }
 
   void _onNotesError(dynamic error) {
-    print('=== NOTES ERROR ===');
-    print('Error: $error');
+    dev.log('=== NOTES ERROR ===');
+    dev.log('Error: $error');
     _error = error.toString();
     _isLoading = false;
     refreshUI();
   }
 
   void _onNoteDeleted() {
-    print('=== NOTE DELETED ===');
+    dev.log('=== NOTE DELETED ===');
     // Reload notes after successful deletion
     _loadNotes();
   }
 
   void _onDeleteError(dynamic error) {
-    print('=== DELETE ERROR ===');
-    print('Error: $error');
+    dev.log('=== DELETE ERROR ===');
+    dev.log('Error: $error');
     _error = 'Ошибка удаления: ${error.toString()}';
     refreshUI();
   }

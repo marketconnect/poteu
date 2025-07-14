@@ -1,6 +1,7 @@
 import 'package:flutter_clean_architecture/flutter_clean_architecture.dart';
 import '../../../../domain/entities/paragraph.dart';
 import '../../../../data/repositories/data_regulation_repository.dart';
+import 'dart:developer' as dev;
 
 class TextFormattingController extends Controller {
   final DataRegulationRepository _dataRepository =
@@ -123,8 +124,8 @@ class TextFormattingController extends Controller {
 
     try {
       // TODO: Implement formatting logic when repository methods are available
-      print(
-          'Applying highlight to text: $_lastSelectedText with color: ${activeColor}');
+      dev.log(
+          'Applying highlight to text: $_lastSelectedText with color: $activeColor');
       _error = null;
       refreshUI();
     } catch (e) {
@@ -140,7 +141,7 @@ class TextFormattingController extends Controller {
 
     try {
       // TODO: Implement formatting logic when repository methods are available
-      print('Applying underline to text: $_lastSelectedText');
+      dev.log('Applying underline to text: $_lastSelectedText');
       _error = null;
       refreshUI();
     } catch (e) {
@@ -156,7 +157,7 @@ class TextFormattingController extends Controller {
 
     try {
       // TODO: Implement formatting logic when repository methods are available
-      print('Applying bold to text: $_lastSelectedText');
+      dev.log('Applying bold to text: $_lastSelectedText');
       _error = null;
       refreshUI();
     } catch (e) {
@@ -172,7 +173,7 @@ class TextFormattingController extends Controller {
 
     try {
       // TODO: Implement formatting logic when repository methods are available
-      print('Applying italic to text: $_lastSelectedText');
+      dev.log('Applying italic to text: $_lastSelectedText');
       _error = null;
       refreshUI();
     } catch (e) {
@@ -188,7 +189,7 @@ class TextFormattingController extends Controller {
 
     try {
       // TODO: Implement formatting removal logic when repository methods are available
-      print('Removing formatting from text: $_lastSelectedText');
+      dev.log('Removing formatting from text: $_lastSelectedText');
       _error = null;
       refreshUI();
     } catch (e) {

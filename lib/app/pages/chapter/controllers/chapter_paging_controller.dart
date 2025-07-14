@@ -4,6 +4,7 @@ import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 import '../../../../domain/entities/paragraph.dart';
 import '../../../../data/repositories/data_regulation_repository.dart';
 import '../../../../data/repositories/static_regulation_repository.dart';
+import 'dart:developer' as dev;
 
 class ChapterPagingController extends Controller {
   final int _regulationId;
@@ -122,7 +123,7 @@ class ChapterPagingController extends Controller {
 
   Future<void> loadAllChapters() async {
     final stopwatch = Stopwatch()..start();
-    print('🔄 Начало загрузки глав...');
+    dev.log('🔄 Начало загрузки глав...');
 
     _isLoading = true;
     _loadingError = null;
@@ -132,7 +133,7 @@ class ChapterPagingController extends Controller {
       // Use the new optimized method to get chapter list
       final chapterList = await _repository.getChapterList(_regulationId);
       _totalChapters = chapterList.length;
-      print('📚 Найдено глав: $_totalChapters');
+      dev.log('📚 Найдено глав: $_totalChapters');
 
       // Загружаем только текущую главу и соседние для быстрой загрузки
       await _loadChapterWithNeighbors(_initialChapterOrderNum);
@@ -142,7 +143,7 @@ class ChapterPagingController extends Controller {
       refreshUI();
 
       stopwatch.stop();
-      print('✅ Загрузка завершена за ${stopwatch.elapsedMilliseconds}ms');
+      dev.log('✅ Загрузка завершена за ${stopwatch.elapsedMilliseconds}ms');
 
       // Delay navigation until after the PageView is built
       if (_scrollToParagraphId != null) {
@@ -152,7 +153,7 @@ class ChapterPagingController extends Controller {
       }
     } catch (e) {
       stopwatch.stop();
-      print('❌ Ошибка загрузки за ${stopwatch.elapsedMilliseconds}ms: $e');
+      dev.log('❌ Ошибка загрузки за ${stopwatch.elapsedMilliseconds}ms: $e');
       _isLoading = false;
       _loadingError = 'Ошибка загрузки: ${e.toString()}';
       refreshUI();
@@ -162,7 +163,7 @@ class ChapterPagingController extends Controller {
   // Загружает главу и соседние главы
   Future<void> _loadChapterWithNeighbors(int chapterOrderNum) async {
     final stopwatch = Stopwatch()..start();
-    print('🔄 Загрузка главы $chapterOrderNum и соседних...');
+    dev.log('🔄 Загрузка главы $chapterOrderNum и соседних...');
 
     // Get chapter list to find chapter IDs
     final chapterList = await _repository.getChapterList(_regulationId);
@@ -201,7 +202,7 @@ class ChapterPagingController extends Controller {
     await Future.wait(loadTasks);
 
     stopwatch.stop();
-    print(
+    dev.log(
         '✅ Загрузка соседних глав завершена за ${stopwatch.elapsedMilliseconds}ms (параллельно)');
   }
 
@@ -212,7 +213,7 @@ class ChapterPagingController extends Controller {
     }
 
     final stopwatch = Stopwatch()..start();
-    print('📖 Загрузка главы $chapterOrderNum (ID: $chapterId)...');
+    dev.log('📖 Загрузка главы $chapterOrderNum (ID: $chapterId)...');
 
     // Use the new optimized method to get chapter content
     final chapter = await _repository.getChapterContent(chapterId);
@@ -222,7 +223,7 @@ class ChapterPagingController extends Controller {
     if (chapterOrderNum == _currentChapterOrderNum) {
       updatedParagraphs =
           await _dataRepository.applyParagraphEdits(chapter.paragraphs);
-      print(
+      dev.log(
           '🎨 Применено форматирование для ${updatedParagraphs.length} параграфов');
     } else {
       // Для соседних глав пока используем оригинальные параграфы
@@ -237,7 +238,7 @@ class ChapterPagingController extends Controller {
     };
 
     stopwatch.stop();
-    print(
+    dev.log(
         '✅ Глава $chapterOrderNum загружена за ${stopwatch.elapsedMilliseconds}ms');
   }
 
@@ -257,7 +258,7 @@ class ChapterPagingController extends Controller {
 
       await _loadChapterDataById(chapterInfo.id, chapterOrderNum);
     } catch (e) {
-      print('❌ Error loading chapter $chapterOrderNum: $e');
+      dev.log('❌ Error loading chapter $chapterOrderNum: $e');
     }
   }
 
@@ -311,16 +312,16 @@ class ChapterPagingController extends Controller {
         // Выполняем все задачи параллельно
         if (loadTasks.isNotEmpty) {
           await Future.wait(loadTasks);
-          print('🔄 Соседние главы загружены в фоне (параллельно)');
+          dev.log('🔄 Соседние главы загружены в фоне (параллельно)');
         }
       } catch (e) {
-        print('❌ Error loading neighbor chapters: $e');
+        dev.log('❌ Error loading neighbor chapters: $e');
       }
     });
   }
 
   void goToChapter(int chapterOrderNum) {
-    print('goToChapter: $chapterOrderNum');
+    dev.log('goToChapter: $chapterOrderNum');
     if (chapterOrderNum >= 1 && chapterOrderNum <= _totalChapters) {
       if (pageController.hasClients) {
         pageController.animateToPage(
@@ -391,7 +392,7 @@ class ChapterPagingController extends Controller {
         });
       }
     } else {
-      print('❌ Paragraph $paragraphId not found in any loaded chapter');
+      dev.log('❌ Paragraph $paragraphId not found in any loaded chapter');
     }
   }
 
@@ -498,14 +499,14 @@ class ChapterPagingController extends Controller {
           duration: const Duration(milliseconds: 500),
           curve: Curves.easeInOut,
         );
-        print(
+        dev.log(
             '📖 Scrolled to paragraph $paragraphIndex in chapter $chapterOrderNum');
       } else {
-        print(
+        dev.log(
             '❌ ItemScrollController not attached for chapter $chapterOrderNum');
       }
     } catch (e) {
-      print('❌ Error scrolling to paragraph: $e');
+      dev.log('❌ Error scrolling to paragraph: $e');
     }
   }
 

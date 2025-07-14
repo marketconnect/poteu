@@ -8,9 +8,9 @@ import '../../../domain/entities/regulation.dart';
 
 class MainPresenter extends Presenter {
   final RegulationRepository _regulationRepository;
-  final SettingsRepository _settingsRepository;
-  final TTSRepository _ttsRepository;
-  final NotesRepository _notesRepository;
+  // final SettingsRepository _settingsRepository;
+  // final TTSRepository _ttsRepository;
+  // final NotesRepository _notesRepository;
 
   Function(List<Regulation>)? onRegulationsLoaded;
   Function(dynamic)? onError;
@@ -20,10 +20,10 @@ class MainPresenter extends Presenter {
     required SettingsRepository settingsRepository,
     required TTSRepository ttsRepository,
     required NotesRepository notesRepository,
-  })  : _regulationRepository = regulationRepository,
-        _settingsRepository = settingsRepository,
-        _ttsRepository = ttsRepository,
-        _notesRepository = notesRepository;
+  }) : _regulationRepository = regulationRepository;
+  // _settingsRepository = settingsRepository,
+  // _ttsRepository = ttsRepository,
+  // _notesRepository = notesRepository;
 
   void getRegulations() {
     final useCase = GetRegulations(_regulationRepository);
