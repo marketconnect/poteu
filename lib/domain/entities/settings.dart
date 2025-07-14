@@ -49,7 +49,7 @@ class Settings {
     return const Settings(
       isDarkMode: false,
       fontSize: 16.0,
-      speechRate: 1.0,
+      speechRate: 0.3,
       volume: 1.0,
       voiceId: '',
       isSoundEnabled: true,

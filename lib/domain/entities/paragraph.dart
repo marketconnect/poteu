@@ -88,6 +88,7 @@ class EditableParagraph extends Paragraph {
     required super.id,
     required super.originalId,
     required super.chapterId,
+    // ignore: avoid_types_as_parameter_names
     required super.num,
     required super.content,
     super.textToSpeech,

@@ -17,6 +17,12 @@ class DataTTSRepository implements TTSRepository {
   String? _currentText;
   bool _isPaused = false;
 
+  // Переменные для отслеживания прогресса
+  int _currentWordIndex = 0;
+  List<String> _words = [];
+  DateTime? _speechStartTime;
+  double _estimatedWordsPerSecond = 2.0; // Примерная скорость речи
+
   void _log(String message) {
     if (_enableTtsLogging) {
       print('[TTS] $message');
@@ -108,9 +114,21 @@ class DataTTSRepository implements TTSRepository {
       _log(
           'Text to speak: ${text.substring(0, text.length > 100 ? 100 : text.length)}...');
 
+      // КРИТИЧНО: Принудительно останавливаем любое текущее воспроизведение
+      // чтобы избежать конфликтов и "перескакивания"
+      _log('Stopping any current speech before starting new...');
+      await _flutterTts.stop();
+      await Future.delayed(Duration(milliseconds: 100));
+
       // Сохраняем текст для возможности возобновления
       _currentText = text;
       _isPaused = false;
+
+      // Инициализируем отслеживание прогресса
+      _words = text.split(' ');
+      _currentWordIndex = 0;
+      _speechStartTime = DateTime.now();
+      _log('Initialized progress tracking: ${_words.length} words');
 
       // КРИТИЧНО: Применяем все настройки перед каждым speak(), как в оригинальном приложении
       _log('Applying current settings before speaking...');
@@ -243,15 +261,41 @@ class DataTTSRepository implements TTSRepository {
   Future<void> pause() async {
     _log('Pausing speech...');
     try {
+      // Сохраняем текущую позицию перед паузой
+      if (_speechStartTime != null && _currentText != null) {
+        final elapsed = DateTime.now().difference(_speechStartTime!).inSeconds;
+        final settings = await _settingsRepository.getSettings();
+        final wordsPerSecond = _estimatedWordsPerSecond * settings.speechRate;
+        _currentWordIndex = (elapsed * wordsPerSecond).round();
+
+        // Ограничиваем индекс размером массива слов
+        if (_currentWordIndex >= _words.length) {
+          _currentWordIndex = _words.length - 1;
+        }
+        if (_currentWordIndex < 0) {
+          _currentWordIndex = 0;
+        }
+
+        _log(
+            'Paused at word index: $_currentWordIndex (${_words[_currentWordIndex]})');
+      }
+
+      // Сначала пробуем нативную паузу
       await _flutterTts.pause();
       _isPaused = true;
       _stateController.add(TtsState.paused);
+      _log('Native pause successful');
     } catch (e) {
       _log('Error pausing speech: $e');
       // Если pause не поддерживается или произошла ошибка,
-      // останавливаем воспроизведение и устанавливаем состояние paused
+      // принудительно останавливаем воспроизведение
       try {
+        _log('Using fallback: forcing stop...');
         await _flutterTts.stop();
+
+        // Небольшая задержка для полной остановки
+        await Future.delayed(Duration(milliseconds: 100));
+
         _isPaused = true;
         _stateController.add(TtsState.paused);
         _log('Fallback: stopped speech and set paused state');
@@ -267,9 +311,37 @@ class DataTTSRepository implements TTSRepository {
     _log('Resuming speech...');
     try {
       if (_isPaused && _currentText != null) {
-        // Для Android и других платформ без native resume
-        // используем повторный вызов speak с сохраненным текстом
-        await speak(_currentText!);
+        // FlutterTts не предоставляет API для получения текущей позиции
+        // поэтому используем fallback с перезапуском с сохраненной позиции
+        _log('Using fallback: restarting from saved position...');
+
+        // КРИТИЧНО: Принудительно останавливаем TTS перед возобновлением
+        // чтобы избежать "перескакивания" вперед
+        _log('Forcing stop before resume to prevent skipping...');
+        await _flutterTts.stop();
+
+        // Небольшая задержка для полной остановки
+        await Future.delayed(Duration(milliseconds: 200));
+
+        // Сбрасываем флаг паузы
+        _isPaused = false;
+
+        // Создаем текст с сохраненной позиции
+        String resumeText;
+        if (_currentWordIndex > 0 && _currentWordIndex < _words.length) {
+          resumeText = _words.sublist(_currentWordIndex).join(' ');
+          _log(
+              'Resuming from word $_currentWordIndex: ${_words[_currentWordIndex]}');
+          _log(
+              'Resume text: ${resumeText.substring(0, resumeText.length > 100 ? 100 : resumeText.length)}...');
+        } else {
+          resumeText = _currentText!;
+          _log('Resuming from beginning (no saved position)');
+        }
+
+        // Запускаем воспроизведение с сохраненной позиции
+        _log('Restarting speech with resume text...');
+        await speak(resumeText);
       } else {
         _log('No text to resume or not paused');
       }

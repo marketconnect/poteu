@@ -4,7 +4,6 @@ import '../../domain/repositories/regulation_repository.dart';
 import '../../domain/repositories/settings_repository.dart';
 import '../../domain/repositories/tts_repository.dart';
 import '../../domain/repositories/notes_repository.dart';
-import '../pages/search/search_view.dart';
 import '../pages/chapter/chapter_view.dart';
 import '../pages/table_of_contents/table_of_contents_page.dart';
 import '../pages/notes/notes_view.dart';

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_clean_architecture/flutter_clean_architecture.dart';
 import 'data/repositories/data_settings_repository.dart';
 import 'data/repositories/data_tts_repository.dart';
 import 'data/repositories/data_notes_repository.dart';
@@ -8,9 +7,6 @@ import 'data/repositories/data_notes_repository.dart';
 import 'app/theme/dynamic_theme.dart';
 import 'app/router/app_router.dart';
 import 'domain/entities/settings.dart';
-import 'domain/repositories/settings_repository.dart';
-import 'domain/repositories/tts_repository.dart';
-import 'domain/repositories/notes_repository.dart';
 import 'domain/repositories/regulation_repository.dart';
 import 'data/repositories/static_regulation_repository.dart';
 import 'data/repositories/data_regulation_repository.dart';
@@ -19,6 +15,7 @@ import 'package:flutter_tts/flutter_tts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 // import 'package:sentry_flutter/sentry_flutter.dart';
 import 'dart:async';
+import 'dart:developer' as dev;
 
 const String sentryDsn =
     ''; // Set to empty for development, replace with your actual Sentry DSN
@@ -42,26 +39,27 @@ class FontManager {
       DataSettingsRepository settingsRepository, Settings initialSettings) {
     _settingsRepository = settingsRepository;
     _currentSettings = initialSettings;
-    print('FontManager initialized with fontSize: ${initialSettings.fontSize}');
+    dev.log(
+        'FontManager initialized with fontSize: ${initialSettings.fontSize}');
   }
 
   void updateSettings(Settings newSettings) async {
-    print('FontManager.updateSettings called');
+    dev.log('FontManager.updateSettings called');
     _currentSettings = newSettings;
 
     // Save to settings repository
     if (_settingsRepository != null) {
       try {
         await _settingsRepository!.saveSettings(newSettings);
-        print('Font settings saved to repository');
+        dev.log('Font settings saved to repository');
       } catch (e) {
-        print('Error saving font settings: $e');
+        dev.log('Error saving font settings: $e');
       }
     }
 
-    print('Adding settings to stream...');
+    dev.log('Adding settings to stream...');
     _fontController.add(_currentSettings);
-    print('Font settings added to stream successfully');
+    dev.log('Font settings added to stream successfully');
   }
 
   void dispose() {
@@ -88,20 +86,20 @@ class ThemeManager {
       DataSettingsRepository settingsRepository, bool initialTheme) {
     _settingsRepository = settingsRepository;
     _isDarkMode = initialTheme;
-    print('ThemeManager initialized with theme: $initialTheme');
+    dev.log('ThemeManager initialized with theme: $initialTheme');
   }
 
   void setTheme(bool isDark) async {
-    print('ThemeManager.setTheme called with: $isDark');
-    print('Previous theme state: $_isDarkMode');
+    dev.log('ThemeManager.setTheme called with: $isDark');
+    dev.log('Previous theme state: $_isDarkMode');
 
     if (_isDarkMode == isDark) {
-      print('Theme is already $isDark, skipping update');
+      dev.log('Theme is already $isDark, skipping update');
       return;
     }
 
     _isDarkMode = isDark;
-    print('New theme state: $_isDarkMode');
+    dev.log('New theme state: $_isDarkMode');
 
     // Save to settings repository
     if (_settingsRepository != null) {
@@ -109,18 +107,18 @@ class ThemeManager {
         final currentSettings = await _settingsRepository!.getSettings();
         final newSettings = currentSettings.copyWith(isDarkMode: isDark);
         await _settingsRepository!.saveSettings(newSettings);
-        print('Theme saved to settings repository');
+        dev.log('Theme saved to settings repository');
 
         // Update FontManager with new settings
         FontManager().updateSettings(newSettings);
       } catch (e) {
-        print('Error saving theme to settings: $e');
+        dev.log('Error saving theme to settings: $e');
       }
     }
 
-    print('Adding to stream...');
+    dev.log('Adding to stream...');
     _themeController.add(_isDarkMode);
-    print('Theme added to stream successfully');
+    dev.log('Theme added to stream successfully');
   }
 
   void dispose() {
@@ -152,7 +150,7 @@ void main() async {
 
   final settings = await settingsRepository.getSettings();
 
-  print('Initial settings loaded - isDarkMode: ${settings.isDarkMode}');
+  dev.log('Initial settings loaded - isDarkMode: ${settings.isDarkMode}');
 
   ThemeManager().initialize(settingsRepository, settings.isDarkMode);
   FontManager().updateSettings(settings);
@@ -227,13 +225,13 @@ class _PoteuAppState extends State<PoteuApp> {
             final isDarkMode = themeSnapshot.data ?? false;
             final settings = fontSnapshot.data ?? Settings.defaultSettings();
 
-            print('App rebuild - isDarkMode: $isDarkMode');
-            print('App rebuild - fontSize: ${settings.fontSize}');
+            dev.log('App rebuild - isDarkMode: $isDarkMode');
+            dev.log('App rebuild - fontSize: ${settings.fontSize}');
 
             final lightTheme = DynamicTheme.getLight(settings);
             final darkTheme = DynamicTheme.getDark(settings);
 
-            print('Applied theme');
+            dev.log('Applied theme');
 
             return MaterialApp(
               title: 'POTEU',

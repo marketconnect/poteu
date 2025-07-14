@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/services.dart';
 import 'package:dart_duckdb/dart_duckdb.dart';
 import 'package:path_provider/path_provider.dart';
+import 'dart:developer' as dev;
 
 /// Провайдер для управления единственным соединением с базой данных DuckDB
 /// Реализует паттерн Singleton для оптимизации доступа к БД
@@ -50,9 +51,9 @@ class DuckDBProvider {
       ''');
 
       _isInitialized = true;
-      print('🗄️ DuckDB initialized successfully');
+      dev.log('🗄️ DuckDB initialized successfully');
     } catch (e) {
-      print('❌ Error initializing DuckDB: $e');
+      dev.log('❌ Error initializing DuckDB: $e');
       rethrow;
     }
   }
@@ -87,9 +88,9 @@ class DuckDBProvider {
       }
 
       _isInitialized = false;
-      print('🗄️ DuckDB disposed successfully');
+      dev.log('🗄️ DuckDB disposed successfully');
     } catch (e) {
-      print('❌ Error disposing DuckDB: $e');
+      dev.log('❌ Error disposing DuckDB: $e');
     }
   }
 

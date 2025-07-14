@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../domain/entities/note.dart';
 import '../../domain/repositories/notes_repository.dart';
 import '../helpers/duckdb_provider.dart';
+import 'dart:developer' as dev;
 
 class DataNotesRepository implements NotesRepository {
   final DuckDBProvider _dbProvider = DuckDBProvider.instance;
@@ -13,12 +14,12 @@ class DataNotesRepository implements NotesRepository {
   @override
   Future<List<Note>> getAllNotes() async {
     try {
-      print('=== GET ALL NOTES ===');
+      dev.log('=== GET ALL NOTES ===');
 
       final conn = await _dbProvider.connection;
-      print('✅ Database connection established');
+      dev.log('✅ Database connection established');
 
-      final query = '''
+      const query = '''
         SELECT
           p.original_id,
           p.content,
@@ -35,11 +36,11 @@ class DataNotesRepository implements NotesRepository {
         JOIN rules r ON c.rule_id = r.id
       ''';
 
-      print('Executing query: $query');
+      dev.log('Executing query: $query');
       final result = await conn.query(query);
 
       final paragraphMaps = result.fetchAll();
-      print(
+      dev.log(
           'Found ${paragraphMaps.length} paragraphs with notes or formatting');
 
       final List<Note> notes = [];
@@ -47,7 +48,7 @@ class DataNotesRepository implements NotesRepository {
       for (int i = 0; i < paragraphMaps.length; i++) {
         try {
           final paragraphMap = paragraphMaps[i];
-          print(
+          dev.log(
               '\n=== PROCESSING PARAGRAPH ${i + 1}/${paragraphMaps.length} ===');
 
           final originalId = paragraphMap[0] as int;
@@ -60,29 +61,29 @@ class DataNotesRepository implements NotesRepository {
           final regulationTitle = paragraphMap[7] as String;
           final originalContent = paragraphMap[8] as String;
 
-          print('Paragraph ID: $originalId');
-          print('Chapter ID: $chapterId');
-          print('Content length: ${editedContent?.length ?? 0}');
-          print('Note: "$noteText"');
-          print('Chapter details:');
-          print('  Title: $chapterName');
-          print('  Order num: $chapterOrderNum');
+          dev.log('Paragraph ID: $originalId');
+          dev.log('Chapter ID: $chapterId');
+          dev.log('Content length: ${editedContent?.length ?? 0}');
+          dev.log('Note: "$noteText"');
+          dev.log('Chapter details:');
+          dev.log('  Title: $chapterName');
+          dev.log('  Order num: $chapterOrderNum');
 
           // First check for formatted links
           final links = editedContent != null
               ? _extractEditedParagraphLinks(editedContent)
               : <EditedParagraphLink>[];
 
-          print('Found ${links.length} formatted links');
+          dev.log('Found ${links.length} formatted links');
 
           // Add formatted links as notes
           for (int j = 0; j < links.length; j++) {
             try {
               final link = links[j];
-              print(
+              dev.log(
                   '\n--- CREATING NOTE FROM FORMATTED LINK ${j + 1}/${links.length} ---');
-              print('Link text: "${link.text}"');
-              print('Link color: ${link.color}');
+              dev.log('Link text: "${link.text}"');
+              dev.log('Link color: ${link.color}');
 
               // Check for duplicates before creating note
               bool isDuplicate = notes.any((existingNote) =>
@@ -91,7 +92,7 @@ class DataNotesRepository implements NotesRepository {
                   existingNote.chapterId == chapterId);
 
               if (isDuplicate) {
-                print('⚠️ Skipping duplicate note: "${link.text}"');
+                dev.log('⚠️ Skipping duplicate note: "${link.text}"');
                 continue;
               }
 
@@ -107,15 +108,15 @@ class DataNotesRepository implements NotesRepository {
                 isEdited: true,
                 link: link,
               );
-              print('✅ Successfully created formatted note');
+              dev.log('✅ Successfully created formatted note');
               notes.add(note);
-              print('Added note to list. Current count: ${notes.length}');
+              dev.log('Added note to list. Current count: ${notes.length}');
             } catch (e, stackTrace) {
-              print('❌ ERROR creating formatted note ${j + 1}:');
-              print('Error: $e');
-              print('Stack trace: $stackTrace');
-              print('Paragraph data: $originalId');
-              print('Link data: ${links[j]}');
+              dev.log('❌ ERROR creating formatted note ${j + 1}:');
+              dev.log('Error: $e');
+              dev.log('Stack trace: $stackTrace');
+              dev.log('Paragraph data: $originalId');
+              dev.log('Link data: ${links[j]}');
             }
           }
 
@@ -123,8 +124,8 @@ class DataNotesRepository implements NotesRepository {
           final plainNote = noteText;
           if (plainNote != null && plainNote.isNotEmpty) {
             try {
-              print('\n--- CREATING NOTE FROM PLAIN TEXT ---');
-              print('Note text: "$plainNote"');
+              dev.log('\n--- CREATING NOTE FROM PLAIN TEXT ---');
+              dev.log('Note text: "$plainNote"');
 
               // Create a default link for plain text note
               final link = EditedParagraphLink(
@@ -138,7 +139,7 @@ class DataNotesRepository implements NotesRepository {
                   existingNote.chapterId == chapterId);
 
               if (isDuplicate) {
-                print('⚠️ Skipping duplicate plain note: "$plainNote"');
+                dev.log('⚠️ Skipping duplicate plain note: "$plainNote"');
                 continue;
               }
 
@@ -154,37 +155,37 @@ class DataNotesRepository implements NotesRepository {
                 isEdited: false,
                 link: link,
               );
-              print('✅ Successfully created plain note');
+              dev.log('✅ Successfully created plain note');
               notes.add(note);
             } catch (e, stackTrace) {
-              print('❌ ERROR creating plain note:');
-              print('Error: $e');
-              print('Stack trace: $stackTrace');
-              print('Paragraph data: $originalId');
+              dev.log('❌ ERROR creating plain note:');
+              dev.log('Error: $e');
+              dev.log('Stack trace: $stackTrace');
+              dev.log('Paragraph data: $originalId');
             }
           }
         } catch (e, stackTrace) {
-          print('❌ ERROR processing paragraph ${i + 1}:');
-          print('Error: $e');
-          print('Stack trace: $stackTrace');
-          print('Paragraph data: ${paragraphMaps[i]}');
+          dev.log('❌ ERROR processing paragraph ${i + 1}:');
+          dev.log('Error: $e');
+          dev.log('Stack trace: $stackTrace');
+          dev.log('Paragraph data: ${paragraphMaps[i]}');
         }
       }
 
-      print('\n=== NOTES SUMMARY ===');
-      print('Total notes found: ${notes.length}');
+      dev.log('\n=== NOTES SUMMARY ===');
+      dev.log('Total notes found: ${notes.length}');
       for (var i = 0; i < notes.length; i++) {
-        print('Note $i:');
-        print('  Text: "${notes[i].link.text}"');
-        print('  Chapter: ${notes[i].chapterName}');
-        print('  Is edited: ${notes[i].isEdited}');
+        dev.log('Note $i:');
+        dev.log('  Text: "${notes[i].link.text}"');
+        dev.log('  Chapter: ${notes[i].chapterName}');
+        dev.log('  Is edited: ${notes[i].isEdited}');
       }
 
       return notes;
     } catch (e, stackTrace) {
-      print('❌ ERROR getting all notes:');
-      print('Error: $e');
-      print('Stack trace: $stackTrace');
+      dev.log('❌ ERROR getting all notes:');
+      dev.log('Error: $e');
+      dev.log('Stack trace: $stackTrace');
       rethrow;
     }
   }
@@ -198,21 +199,21 @@ class DataNotesRepository implements NotesRepository {
   @override
   Future<void> deleteNote(Note note) async {
     try {
-      print('=== DELETE NOTE ===');
-      print('Note ID: ${note.originalParagraphId}');
-      print('Note text: "${note.link.text}"');
-      print('Is edited: ${note.isEdited}');
-      print('Chapter ID: ${note.chapterId}');
-      print('Chapter name: ${note.chapterName}');
+      dev.log('=== DELETE NOTE ===');
+      dev.log('Note ID: ${note.originalParagraphId}');
+      dev.log('Note text: "${note.link.text}"');
+      dev.log('Is edited: ${note.isEdited}');
+      dev.log('Chapter ID: ${note.chapterId}');
+      dev.log('Chapter name: ${note.chapterName}');
 
       final conn = await _dbProvider.connection;
-      print('✅ Database connection established');
+      dev.log('✅ Database connection established');
 
       final result = await conn.query(
         'SELECT content, note FROM user_paragraph_edits WHERE original_id = ${note.originalParagraphId}',
       );
       final rows = result.fetchAll();
-      print(
+      dev.log(
           'Found ${rows.length} existing records for paragraph ${note.originalParagraphId}');
 
       if (rows.isNotEmpty) {
@@ -220,34 +221,35 @@ class DataNotesRepository implements NotesRepository {
         final currentContent = row[0] as String?;
         final currentNote = row[1] as String?;
 
-        print('Current content length: ${currentContent?.length ?? 0}');
-        print('Current note: "$currentNote"');
+        dev.log('Current content length: ${currentContent?.length ?? 0}');
+        dev.log('Current note: "$currentNote"');
 
         String? newContent = currentContent;
         String? newNote = currentNote;
 
         // Remove the specific formatting for this note's link
         if (note.isEdited && newContent != null) {
-          print('Removing formatting for edited note');
+          dev.log('Removing formatting for edited note');
           newContent = _removeSpecificFormatting(newContent, note.link);
-          print(
+          dev.log(
               'Content after formatting removal length: ${newContent.length}');
         }
 
         // Check if this is a plain text note that needs to be removed
         if (!note.isEdited && newNote != null && newNote == note.link.text) {
-          print('Removing plain text note');
+          dev.log('Removing plain text note');
           newNote = null;
         }
 
         final hasFormatting =
             newContent != null && _hasAnyFormatting(newContent);
-        print('Has remaining formatting: $hasFormatting');
-        print('Has remaining notes: ${newNote != null && newNote.isNotEmpty}');
+        dev.log('Has remaining formatting: $hasFormatting');
+        dev.log(
+            'Has remaining notes: ${newNote != null && newNote.isNotEmpty}');
 
         if (hasFormatting || (newNote != null && newNote.isNotEmpty)) {
           // Still has other formatting or other notes, just update
-          print('Updating existing record with remaining content/notes');
+          dev.log('Updating existing record with remaining content/notes');
           final query = '''
             INSERT INTO user_paragraph_edits (original_id, content, note, updated_at)
             VALUES (${note.originalParagraphId}, '${newContent ?? ''}', '${newNote ?? ''}', NOW())
@@ -256,29 +258,29 @@ class DataNotesRepository implements NotesRepository {
               note = EXCLUDED.note,
               updated_at = NOW();
           ''';
-          print('Executing query: $query');
+          dev.log('Executing query: $query');
           await conn.query(query);
-          print('✅ Note updated successfully');
+          dev.log('✅ Note updated successfully');
         } else {
           // No formatting or notes left, remove the edit entry entirely
-          print('No remaining content/notes, deleting entire record');
+          dev.log('No remaining content/notes, deleting entire record');
           await conn.query(
             'DELETE FROM user_paragraph_edits WHERE original_id = ${note.originalParagraphId}',
           );
-          print('✅ Note record deleted successfully');
+          dev.log('✅ Note record deleted successfully');
         }
       } else {
-        print(
+        dev.log(
             '⚠️ No existing record found for paragraph ${note.originalParagraphId}');
       }
     } catch (e, stackTrace) {
-      print('❌ ERROR deleting note:');
-      print('Error: $e');
-      print('Stack trace: $stackTrace');
-      print('Note ID: ${note.originalParagraphId}');
-      print('Note text: "${note.link.text}"');
-      print('Is edited: ${note.isEdited}');
-      print('Chapter ID: ${note.chapterId}');
+      dev.log('❌ ERROR deleting note:');
+      dev.log('Error: $e');
+      dev.log('Stack trace: $stackTrace');
+      dev.log('Note ID: ${note.originalParagraphId}');
+      dev.log('Note text: "${note.link.text}"');
+      dev.log('Is edited: ${note.isEdited}');
+      dev.log('Chapter ID: ${note.chapterId}');
       rethrow;
     }
   }
@@ -286,31 +288,31 @@ class DataNotesRepository implements NotesRepository {
   @override
   Future<void> deleteNoteById(int paragraphId) async {
     try {
-      print('=== DELETE NOTE BY ID ===');
-      print('Paragraph ID: $paragraphId');
+      dev.log('=== DELETE NOTE BY ID ===');
+      dev.log('Paragraph ID: $paragraphId');
 
       final conn = await _dbProvider.connection;
-      print('✅ Database connection established');
+      dev.log('✅ Database connection established');
 
       await conn.query(
         'DELETE FROM user_paragraph_edits WHERE original_id = $paragraphId',
       );
 
-      print('✅ Note deleted successfully for paragraph ID: $paragraphId');
+      dev.log('✅ Note deleted successfully for paragraph ID: $paragraphId');
     } catch (e, stackTrace) {
-      print('❌ ERROR deleting note by ID:');
-      print('Error: $e');
-      print('Stack trace: $stackTrace');
-      print('Paragraph ID: $paragraphId');
+      dev.log('❌ ERROR deleting note by ID:');
+      dev.log('Error: $e');
+      dev.log('Stack trace: $stackTrace');
+      dev.log('Paragraph ID: $paragraphId');
       rethrow;
     }
   }
 
   // Helper methods for extracting and managing formatted links
   List<EditedParagraphLink> _extractEditedParagraphLinks(String content) {
-    print('=== EXTRACTING EDITED PARAGRAPH LINKS ===');
-    print('Content length: ${content.length}');
-    print(
+    dev.log('=== EXTRACTING EDITED PARAGRAPH LINKS ===');
+    dev.log('Content length: ${content.length}');
+    dev.log(
         'Content preview: "${content.substring(0, content.length > 200 ? 200 : content.length)}..."');
 
     final links = <EditedParagraphLink>[];
@@ -319,7 +321,7 @@ class DataNotesRepository implements NotesRepository {
     final spanRegex = RegExp(
         r'<span[^>]*style="[^"]*background-color:\s*([^;"]+)[^"]*"[^>]*>([^<]+)</span>');
     final spanMatches = spanRegex.allMatches(content);
-    print('Found ${spanMatches.length} span matches');
+    dev.log('Found ${spanMatches.length} span matches');
 
     for (final match in spanMatches) {
       final colorHex = match.group(1)?.trim();
@@ -329,9 +331,9 @@ class DataNotesRepository implements NotesRepository {
         try {
           final color = _parseColor(colorHex);
           links.add(EditedParagraphLink(text: text, color: color));
-          print('Found highlighted text: "$text" with color: $colorHex');
+          dev.log('Found highlighted text: "$text" with color: $colorHex');
         } catch (e) {
-          print('Error parsing color: $colorHex');
+          dev.log('Error parsing color: $colorHex');
         }
       }
     }
@@ -340,7 +342,7 @@ class DataNotesRepository implements NotesRepository {
     final underlineRegex = RegExp(
         r'<u[^>]*style="[^"]*text-decoration-color:\s*([^;"]+)[^"]*"[^>]*>([^<]+)</u>');
     final underlineMatches = underlineRegex.allMatches(content);
-    print('Found ${underlineMatches.length} underline matches');
+    dev.log('Found ${underlineMatches.length} underline matches');
 
     for (final match in underlineMatches) {
       final colorHex = match.group(1)?.trim();
@@ -350,14 +352,14 @@ class DataNotesRepository implements NotesRepository {
         try {
           final color = _parseColor(colorHex);
           links.add(EditedParagraphLink(text: text, color: color));
-          print('Found underlined text: "$text" with color: $colorHex');
+          dev.log('Found underlined text: "$text" with color: $colorHex');
         } catch (e) {
-          print('Error parsing color: $colorHex');
+          dev.log('Error parsing color: $colorHex');
         }
       }
     }
 
-    print('Total formatted links found: ${links.length}');
+    dev.log('Total formatted links found: ${links.length}');
     return links;
   }
 

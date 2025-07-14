@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_clean_architecture/flutter_clean_architecture.dart';
 import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 import '../../../domain/entities/paragraph.dart';
-import '../../../domain/entities/chapter.dart';
 import '../../../domain/entities/formatting.dart';
 import '../../../domain/entities/tts_state.dart';
 import '../../../domain/usecases/tts_usecase.dart';

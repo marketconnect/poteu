@@ -22,7 +22,7 @@ class DataSettingsRepository implements SettingsRepository {
     return Settings(
       isDarkMode: _prefs.getBool(_darkModeKey) ?? false,
       fontSize: _prefs.getDouble(_fontSizeKey) ?? 16.0,
-      speechRate: _prefs.getDouble(_speechRateKey) ?? 1.0,
+      speechRate: _prefs.getDouble(_speechRateKey) ?? 0.5,
       volume: _prefs.getDouble(_volumeKey) ?? 1.0,
       voiceId: _prefs.getString(_voiceIdKey) ?? '',
       isSoundEnabled: _prefs.getBool(_soundEnabledKey) ?? true,
