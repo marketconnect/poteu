@@ -64,43 +64,38 @@ class SoundSettingsUseCaseParams {
   final String? language;
   final String? voice;
 
-  SoundSettingsUseCaseParams.setVolume(double volume)
+  SoundSettingsUseCaseParams.setVolume(this.volume)
       : action = SoundSettingsAction.setVolume,
-        volume = volume,
         pitch = null,
         rate = null,
         language = null,
         voice = null;
 
-  SoundSettingsUseCaseParams.setPitch(double pitch)
+  SoundSettingsUseCaseParams.setPitch(this.pitch)
       : action = SoundSettingsAction.setPitch,
         volume = null,
-        pitch = pitch,
         rate = null,
         language = null,
         voice = null;
 
-  SoundSettingsUseCaseParams.setRate(double rate)
+  SoundSettingsUseCaseParams.setRate(this.rate)
       : action = SoundSettingsAction.setRate,
         volume = null,
         pitch = null,
-        rate = rate,
         language = null,
         voice = null;
 
-  SoundSettingsUseCaseParams.setLanguage(String language)
+  SoundSettingsUseCaseParams.setLanguage(this.language)
       : action = SoundSettingsAction.setLanguage,
         volume = null,
         pitch = null,
         rate = null,
-        language = language,
         voice = null;
 
-  SoundSettingsUseCaseParams.setVoice(String voice)
+  SoundSettingsUseCaseParams.setVoice(this.voice)
       : action = SoundSettingsAction.setVoice,
         volume = null,
         pitch = null,
         rate = null,
-        language = null,
-        voice = voice;
+        language = null;
 }

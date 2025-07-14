@@ -4,7 +4,6 @@ import '../../domain/entities/settings.dart';
 class DynamicTheme {
   static ThemeData getLight(Settings settings) {
     return ThemeData(
-      indicatorColor: const Color(0xFFe98c14),
       dividerTheme: const DividerThemeData(color: Color(0xFF303030)),
       dividerColor: Colors.transparent,
       navigationRailTheme: NavigationRailThemeData(
@@ -83,7 +82,6 @@ class DynamicTheme {
 
   static ThemeData getDark(Settings settings) {
     return ThemeData(
-      indicatorColor: const Color(0xFFf49315),
       dividerColor: Colors.transparent,
       focusColor: Colors.blueGrey[900],
       shadowColor: const Color(0xFF353535),

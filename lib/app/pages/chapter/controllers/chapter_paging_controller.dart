@@ -19,16 +19,16 @@ class ChapterPagingController extends Controller {
   late TextEditingController pageTextController;
 
   // ScrollController for each chapter
-  Map<int, ScrollController> _chapterScrollControllers = {};
+  final Map<int, ScrollController> _chapterScrollControllers = {};
 
   // ItemScrollController for precise scrolling
-  Map<int, ItemScrollController> _itemScrollControllers = {};
+  final Map<int, ItemScrollController> _itemScrollControllers = {};
 
   // GlobalKeys for precise scrolling to paragraphs
-  Map<int, Map<int, GlobalKey>> _paragraphKeys =
+  final Map<int, Map<int, GlobalKey>> _paragraphKeys =
       {}; // chapterOrderNum -> paragraphIndex -> GlobalKey
 
-  Map<int, Map<String, dynamic>> _chaptersData = {};
+  final Map<int, Map<String, dynamic>> _chaptersData = {};
   int _currentChapterOrderNum = 1;
   int _totalChapters = 0;
   bool _isLoading = true;

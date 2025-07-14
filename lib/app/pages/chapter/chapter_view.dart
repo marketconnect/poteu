@@ -1080,7 +1080,7 @@ class ChapterViewState extends ViewState<ChapterView, ChapterController> {
               final color = predefinedColors[index];
               return GestureDetector(
                 onTap: () {
-                  controller.setActiveColor(color.value);
+                  controller.setActiveColor(color.toARGB32());
                   Navigator.pop(context);
                 },
                 child: Container(

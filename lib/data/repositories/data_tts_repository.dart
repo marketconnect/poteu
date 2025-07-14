@@ -21,7 +21,7 @@ class DataTTSRepository implements TTSRepository {
   int _currentWordIndex = 0;
   List<String> _words = [];
   DateTime? _speechStartTime;
-  double _estimatedWordsPerSecond = 2.0; // Примерная скорость речи
+  final double _estimatedWordsPerSecond = 2.0; // Примерная скорость речи
 
   void _log(String message) {
     if (_enableTtsLogging) {

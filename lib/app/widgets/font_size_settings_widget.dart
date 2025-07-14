@@ -89,7 +89,7 @@ class _FontSizeSettingsWidgetState extends State<FontSizeSettingsWidget> {
                             .navigationRailTheme
                             .unselectedIconTheme!
                             .color
-                            ?.withOpacity(0.3),
+                            ?.withValues(alpha: 0.3),
                         onChanged: _updateFontSize,
                       ),
                     ),

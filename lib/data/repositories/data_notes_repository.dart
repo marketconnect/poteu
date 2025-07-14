@@ -88,7 +88,7 @@ class DataNotesRepository implements NotesRepository {
               // Check for duplicates before creating note
               bool isDuplicate = notes.any((existingNote) =>
                   existingNote.link.text == link.text &&
-                  existingNote.link.color.value == link.color.value &&
+                  existingNote.link.color.toARGB32() == link.color.toARGB32() &&
                   existingNote.chapterId == chapterId);
 
               if (isDuplicate) {
@@ -384,7 +384,7 @@ class DataNotesRepository implements NotesRepository {
       if (text == link.text) {
         try {
           final color = _parseColor(colorHex!);
-          if (color.value == link.color.value) {
+          if (color.toARGB32() == link.color.toARGB32()) {
             return text ?? ''; // Remove the span, keep only the text
           }
         } catch (e) {
@@ -404,7 +404,7 @@ class DataNotesRepository implements NotesRepository {
       if (text == link.text) {
         try {
           final color = _parseColor(colorHex!);
-          if (color.value == link.color.value) {
+          if (color.toARGB32() == link.color.toARGB32()) {
             return text ?? ''; // Remove the u tag, keep only the text
           }
         } catch (e) {

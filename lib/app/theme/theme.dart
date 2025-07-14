@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 class FlutterRegulationTheme {
   static ThemeData get light {
     return ThemeData(
-      indicatorColor: const Color(0xFFe98c14),
       dividerTheme: const DividerThemeData(color: Color(0xFF303030)),
       dividerColor: Colors.transparent,
       navigationRailTheme: const NavigationRailThemeData(
@@ -85,7 +84,6 @@ class FlutterRegulationTheme {
 
   static ThemeData get dark {
     return ThemeData(
-      indicatorColor: const Color(0xFFf49315),
       dividerColor: Colors.transparent,
       fontFamily: 'Yandex',
       focusColor: Colors.blueGrey[900],

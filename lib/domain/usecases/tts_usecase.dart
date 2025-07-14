@@ -100,9 +100,8 @@ class TTSUseCaseParams {
   final double? pitch;
   final double? rate;
 
-  TTSUseCaseParams.speak(String text)
+  TTSUseCaseParams.speak(this.text)
       : action = TTSAction.speak,
-        text = text,
         language = null,
         volume = null,
         pitch = null,
@@ -132,35 +131,31 @@ class TTSUseCaseParams {
         pitch = null,
         rate = null;
 
-  TTSUseCaseParams.setLanguage(String language)
+  TTSUseCaseParams.setLanguage(this.language)
       : action = TTSAction.setLanguage,
         text = null,
-        language = language,
         volume = null,
         pitch = null,
         rate = null;
 
-  TTSUseCaseParams.setVolume(double volume)
+  TTSUseCaseParams.setVolume(this.volume)
       : action = TTSAction.setVolume,
         text = null,
         language = null,
-        volume = volume,
         pitch = null,
         rate = null;
 
-  TTSUseCaseParams.setPitch(double pitch)
+  TTSUseCaseParams.setPitch(this.pitch)
       : action = TTSAction.setPitch,
         text = null,
         language = null,
         volume = null,
-        pitch = pitch,
         rate = null;
 
-  TTSUseCaseParams.setRate(double rate)
+  TTSUseCaseParams.setRate(this.rate)
       : action = TTSAction.setRate,
         text = null,
         language = null,
         volume = null,
-        pitch = null,
-        rate = rate;
+        pitch = null;
 }

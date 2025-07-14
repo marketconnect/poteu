@@ -17,7 +17,8 @@ class GetNotesUseCase extends UseCase<List<Note>, GetNotesParams> {
 
       // Apply sorting if specified
       if (params != null && params.sortByColor) {
-        notes.sort((a, b) => a.link.color.value.compareTo(b.link.color.value));
+        notes.sort((a, b) =>
+            a.link.color.toARGB32().compareTo(b.link.color.toARGB32()));
       } else {
         // Sort by date (most recent first)
         notes.sort((a, b) => b.lastTouched.compareTo(a.lastTouched));

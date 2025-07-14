@@ -375,7 +375,7 @@ class NotesViewState extends ViewState<NotesView, NotesController> {
             child: Text(
               'Удалить',
               style: TextStyle(
-                color: Theme.of(context).indicatorColor,
+                color: Theme.of(context).colorScheme.primary,
                 fontSize: 16,
               ),
             ),
