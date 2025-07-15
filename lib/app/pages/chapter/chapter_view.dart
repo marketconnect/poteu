@@ -626,6 +626,9 @@ class ChapterViewState extends ViewState<ChapterView, ChapterController> {
   }
 
   Widget _buildNftContent(String content, ChapterController controller) {
+    if (content == '\n') {
+      return const SizedBox.shrink();
+    }
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
