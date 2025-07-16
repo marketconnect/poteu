@@ -17,7 +17,7 @@ abstract class RegulationRepository {
   Future<List<Map<String, dynamic>>> searchChapters(String query);
   Future<List<Paragraph>> getParagraphsByChapterOrderNum(
       int regulationId, int chapterOrderNum);
-  Future<List<Map<String, dynamic>>> getTableOfContents();
+  Future<List<Chapter>> getTableOfContents();
   Future<void> saveNote(int chapterId, String note);
   Future<List<Map<String, dynamic>>> getNotes();
   Future<void> deleteNote(int noteId);

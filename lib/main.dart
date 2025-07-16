@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:poteu/data/helpers/duckdb_provider.dart';
 import 'data/repositories/data_settings_repository.dart';
 import 'data/repositories/data_tts_repository.dart';
 import 'data/repositories/data_notes_repository.dart';
@@ -132,24 +133,30 @@ void main() async {
     const SystemUiOverlayStyle(statusBarColor: Colors.black),
   );
 
+  // === ЦЕНТРАЛИЗОВАННАЯ ИНИЦИАЛИЗАЦИЯ БД ===
+  // Гарантируем, что база данных полностью готова ДО любых других действий.
+  await DuckDBProvider.instance.initialize();
+  // ==========================================
+
   final prefs = await SharedPreferences.getInstance();
   final settingsRepository = DataSettingsRepository(prefs);
   final regulationRepository = StaticRegulationRepository();
   final ttsRepository = DataTTSRepository(settingsRepository, FlutterTts());
 
+  // Теперь создание репозиториев безопасно
   final notesRepository = DataNotesRepository();
+  final dataRegulationRepository = DataRegulationRepository();
 
   // === ЗАПУСК МИГРАЦИИ ===
-  final dataRegulationRepository = DataRegulationRepository();
+  // Миграция теперь будет работать со 100% готовой базой данных
   final migrationService = MigrationService(
     staticRepo: regulationRepository,
-    dataRepo: dataRegulationRepository, // Передаем его
+    dataRepo: dataRegulationRepository,
   );
   await migrationService.migrateIfNeeded();
   // =======================
 
   final settings = await settingsRepository.getSettings();
-
   dev.log('Initial settings loaded - isDarkMode: ${settings.isDarkMode}');
 
   ThemeManager().initialize(settingsRepository, settings.isDarkMode);

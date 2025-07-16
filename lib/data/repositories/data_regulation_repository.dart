@@ -10,9 +10,7 @@ import "dart:async";
 class DataRegulationRepository implements RegulationRepository {
   final DuckDBProvider _dbProvider = DuckDBProvider.instance;
 
-  DataRegulationRepository() {
-    _dbProvider.initialize();
-  }
+  DataRegulationRepository();
 
   @override
   Future<List<Regulation>> getRegulations() async {
@@ -82,7 +80,7 @@ class DataRegulationRepository implements RegulationRepository {
   }
 
   @override
-  Future<List<Map<String, dynamic>>> getTableOfContents() async {
+  Future<List<Chapter>> getTableOfContents() async {
     throw UnimplementedError(
         "Read operations should be handled by StaticRegulationRepository");
   }

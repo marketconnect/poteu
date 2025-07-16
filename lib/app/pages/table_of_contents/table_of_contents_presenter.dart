@@ -3,6 +3,7 @@ import '../../../domain/repositories/regulation_repository.dart';
 import '../../../domain/repositories/settings_repository.dart';
 import '../../../domain/repositories/tts_repository.dart';
 import '../../../domain/usecases/get_table_of_contents.dart';
+import '../../../domain/entities/chapter.dart';
 
 class TableOfContentsPresenter extends Presenter {
   final RegulationRepository _regulationRepository;
@@ -10,7 +11,7 @@ class TableOfContentsPresenter extends Presenter {
   // final TTSRepository _ttsRepository;
   // final int _regulationId;
 
-  Function(List<Map<String, dynamic>>)? onChaptersLoaded;
+  Function(List<Chapter>)? onChaptersLoaded;
   Function(dynamic)? onError;
 
   TableOfContentsPresenter({
@@ -34,7 +35,7 @@ class TableOfContentsPresenter extends Presenter {
   }
 }
 
-class _TableOfContentsObserver extends Observer<List<Map<String, dynamic>>?> {
+class _TableOfContentsObserver extends Observer<List<Chapter>?> {
   final TableOfContentsPresenter _presenter;
 
   _TableOfContentsObserver(this._presenter);
@@ -50,7 +51,7 @@ class _TableOfContentsObserver extends Observer<List<Map<String, dynamic>>?> {
   }
 
   @override
-  void onNext(List<Map<String, dynamic>>? chapters) {
+  void onNext(List<Chapter>? chapters) {
     if (chapters != null) {
       _presenter.onChaptersLoaded?.call(chapters);
     }

@@ -396,6 +396,7 @@ class ChapterController extends Controller {
 
     _chaptersData[chapterOrderNum] = {
       'id': chapter.id,
+      'num': chapter.num,
       'title': chapter.title,
       'content': chapter.content,
       'paragraphs': updatedParagraphs,

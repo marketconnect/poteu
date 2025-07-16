@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_clean_architecture/flutter_clean_architecture.dart'
+    as fca;
 import 'package:rolling_switch/rolling_switch.dart';
 import '../../../domain/repositories/regulation_repository.dart';
 import '../../../domain/repositories/settings_repository.dart';
@@ -11,110 +13,94 @@ import '../../widgets/chapter_card.dart';
 import '../../widgets/font_size_settings_widget.dart';
 import '../../../main.dart';
 import '../drawer/sound_settings_view.dart';
+import 'table_of_contents_controller.dart';
 
-class TableOfContentsPage extends StatefulWidget {
+class TableOfContentsView extends fca.View {
   final RegulationRepository regulationRepository;
   final SettingsRepository settingsRepository;
   final TTSRepository ttsRepository;
   final NotesRepository notesRepository;
+  final int regulationId;
 
-  const TableOfContentsPage({
-    super.key,
+  const TableOfContentsView({
+    Key? key,
     required this.regulationRepository,
     required this.settingsRepository,
     required this.ttsRepository,
     required this.notesRepository,
-  });
+    required this.regulationId,
+  }) : super(key: key);
 
   @override
-  State<TableOfContentsPage> createState() => _TableOfContentsPageState();
+  // ignore: no_logic_in_create_state
+  State<TableOfContentsView> createState() => _TableOfContentsPageState(
+        TableOfContentsController(
+          regulationId: regulationId,
+          regulationRepository: regulationRepository,
+          settingsRepository: settingsRepository,
+          ttsRepository: ttsRepository,
+        ),
+      );
 }
 
-class _TableOfContentsPageState extends State<TableOfContentsPage> {
-  List<Map<String, dynamic>> chapters = [];
-  bool isLoading = true;
-  String? error;
+class _TableOfContentsPageState
+    extends fca.ViewState<TableOfContentsView, TableOfContentsController> {
+  _TableOfContentsPageState(TableOfContentsController controller)
+      : super(controller);
 
   @override
-  void initState() {
-    super.initState();
-    _loadChapters();
-  }
-
-  Future<void> _loadChapters() async {
-    try {
-      setState(() {
-        isLoading = true;
-        error = null;
-      });
-
-      final tableOfContents =
-          await widget.regulationRepository.getTableOfContents();
-
-      setState(() {
-        chapters = tableOfContents;
-        isLoading = false;
-      });
-    } catch (e) {
-      setState(() {
-        error = e.toString();
-        isLoading = false;
-      });
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: PreferredSize(
-        preferredSize: Size.fromHeight(
-          Theme.of(context).appBarTheme.toolbarHeight ?? 74.0,
-        ),
-        child: Padding(
-          padding: EdgeInsets.only(
-            top: MediaQuery.of(context).padding.top,
+  Widget get view => Scaffold(
+        appBar: PreferredSize(
+          preferredSize: Size.fromHeight(
+            Theme.of(context).appBarTheme.toolbarHeight ?? 74.0,
           ),
-          child: RegulationAppBar(
-            child: TableOfContentsAppBar(
-              title: 'ПОТЭУ', // Аббревиатура регламента
-              name: 'Правила охраны труда при эксплуатации электроустановок',
-              regulationRepository: widget.regulationRepository,
-              settingsRepository: widget.settingsRepository,
-              ttsRepository: widget.ttsRepository,
+          child: Padding(
+            padding: EdgeInsets.only(
+              top: MediaQuery.of(context).padding.top,
+            ),
+            child: RegulationAppBar(
+              child: TableOfContentsAppBar(
+                title: 'ПОТЭУ',
+                name: 'Правила охраны труда при эксплуатации электроустановок',
+                regulationRepository: widget.regulationRepository,
+                settingsRepository: widget.settingsRepository,
+                ttsRepository: widget.ttsRepository,
+              ),
             ),
           ),
         ),
-      ),
-      drawer: _buildDrawer(context),
-      body: _buildBody(),
-    );
-  }
-
-  Widget _buildBody() {
-    if (isLoading) {
-      return const Center(child: CircularProgressIndicator());
-    }
-    if (error != null) {
-      return Center(child: Text('Error: $error'));
-    }
-    if (chapters.isEmpty) {
-      return const Center(child: Text('Нет глав'));
-    }
-
-    return ListView.builder(
-      itemCount: chapters.length,
-      itemBuilder: (context, index) {
-        final chapter = chapters[index];
-        return ChapterCard(
-          name: chapter['title'] as String,
-          num: '', // Можно добавить номер главы если есть в данных
-          chapterID: chapter['id'] as int? ?? index,
-          chapterOrderNum: index + 1,
-          totalChapters: chapters.length,
-        );
-      },
-    );
-  }
+        drawer: _buildDrawer(context),
+        body: fca.ControlledWidgetBuilder<TableOfContentsController>(
+          builder: (context, controller) {
+            if (controller.isLoading) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            if (controller.error != null) {
+              return Center(child: Text('Error: ${controller.error}'));
+            }
+            if (controller.chapters.isEmpty) {
+              return const Center(child: Text('Нет глав'));
+            }
+            return ListView.builder(
+              itemCount: controller.chapters.length,
+              itemBuilder: (context, index) {
+                final chapter = controller.chapters[index];
+                // Проверяем, есть ли onTap у ChapterCard, иначе оборачиваем в GestureDetector
+                return GestureDetector(
+                  onTap: () => controller.onChapterSelected(chapter),
+                  child: ChapterCard(
+                    name: chapter.title,
+                    num: chapter.num,
+                    chapterID: chapter.id,
+                    chapterOrderNum: chapter.level,
+                    totalChapters: controller.chapters.length,
+                  ),
+                );
+              },
+            );
+          },
+        ),
+      );
 
   Widget _buildDrawer(BuildContext context) {
     return OrientationBuilder(

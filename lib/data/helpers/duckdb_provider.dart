@@ -100,6 +100,18 @@ class DuckDBProvider {
     return await conn.query(query);
   }
 
+  // Future<void> forceCheckpoint() async {
+  //   if (!_isInitialized || _connection == null) {
+  //     return;
+  //   }
+  //   try {
+  //     await _connection!.query('CHECKPOINT;');
+  //     dev.log('🗄️ DuckDB CHECKPOINT successful');
+  //   } catch (e) {
+  //     dev.log('❌ Error during DuckDB CHECKPOINT: $e');
+  //   }
+  // }
+
   /// Выполнение транзакции
   Future<T> executeTransaction<T>(
       Future<T> Function(Connection) transaction) async {

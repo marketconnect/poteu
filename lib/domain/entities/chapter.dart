@@ -16,6 +16,7 @@ class ChapterInfo {
 
 class Chapter {
   final int id;
+  final String num;
   final int regulationId;
   final String title;
   final String content;
@@ -25,6 +26,7 @@ class Chapter {
 
   Chapter({
     required this.id,
+    required this.num,
     required this.regulationId,
     required this.title,
     required this.content,
@@ -36,6 +38,7 @@ class Chapter {
   Map<String, dynamic> toMap() {
     return {
       'id': id,
+      'num': num,
       'regulationId': regulationId,
       'title': title,
       'content': content,
@@ -46,6 +49,7 @@ class Chapter {
   factory Chapter.fromMap(Map<String, dynamic> map) {
     return Chapter(
       id: map['id'] as int,
+      num: map['num'] as String,
       regulationId: map['regulationId'] as int,
       title: map['title'] as String,
       content: map['content'] as String,
@@ -55,6 +59,7 @@ class Chapter {
 
   Chapter copyWith({
     int? id,
+    String? num,
     int? regulationId,
     String? title,
     String? content,
@@ -64,6 +69,7 @@ class Chapter {
   }) {
     return Chapter(
       id: id ?? this.id,
+      num: num ?? this.num,
       regulationId: regulationId ?? this.regulationId,
       title: title ?? this.title,
       content: content ?? this.content,
@@ -78,6 +84,7 @@ class Chapter {
     if (identical(this, other)) return true;
     return other is Chapter &&
         other.id == id &&
+        other.num == num &&
         other.regulationId == regulationId &&
         other.title == title &&
         other.content == content &&

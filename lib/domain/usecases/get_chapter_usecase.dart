@@ -21,6 +21,7 @@ class GetChapterUseCase extends UseCase<Chapter?, GetChapterUseCaseParams?> {
           await _regulationRepository.getChapter(params.chapterId);
       final chapter = Chapter(
         id: chapterData['id'] as int,
+        num: chapterData['num'] as String,
         regulationId: chapterData['regulationId'] as int,
         title: chapterData['title'] as String,
         content: chapterData['content'] as String,

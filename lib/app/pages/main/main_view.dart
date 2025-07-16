@@ -22,11 +22,12 @@ class MainView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Simply return the table of contents page
-    return TableOfContentsPage(
+    return TableOfContentsView(
       regulationRepository: regulationRepository,
       settingsRepository: settingsRepository,
       ttsRepository: ttsRepository,
       notesRepository: notesRepository,
+      regulationId: 1, // <-- добавлено
     );
   }
 }

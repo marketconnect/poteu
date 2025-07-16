@@ -62,11 +62,12 @@ class AppNavigator {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => TableOfContentsPage(
+        builder: (context) => TableOfContentsView(
           regulationRepository: regulationRepository,
           settingsRepository: settingsRepository,
           ttsRepository: ttsRepository,
           notesRepository: notesRepository,
+          regulationId: regulationId,
         ),
       ),
     );

@@ -11,19 +11,9 @@ import '../helpers/duckdb_provider.dart';
 
 class StaticRegulationRepository implements RegulationRepository {
   final DuckDBProvider _dbProvider = DuckDBProvider.instance;
-  bool _isInitialized = false;
-
-  /// Инициализация базы данных при первом использовании репозитория
-  Future<void> _ensureInitialized() async {
-    if (!_isInitialized) {
-      await _dbProvider.initialize();
-      _isInitialized = true;
-    }
-  }
 
   @override
   Future<List<Regulation>> getRegulations() async {
-    await _ensureInitialized();
     return await _dbProvider.executeTransaction((conn) async {
       // 3. Чтение правил
       final rulesRs =
@@ -38,13 +28,13 @@ class StaticRegulationRepository implements RegulationRepository {
 
         // 4. Чтение глав
         final chRs = await conn.query(
-            'SELECT id, name, orderNum FROM chapters WHERE rule_id = $ruleId ORDER BY orderNum');
+            'SELECT id, name, orderNum, num FROM chapters WHERE rule_id = $ruleId ORDER BY orderNum');
         final chapters = <Chapter>[];
         for (final ch in chRs.fetchAll()) {
           final chapId = ch[0] as int;
           final chapName = ch[1] as String;
           final chapOrderNum = ch[2] as int;
-
+          final chapNum = ch[3] as String;
           // 5. Чтение параграфов
           final pRs = await conn.query(
               'SELECT id, num, content, text_to_speech, isTable, isNFT, paragraphClass '
@@ -67,6 +57,7 @@ class StaticRegulationRepository implements RegulationRepository {
 
           chapters.add(Chapter(
             id: chapId,
+            num: chapNum,
             regulationId: ruleId,
             title: chapName,
             content: '',
@@ -125,7 +116,6 @@ class StaticRegulationRepository implements RegulationRepository {
 
   /// Загружает только список глав (ID, номер, название) без их содержимого
   Future<List<ChapterInfo>> getChapterList(int regulationId) async {
-    await _ensureInitialized();
     return await _dbProvider.executeTransaction((conn) async {
       // 3. Чтение только списка глав без параграфов
       final chRs = await conn.query(
@@ -151,11 +141,10 @@ class StaticRegulationRepository implements RegulationRepository {
 
   /// Загружает полное содержимое (все параграфы) только для одной конкретной главы по ее ID
   Future<Chapter> getChapterContent(int chapterId) async {
-    await _ensureInitialized();
     return await _dbProvider.executeTransaction((conn) async {
       // 3. Чтение информации о главе
       final chRs = await conn.query(
-          'SELECT id, rule_id, name, orderNum FROM chapters WHERE id = $chapterId');
+          'SELECT id, rule_id, name, orderNum, num FROM chapters WHERE id = $chapterId');
 
       if (chRs.fetchAll().isEmpty) {
         throw Exception('Chapter not found: $chapterId');
@@ -166,7 +155,7 @@ class StaticRegulationRepository implements RegulationRepository {
       final ruleId = ch[1] as int;
       final chapName = ch[2] as String;
       final chapOrderNum = ch[3] as int;
-
+      final chapNum = ch[4] as String;
       // 4. Чтение параграфов для этой главы
       final pRs = await conn.query(
           'SELECT id, num, content, text_to_speech, isTable, isNFT, paragraphClass '
@@ -190,6 +179,7 @@ class StaticRegulationRepository implements RegulationRepository {
 
       return Chapter(
         id: chapId,
+        num: chapNum,
         regulationId: ruleId,
         title: chapName,
         content: '',
@@ -208,6 +198,7 @@ class StaticRegulationRepository implements RegulationRepository {
         if (chapter.id == id) {
           return {
             'id': chapter.id,
+            'num': chapter.num,
             'title': chapter.title,
             'level': chapter.level,
             'paragraphs': chapter.paragraphs,
@@ -227,17 +218,11 @@ class StaticRegulationRepository implements RegulationRepository {
   }
 
   @override
-  Future<List<Map<String, dynamic>>> getTableOfContents() async {
+  Future<List<Chapter>> getTableOfContents() async {
     final regs = await getRegulations();
-    final toc = <Map<String, dynamic>>[];
+    final toc = <Chapter>[];
     for (final reg in regs) {
-      for (final chapter in reg.chapters) {
-        toc.add({
-          'id': chapter.id,
-          'title': chapter.title,
-          'level': chapter.level,
-        });
-      }
+      toc.addAll(reg.chapters);
     }
     return toc;
   }
@@ -350,7 +335,6 @@ class StaticRegulationRepository implements RegulationRepository {
   }) async {
     if (query.isEmpty) return [];
 
-    await _ensureInitialized();
     return await _dbProvider.executeTransaction((conn) async {
       final results = <SearchResult>[];
       int searchResultId = 0;

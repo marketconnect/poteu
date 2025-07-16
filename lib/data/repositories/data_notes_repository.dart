@@ -7,9 +7,7 @@ import 'dart:developer' as dev;
 class DataNotesRepository implements NotesRepository {
   final DuckDBProvider _dbProvider = DuckDBProvider.instance;
 
-  DataNotesRepository() {
-    _dbProvider.initialize();
-  }
+  DataNotesRepository();
 
   @override
   Future<List<Note>> getAllNotes() async {

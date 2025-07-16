@@ -37,11 +37,12 @@ class AppRouter {
     switch (routeSettings.name) {
       case AppRouteNames.contents:
         return MaterialPageRoute(
-          builder: (BuildContext context) => TableOfContentsPage(
+          builder: (BuildContext context) => TableOfContentsView(
             regulationRepository: _repository,
             settingsRepository: _settingsRepository,
             ttsRepository: _ttsRepository,
             notesRepository: _notesRepository,
+            regulationId: 1, // <-- добавлено
           ),
         );
       case AppRouteNames.notesList:

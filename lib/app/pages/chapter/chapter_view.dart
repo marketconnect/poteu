@@ -392,7 +392,9 @@ class ChapterViewState extends ViewState<ChapterView, ChapterController> {
                 top: 20.0, bottom: 20.0, left: 20.0, right: 20.0),
             child: Center(
               child: Text(
-                chapterData['title'],
+                chapterData['num'] != null && chapterData['num'] != ''
+                    ? '${chapterData['num']}. ${chapterData['title']}'
+                    : chapterData['title'],
                 style: Theme.of(context).textTheme.displayLarge?.copyWith(
                       fontWeight: FontWeight.w600,
                       fontSize:
