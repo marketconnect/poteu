@@ -1,0 +1,35 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "ПОТЭУ (poteu)",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "debug",
+            "args": [
+                "--flavor",
+                "poteu"
+            ]
+        },
+        {
+            "name": "Высота 782н (height_782n)",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "debug",
+            "args": [
+                "--flavor",
+                "height_782n"
+            ]
+        },
+        {
+            "name": "ПТЭЭП (pteep)",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "debug",
+            "args": [
+                "--flavor",
+                "pteep"
+            ]
+        }
+    ]
+}

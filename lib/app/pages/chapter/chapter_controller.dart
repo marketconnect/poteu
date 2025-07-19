@@ -526,44 +526,20 @@ class ChapterController extends Controller {
     }
   }
 
-  void goToParagraph(int paragraphId) {
+  void goToParagraph(int paragraphNum) {
     // Ищем параграф только в текущей главе
     final result =
-        _findParagraphInChapter(_currentChapterOrderNum, paragraphId);
+        _findParagraphInChapter(_currentChapterOrderNum, paragraphNum);
 
     if (result != null) {
       // Параграф найден в текущей главе
       _scrollToParagraphInCurrentChapter(_currentChapterOrderNum, result);
       return;
     }
-
-    // Если не найден в текущей главе, ищем во всех загруженных главах
-    // (это может быть нужно для обратной совместимости)
-    final globalResult = _findParagraphInAllChapters(paragraphId);
-
-    if (globalResult != null) {
-      final targetChapter = globalResult['chapterOrderNum'] as int;
-      final paragraphOrderNum = globalResult['paragraphOrderNum'] as int;
-
-      // Переходим на главу и скроллим к параграфу
-      if (_currentChapterOrderNum == targetChapter) {
-        _scrollToParagraphInCurrentChapter(targetChapter, paragraphOrderNum);
-      } else {
-        goToChapter(targetChapter);
-        Future.delayed(const Duration(milliseconds: 1200), () {
-          if (_currentChapterOrderNum == targetChapter) {
-            _scrollToParagraphInCurrentChapter(
-                targetChapter, paragraphOrderNum);
-          }
-        });
-      }
-    } else {
-      dev.log('❌ Paragraph $paragraphId not found in any loaded chapter');
-    }
   }
 
   /// Ищет параграф в конкретной главе
-  int? _findParagraphInChapter(int chapterOrderNum, int paragraphId) {
+  int? _findParagraphInChapter(int chapterOrderNum, int paragraphOrderNum) {
     final chapterData = _chaptersData[chapterOrderNum];
     if (chapterData == null) return null;
 
@@ -576,9 +552,10 @@ class ChapterController extends Controller {
       bool found = false;
 
       // Check database IDs
-      if (paragraph.originalId == paragraphId ||
-          paragraph.id == paragraphId ||
-          paragraph.num == paragraphId) {
+      if (
+          // paragraph.originalId == paragraphId ||
+          paragraph.id == paragraphOrderNum ||
+              paragraph.num == paragraphOrderNum) {
         found = true;
       }
 
@@ -590,7 +567,7 @@ class ChapterController extends Controller {
 
         for (final match in matches) {
           final anchorId = int.tryParse(match.group(1) ?? '');
-          if (anchorId == paragraphId) {
+          if (anchorId == paragraphOrderNum) {
             found = true;
             break;
           }
@@ -602,7 +579,7 @@ class ChapterController extends Controller {
           final numberMatches = numberRegex.allMatches(paragraph.content);
           for (final match in numberMatches) {
             final fullNumber = '${match.group(1)}${match.group(2)}';
-            if (int.tryParse(fullNumber) == paragraphId) {
+            if (int.tryParse(fullNumber) == paragraphOrderNum) {
               found = true;
               break;
             }
@@ -619,7 +596,7 @@ class ChapterController extends Controller {
 
             if (chapterNum != null && paragraphNum != null) {
               final combinedNumber = int.tryParse('$chapterNum$paragraphNum');
-              if (combinedNumber == paragraphId) {
+              if (combinedNumber == paragraphOrderNum) {
                 found = true;
                 break;
               }
@@ -630,87 +607,6 @@ class ChapterController extends Controller {
 
       if (found) {
         return i + 1; // 1-based order number in chapter
-      }
-    }
-
-    return null;
-  }
-
-  /// Ищет параграф во всех загруженных главах (для обратной совместимости)
-  Map<String, dynamic>? _findParagraphInAllChapters(int paragraphId) {
-    for (final MapEntry<int, Map<String, dynamic>> entry
-        in _chaptersData.entries) {
-      final chapterOrderNum = entry.key;
-      final chapterData = entry.value;
-
-      final paragraphs = chapterData['paragraphs'] as List<Paragraph>;
-
-      for (int i = 0; i < paragraphs.length; i++) {
-        final paragraph = paragraphs[i];
-
-        // Try matching by different ID types
-        bool found = false;
-
-        // Check database IDs
-        if (paragraph.originalId == paragraphId ||
-            paragraph.id == paragraphId ||
-            paragraph.num == paragraphId) {
-          found = true;
-        }
-
-        // Also check HTML anchor IDs in content
-        if (!found && paragraph.content.isNotEmpty) {
-          // Look for anchor tags with matching ID
-          final anchorRegex = RegExp('<a\\s+id=["\']([0-9]+)["\']');
-          final matches = anchorRegex.allMatches(paragraph.content);
-
-          for (final match in matches) {
-            final anchorId = int.tryParse(match.group(1) ?? '');
-            if (anchorId == paragraphId) {
-              found = true;
-              break;
-            }
-          }
-
-          // Also try matching paragraph numbers in content (like "1.1", "2.3", etc.)
-          if (!found) {
-            final numberRegex = RegExp(r'(\d+)\.(\d+)');
-            final numberMatches = numberRegex.allMatches(paragraph.content);
-            for (final match in numberMatches) {
-              final fullNumber = '${match.group(1)}${match.group(2)}';
-              if (int.tryParse(fullNumber) == paragraphId) {
-                found = true;
-                break;
-              }
-            }
-          }
-
-          // Try matching formatted paragraph numbers like "6.14" directly
-          if (!found) {
-            final simpleNumberRegex = RegExp(r'(\d+)\.(\d+)');
-            final numberMatches =
-                simpleNumberRegex.allMatches(paragraph.content);
-            for (final match in numberMatches) {
-              final chapterNum = int.tryParse(match.group(1) ?? '');
-              final paragraphNum = int.tryParse(match.group(2) ?? '');
-
-              if (chapterNum != null && paragraphNum != null) {
-                final combinedNumber = int.tryParse('$chapterNum$paragraphNum');
-                if (combinedNumber == paragraphId) {
-                  found = true;
-                  break;
-                }
-              }
-            }
-          }
-        }
-
-        if (found) {
-          return {
-            'chapterOrderNum': chapterOrderNum,
-            'paragraphOrderNum': i + 1, // 1-based order number in chapter
-          };
-        }
       }
     }
 
@@ -914,24 +810,11 @@ class ChapterController extends Controller {
       // Show first 20
       final p = paragraphs[i];
 
-      // final plainText = TextUtils.parseHtmlString(p.content);
-      // final preview = plainText.length > 50
-      //     ? '${plainText.substring(0, 50)}...'
-      //     : plainText;
-
       // Look for anchor IDs
       final anchorRegex = RegExp('<a\\s+id=["\']([0-9]+)["\']');
       final matches = anchorRegex.allMatches(p.content);
       final anchorIds = matches.map((m) => m.group(1)).toList();
       if (anchorIds.isNotEmpty) {}
-
-      // Look for number patterns
-      // final numberRegex = RegExp(r'(\d+)\.(\d+)');
-      // final numberMatches = numberRegex.allMatches(p.content);
-      // if (numberMatches.isNotEmpty) {
-      //   final numbers =
-      //       numberMatches.map((m) => '${m.group(1)}.${m.group(2)}').toList();
-      // }
     }
 
     if (paragraphs.length > 20) {}
@@ -1553,109 +1436,6 @@ class ChapterController extends Controller {
     dev.log('🎵 _waitForTTSState: Wait completed with result: $result');
     return result;
   }
-
-  /// Creates text chunks that fit within TTS limits
-  // List<String> _createTextChunks(List<String> texts) {
-  //   dev.log('🎵 _createTextChunks: Creating chunks from ${texts.length} texts');
-  //   final chunks = <String>[];
-  //   String currentChunk = '';
-
-  //   for (int i = 0; i < texts.length; i++) {
-  //     final text = texts[i];
-  //     dev.log(
-  //         '🎵 _createTextChunks: Processing text ${i + 1}/${texts.length} (${text.length} chars)');
-  //     dev.log('🎵 _createTextChunks: Text content: "$text"');
-
-  //     final potentialChunk =
-  //         currentChunk.isEmpty ? text : '$currentChunk. $text';
-
-  //     dev.log(
-  //         '🎵 _createTextChunks: Potential chunk content: "$potentialChunk"');
-
-  //     if (potentialChunk.length <= _maxTtsTextLength) {
-  //       currentChunk = potentialChunk;
-  //       dev.log('🎵 _createTextChunks: Added to current chunk');
-  //     } else {
-  //       // Current chunk is full, save it and start a new one
-  //       if (currentChunk.isNotEmpty) {
-  //         chunks.add(currentChunk);
-  //         dev.log(
-  //             '🎵 _createTextChunks: Saved chunk ${chunks.length} (${currentChunk.length} chars)');
-  //         dev.log('🎵 _createTextChunks: Saved chunk content: "$currentChunk"');
-  //       }
-
-  //       // Check if the current text is too long to fit in a single chunk
-  //       if (text.length > _maxTtsTextLength) {
-  //         dev.log(
-  //             '🎵 _createTextChunks: Text ${i + 1} is too long (${text.length} chars), will be split');
-  //         // Split the long text into smaller pieces
-  //         final textChunks = _splitLongText(text);
-  //         for (final textChunk in textChunks) {
-  //           chunks.add(textChunk);
-  //           dev.log(
-  //               '🎵 _createTextChunks: Saved split chunk ${chunks.length} (${textChunk.length} chars)');
-  //           dev.log('🎵 _createTextChunks: Split chunk content: "$textChunk"');
-  //         }
-  //         currentChunk = '';
-  //       } else {
-  //         // Start a new chunk with the current text
-  //         currentChunk = text;
-  //         dev.log('🎵 _createTextChunks: Started new chunk with text ${i + 1}');
-  //       }
-  //     }
-  //   }
-
-  //   // Add the last chunk if it's not empty
-  //   if (currentChunk.isNotEmpty) {
-  //     chunks.add(currentChunk);
-  //     dev.log(
-  //         '🎵 _createTextChunks: Saved final chunk ${chunks.length} (${currentChunk.length} chars)');
-  //     dev.log('🎵 _createTextChunks: Final chunk content: "$currentChunk"');
-  //   }
-
-  //   dev.log('🎵 _createTextChunks: Created ${chunks.length} total chunks');
-  //   return chunks;
-  // }
-
-  /// Splits a long text into smaller chunks that fit within TTS limits
-  // List<String> _splitLongText(String text) {
-  //   final chunks = <String>[];
-  //   int startIndex = 0;
-
-  //   while (startIndex < text.length) {
-  //     int endIndex = startIndex + _maxTtsTextLength;
-
-  //     // If we're not at the end, try to find a good break point
-  //     if (endIndex < text.length) {
-  //       // Look for sentence endings (., !, ?) or paragraph breaks
-  //       int lastGoodBreak = startIndex;
-  //       for (int i = startIndex; i < endIndex; i++) {
-  //         if (text[i] == '.' ||
-  //             text[i] == '!' ||
-  //             text[i] == '?' ||
-  //             text[i] == '\n') {
-  //           lastGoodBreak = i + 1;
-  //         }
-  //       }
-
-  //       // If we found a good break point, use it
-  //       if (lastGoodBreak > startIndex) {
-  //         endIndex = lastGoodBreak;
-  //       }
-  //     } else {
-  //       endIndex = text.length;
-  //     }
-
-  //     final chunk = text.substring(startIndex, endIndex).trim();
-  //     if (chunk.isNotEmpty) {
-  //       chunks.add(chunk);
-  //     }
-
-  //     startIndex = endIndex;
-  //   }
-
-  //   return chunks;
-  // }
 
   Future<void> stopTTS() async {
     try {

@@ -1,4 +1,5 @@
 import 'package:flutter_clean_architecture/flutter_clean_architecture.dart';
+import "package:poteu/config.dart";
 import "../../../domain/entities/regulation.dart";
 import "../../../domain/repositories/regulation_repository.dart";
 import "../../../domain/repositories/settings_repository.dart";
@@ -86,7 +87,7 @@ class MainController extends Controller {
   void navigateToTableOfContents() {
     AppNavigator.navigateToTableOfContents(
       getContext(),
-      regulationId: 1,
+      regulationId: AppConfig.instance.regulationId,
       regulationRepository: _regulationRepository,
       settingsRepository: _settingsRepository,
       ttsRepository: _ttsRepository,

@@ -1,3 +1,5 @@
+import 'package:poteu/config.dart';
+
 import 'duckdb_provider.dart';
 import '../repositories/static_regulation_repository.dart';
 import 'dart:developer' as dev;
@@ -34,7 +36,7 @@ class DatabasePerformanceTest {
       // Тест 3: Поиск в регулировании
       stopwatch.reset();
       final searchResults = await repository.searchInRegulation(
-        regulationId: 1,
+        regulationId: AppConfig.instance.regulationId,
         query: 'общие',
       );
       dev.log(

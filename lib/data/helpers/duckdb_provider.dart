@@ -4,6 +4,8 @@ import 'package:dart_duckdb/dart_duckdb.dart';
 import 'package:path_provider/path_provider.dart';
 import 'dart:developer' as dev;
 
+import 'package:poteu/config.dart';
+
 /// Провайдер для управления единственным соединением с базой данных DuckDB
 /// Реализует паттерн Singleton для оптимизации доступа к БД
 class DuckDBProvider {
@@ -28,9 +30,11 @@ class DuckDBProvider {
 
     try {
       // 1. Загрузка из assets
-      final data = await rootBundle.load('assets/data/regulations.duckdb');
+      final data = await rootBundle.load(AppConfig.instance.databasePath);
       final dir = await getApplicationDocumentsDirectory();
-      final file = File('${dir.path}/regulations.duckdb');
+      final flavorName = AppConfig.instance.flavorName;
+      final localDbPath = '${dir.path}/${flavorName}_regulations.duckdb';
+      final file = File(localDbPath);
 
       if (!await file.exists()) {
         await file.writeAsBytes(data.buffer.asUint8List());

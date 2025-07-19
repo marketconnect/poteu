@@ -4,6 +4,7 @@ import 'package:poteu/app/pages/chapter/chapter_view.dart';
 import 'package:poteu/app/pages/notes/notes_view.dart';
 import 'package:poteu/app/pages/search/search_view.dart';
 import 'package:poteu/app/pages/table_of_contents/table_of_contents_page.dart';
+import 'package:poteu/config.dart';
 import 'package:poteu/domain/repositories/settings_repository.dart';
 import 'package:poteu/domain/repositories/tts_repository.dart';
 import 'package:poteu/data/repositories/data_regulation_repository.dart';
@@ -42,7 +43,7 @@ class AppRouter {
             settingsRepository: _settingsRepository,
             ttsRepository: _ttsRepository,
             notesRepository: _notesRepository,
-            regulationId: 1, // <-- добавлено
+            regulationId: AppConfig.instance.regulationId, // <-- добавлено
           ),
         );
       case AppRouteNames.notesList:
@@ -60,7 +61,8 @@ class AppRouter {
 
         return MaterialPageRoute(
           builder: (_) => ChapterView(
-            regulationId: 1, // POTEU regulation ID
+            regulationId:
+                AppConfig.instance.regulationId, // POTEU regulation ID
             initialChapterOrderNum: chapterArguments.chapterOrderNum,
             scrollToParagraphId: chapterArguments.scrollTo > 0
                 ? chapterArguments.scrollTo

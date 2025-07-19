@@ -1,12 +1,21 @@
 import java.util.Properties
 import java.io.FileInputStream
-
+import java.io.File
 
 plugins {
     id("com.android.application")
     id("kotlin-android")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
+}
+
+val versionsProperties = Properties()
+val versionsPropertiesFile = File(rootProject.projectDir, "versions.properties")
+
+if (versionsPropertiesFile.exists()) {
+    versionsProperties.load(FileInputStream(versionsPropertiesFile))
+} else {
+    throw GradleException("Файл 'versions.properties' не найден. Убедитесь, что он существует по пути 'android/versions.properties'")
 }
 
 val keystoreProperties = Properties()
@@ -66,6 +75,33 @@ android {
            signingConfig = signingConfigs.getByName("release")
         }
     }
+
+    flavorDimensions.add("default")
+    
+    productFlavors {
+        create("poteu") {
+            dimension = "default"
+            applicationIdSuffix = ".poteu"
+            resValue("string", "app_name", "ПОТЭЭ-903н-2022")
+            versionCode = versionsProperties["POTEU_VERSION_CODE"].toString().toInt()
+            versionName = versionsProperties["POTEU_VERSION_NAME"] as String
+        }
+        create("height_782n") {
+            dimension = "default"
+            applicationIdSuffix = ".height_782n"
+            resValue("string", "app_name", "782н")
+            versionCode = versionsProperties["HEIGHT_VERSION_CODE"].toString().toInt()
+            versionName = versionsProperties["HEIGHT_VERSION_NAME"] as String
+        }
+        create("pteep") {
+            dimension = "default"
+            applicationIdSuffix = ".pteep"
+            resValue("string", "app_name", "ПТЭЭП")
+            versionCode = versionsProperties["PTEEP_VERSION_CODE"].toString().toInt()
+            versionName = versionsProperties["PTEEP_VERSION_NAME"] as String
+        }        
+    }
+
 }
 
 flutter {

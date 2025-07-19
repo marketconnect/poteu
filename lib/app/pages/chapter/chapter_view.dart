@@ -520,8 +520,21 @@ class ChapterViewState extends ViewState<ChapterView, ChapterController> {
             : _buildRegularContent(
                 paragraph, textAlign, controller, isSelectable);
 
+    // Determine container alignment based on text alignment
+    Alignment containerAlignment;
+    switch (textAlign) {
+      case TextAlign.right:
+        containerAlignment = Alignment.centerRight;
+        break;
+      case TextAlign.center:
+        containerAlignment = Alignment.center;
+        break;
+      default:
+        containerAlignment = Alignment.centerLeft;
+    }
+
     return Container(
-      alignment: Alignment.centerLeft,
+      alignment: containerAlignment,
       padding: padding,
       child: isCurrentTTSParagraph && !paragraph.isTable && !paragraph.isNft
           ? Row(
@@ -1215,7 +1228,8 @@ class ChapterViewState extends ViewState<ChapterView, ChapterController> {
         margin: EdgeInsets.zero,
         child: Container(
           decoration: decoration,
-          child: _buildParagraphContent(paragraph, controller),
+          child: _buildParagraphContent(paragraph, controller,
+              isSelectable: controller.isBottomBarExpanded),
         ),
       ),
     );

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:poteu/config.dart';
 import 'package:poteu/data/helpers/duckdb_provider.dart';
 import 'data/repositories/data_settings_repository.dart';
 import 'data/repositories/data_tts_repository.dart';
@@ -133,6 +134,14 @@ void main() async {
     const SystemUiOverlayStyle(statusBarColor: Colors.black),
   );
 
+  const flavor = String.fromEnvironment('FLUTTER_APP_FLAVOR');
+  if (flavor.isEmpty) {
+    throw Exception(
+        "FLUTTER_APP_FLAVOR не был определен. Запустите приложение с флагом --flavor");
+  }
+
+  AppConfig.initialize(flavor);
+
   // === ЦЕНТРАЛИЗОВАННАЯ ИНИЦИАЛИЗАЦИЯ БД ===
   // Гарантируем, что база данных полностью готова ДО любых других действий.
   await DuckDBProvider.instance.initialize();
@@ -241,7 +250,7 @@ class _PoteuAppState extends State<PoteuApp> {
             dev.log('Applied theme');
 
             return MaterialApp(
-              title: 'POTEU',
+              title: AppConfig.instance.appName,
               theme: lightTheme,
               darkTheme: darkTheme,
               themeMode: isDarkMode ? ThemeMode.dark : ThemeMode.light,

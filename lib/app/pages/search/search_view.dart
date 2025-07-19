@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart' hide View, SearchController;
 import 'package:flutter_clean_architecture/flutter_clean_architecture.dart';
+import 'package:poteu/config.dart';
 
 import '../../../domain/repositories/regulation_repository.dart';
 import '../../../domain/repositories/settings_repository.dart';
@@ -146,8 +147,8 @@ class SearchViewState extends ViewState<SearchView, SearchPageController> {
                                             context,
                                             MaterialPageRoute(
                                               builder: (context) => ChapterView(
-                                                regulationId:
-                                                    1, // POTEU regulation ID
+                                                regulationId: AppConfig.instance
+                                                    .regulationId, // POTEU regulation ID
                                                 initialChapterOrderNum:
                                                     result.chapterOrderNum,
                                                 scrollToParagraphId:

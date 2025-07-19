@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:poteu/config.dart';
 import '../table_of_contents/table_of_contents_page.dart';
 import '../../../data/repositories/static_regulation_repository.dart';
 import '../../../domain/repositories/settings_repository.dart';
@@ -27,7 +28,7 @@ class MainView extends StatelessWidget {
       settingsRepository: settingsRepository,
       ttsRepository: ttsRepository,
       notesRepository: notesRepository,
-      regulationId: 1, // <-- добавлено
+      regulationId: AppConfig.instance.regulationId, // <-- добавлено
     );
   }
 }

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_clean_architecture/flutter_clean_architecture.dart'
     as fca;
+import 'package:flutter/services.dart';
+import 'package:poteu/config.dart';
 import 'package:rolling_switch/rolling_switch.dart';
 import '../../../domain/repositories/regulation_repository.dart';
 import '../../../domain/repositories/settings_repository.dart';
@@ -60,7 +62,7 @@ class _TableOfContentsPageState
             ),
             child: RegulationAppBar(
               child: TableOfContentsAppBar(
-                title: 'ПОТЭУ',
+                title: AppConfig.instance.appName,
                 name: 'Правила охраны труда при эксплуатации электроустановок',
                 regulationRepository: widget.regulationRepository,
                 settingsRepository: widget.settingsRepository,
@@ -238,6 +240,44 @@ class _TableOfContentsPageState
                                 ),
                               ],
                             ),
+                            // О программе
+                            ExpansionTile(
+                              onExpansionChanged: (bool val) {
+                                if (val) {
+                                  Navigator.of(context).pop(); // Close drawer
+                                  _showAboutDialog(context);
+                                }
+                              },
+                              trailing: const SizedBox(),
+                              backgroundColor: Theme.of(context)
+                                  .navigationRailTheme
+                                  .indicatorColor,
+                              collapsedBackgroundColor: Theme.of(context)
+                                  .navigationRailTheme
+                                  .backgroundColor,
+                              iconColor: Theme.of(context)
+                                  .navigationRailTheme
+                                  .selectedIconTheme!
+                                  .color,
+                              collapsedIconColor: Theme.of(context)
+                                  .navigationRailTheme
+                                  .unselectedIconTheme!
+                                  .color,
+                              textColor: Theme.of(context)
+                                  .navigationRailTheme
+                                  .selectedLabelTextStyle!
+                                  .color,
+                              collapsedTextColor: Theme.of(context)
+                                  .navigationRailTheme
+                                  .unselectedLabelTextStyle!
+                                  .color,
+                              title: const Padding(
+                                padding: EdgeInsets.only(bottom: 3.0),
+                                child: Text('О программе'),
+                              ),
+                              leading: const Icon(Icons.info_outline),
+                              children: [Container()],
+                            ),
                           ],
                         ),
                       ),
@@ -298,6 +338,67 @@ class _TableOfContentsPageState
                 ),
               )
             : Container();
+      },
+    );
+  }
+
+  void _showAboutDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+          content: SingleChildScrollView(
+            child: ListBody(
+              children: <Widget>[
+                const Text(
+                  'О программе',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 20,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'Данное приложение является частной разработкой и не представляет государственный орган. Оно создано исключительно в образовательных и справочных целях. Для юридически значимых действий всегда обращайтесь к официальным первоисточникам.',
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'ПОЛИТИКА КОНФИДЕНЦИАЛЬНОСТИ',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 8),
+                InkWell(
+                  onTap: () {
+                    // A plausible URL for the privacy policy.
+                    const url =
+                        'https://marketconnect.github.io/app-policies/poteu/';
+                    Clipboard.setData(const ClipboardData(text: url));
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                          content: Text(
+                              'Ссылка на политику конфиденциальности скопирована')),
+                    );
+                  },
+                  child: const Text(
+                    'Политика конфиденциальности (нажмите, чтобы скопировать ссылку).',
+                    style: TextStyle(
+                        color: Colors.blue,
+                        decoration: TextDecoration.underline),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: <Widget>[
+            TextButton(
+              child: const Text('Закрыть'),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+          ],
+        );
       },
     );
   }
