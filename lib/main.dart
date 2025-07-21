@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:poteu/config.dart';
 import 'package:poteu/data/helpers/duckdb_provider.dart';
+import 'package:sentry_flutter/sentry_flutter.dart';
 import 'data/repositories/data_settings_repository.dart';
 import 'data/repositories/data_tts_repository.dart';
 import 'data/repositories/data_notes_repository.dart';
@@ -20,7 +21,8 @@ import 'dart:async';
 import 'dart:developer' as dev;
 
 const String sentryDsn =
-    ''; // Set to empty for development, replace with your actual Sentry DSN
+    'https://e6d3f7bf29480ee56c4cbab7b671c86e@o1380632.ingest.us.sentry.io/4509700816175104';
+// Set to empty for development, replace with your actual Sentry DSN
 
 // Font Manager for Clean Architecture
 class FontManager {
@@ -128,71 +130,134 @@ class ThemeManager {
   }
 }
 
+// void main() async {
+//   WidgetsFlutterBinding.ensureInitialized();
+//   SystemChrome.setSystemUIOverlayStyle(
+//     const SystemUiOverlayStyle(statusBarColor: Colors.black),
+//   );
+
+//   const flavor = String.fromEnvironment('FLUTTER_APP_FLAVOR');
+//   if (flavor.isEmpty) {
+//     throw Exception(
+//         "FLUTTER_APP_FLAVOR не был определен. Запустите приложение с флагом --flavor");
+//   }
+
+//   AppConfig.initialize(flavor);
+
+//   // === ЦЕНТРАЛИЗОВАННАЯ ИНИЦИАЛИЗАЦИЯ БД ===
+//   // Гарантируем, что база данных полностью готова ДО любых других действий.
+//   await DuckDBProvider.instance.initialize();
+//   // ==========================================
+
+//   final prefs = await SharedPreferences.getInstance();
+//   final settingsRepository = DataSettingsRepository(prefs);
+//   final regulationRepository = StaticRegulationRepository();
+//   final ttsRepository = DataTTSRepository(settingsRepository, FlutterTts());
+
+//   // Теперь создание репозиториев безопасно
+//   final notesRepository = DataNotesRepository();
+//   final dataRegulationRepository = DataRegulationRepository();
+
+//   // === ЗАПУСК МИГРАЦИИ ===
+//   // Миграция теперь будет работать со 100% готовой базой данных
+//   final migrationService = MigrationService(
+//     staticRepo: regulationRepository,
+//     dataRepo: dataRegulationRepository,
+//   );
+//   await migrationService.migrateIfNeeded();
+//   // =======================
+
+//   final settings = await settingsRepository.getSettings();
+//   dev.log('Initial settings loaded - isDarkMode: ${settings.isDarkMode}');
+
+//   ThemeManager().initialize(settingsRepository, settings.isDarkMode);
+//   FontManager().updateSettings(settings);
+
+//   // Only initialize Sentry if a valid DSN is provided
+//   if (sentryDsn.isNotEmpty && sentryDsn != 'YOUR_SENTRY_DSN') {
+//     // await SentryFlutter.init(
+//     //   (options) => options.dsn = sentryDsn,
+//     //   appRunner: () => runApp(PoteuApp(
+//     //     settings: settings,
+//     //     settingsRepository: settingsRepository,
+//     //     regulationRepository: regulationRepository,
+//     //     ttsRepository: ttsRepository,
+//     //     notesRepository: notesRepository,
+//     //   )),
+//     // );
+//   } else {
+//     // Run app without Sentry for development
+//     runApp(PoteuApp(
+//       settings: settings,
+//       settingsRepository: settingsRepository,
+//       regulationRepository: regulationRepository,
+//       ttsRepository: ttsRepository,
+//       notesRepository: notesRepository,
+//     ));
+//   }
+// }
+
 void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  SystemChrome.setSystemUIOverlayStyle(
-    const SystemUiOverlayStyle(statusBarColor: Colors.black),
+  // Оборачиваем весь запуск в SentryFlutter.init
+  await SentryFlutter.init(
+    (options) {
+      options.dsn = sentryDsn;
+      // Установите sample rate для трассировки производительности.
+      // Рекомендуется 1.0 для отладки и меньшее значение (например, 0.2) для продакшена.
+      options.tracesSampleRate = 1.0;
+      // Включаем автоматическое отслеживание производительности для виджетов
+      // options.enableAutoPerformanceTracking = true;
+      options.enableAutoPerformanceTracing = true;
+      // Прикрепляем скриншот к событиям об ошибках
+      options.attachScreenshot = true;
+      // Прикрепляем иерархию виджетов
+      options.attachViewHierarchy = true;
+    },
+    appRunner: () async {
+      // Весь ваш существующий код из функции main остается здесь
+      WidgetsFlutterBinding.ensureInitialized();
+      SystemChrome.setSystemUIOverlayStyle(
+        const SystemUiOverlayStyle(statusBarColor: Colors.black),
+      );
+
+      const flavor = String.fromEnvironment('FLUTTER_APP_FLAVOR');
+      if (flavor.isEmpty) {
+        throw Exception(
+            "FLUTTER_APP_FLAVOR не был определен. Запустите приложение с флагом --flavor");
+      }
+
+      AppConfig.initialize(flavor);
+
+      await DuckDBProvider.instance.initialize();
+
+      final prefs = await SharedPreferences.getInstance();
+      final settingsRepository = DataSettingsRepository(prefs);
+      final regulationRepository = StaticRegulationRepository();
+      final ttsRepository = DataTTSRepository(settingsRepository, FlutterTts());
+      final notesRepository = DataNotesRepository();
+      final dataRegulationRepository = DataRegulationRepository();
+
+      final migrationService = MigrationService(
+        staticRepo: regulationRepository,
+        dataRepo: dataRegulationRepository,
+      );
+      await migrationService.migrateIfNeeded();
+
+      final settings = await settingsRepository.getSettings();
+      dev.log('Initial settings loaded - isDarkMode: ${settings.isDarkMode}');
+
+      ThemeManager().initialize(settingsRepository, settings.isDarkMode);
+      FontManager().updateSettings(settings);
+
+      runApp(PoteuApp(
+        settings: settings,
+        settingsRepository: settingsRepository,
+        regulationRepository: regulationRepository,
+        ttsRepository: ttsRepository,
+        notesRepository: notesRepository,
+      ));
+    },
   );
-
-  const flavor = String.fromEnvironment('FLUTTER_APP_FLAVOR');
-  if (flavor.isEmpty) {
-    throw Exception(
-        "FLUTTER_APP_FLAVOR не был определен. Запустите приложение с флагом --flavor");
-  }
-
-  AppConfig.initialize(flavor);
-
-  // === ЦЕНТРАЛИЗОВАННАЯ ИНИЦИАЛИЗАЦИЯ БД ===
-  // Гарантируем, что база данных полностью готова ДО любых других действий.
-  await DuckDBProvider.instance.initialize();
-  // ==========================================
-
-  final prefs = await SharedPreferences.getInstance();
-  final settingsRepository = DataSettingsRepository(prefs);
-  final regulationRepository = StaticRegulationRepository();
-  final ttsRepository = DataTTSRepository(settingsRepository, FlutterTts());
-
-  // Теперь создание репозиториев безопасно
-  final notesRepository = DataNotesRepository();
-  final dataRegulationRepository = DataRegulationRepository();
-
-  // === ЗАПУСК МИГРАЦИИ ===
-  // Миграция теперь будет работать со 100% готовой базой данных
-  final migrationService = MigrationService(
-    staticRepo: regulationRepository,
-    dataRepo: dataRegulationRepository,
-  );
-  await migrationService.migrateIfNeeded();
-  // =======================
-
-  final settings = await settingsRepository.getSettings();
-  dev.log('Initial settings loaded - isDarkMode: ${settings.isDarkMode}');
-
-  ThemeManager().initialize(settingsRepository, settings.isDarkMode);
-  FontManager().updateSettings(settings);
-
-  // Only initialize Sentry if a valid DSN is provided
-  if (sentryDsn.isNotEmpty && sentryDsn != 'YOUR_SENTRY_DSN') {
-    // await SentryFlutter.init(
-    //   (options) => options.dsn = sentryDsn,
-    //   appRunner: () => runApp(PoteuApp(
-    //     settings: settings,
-    //     settingsRepository: settingsRepository,
-    //     regulationRepository: regulationRepository,
-    //     ttsRepository: ttsRepository,
-    //     notesRepository: notesRepository,
-    //   )),
-    // );
-  } else {
-    // Run app without Sentry for development
-    runApp(PoteuApp(
-      settings: settings,
-      settingsRepository: settingsRepository,
-      regulationRepository: regulationRepository,
-      ttsRepository: ttsRepository,
-      notesRepository: notesRepository,
-    ));
-  }
 }
 
 class PoteuApp extends StatefulWidget {
@@ -257,6 +322,9 @@ class _PoteuAppState extends State<PoteuApp> {
               onGenerateRoute: _appRouter.onGenerateRoute,
               initialRoute: '/',
               debugShowCheckedModeBanner: false,
+              navigatorObservers: [
+                SentryNavigatorObserver(),
+              ],
             );
           },
         );

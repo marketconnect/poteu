@@ -12,13 +12,13 @@
             ]
         },
         {
-            "name": "Высота 782н (height_782n)",
+            "name": "Высота 782н (height_rules)",
             "request": "launch",
             "type": "dart",
             "flutterMode": "debug",
             "args": [
                 "--flavor",
-                "height_782n"
+                "height_rules"
             ]
         },
         {
@@ -29,6 +29,16 @@
             "args": [
                 "--flavor",
                 "pteep"
+            ]
+        },
+        {
+            "name": "116-ФЗ (fz116)",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "debug",
+            "args": [
+                "--flavor",
+                "fz116"
             ]
         }
     ]

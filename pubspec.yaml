@@ -46,6 +46,7 @@ dependencies:
   dart_duckdb: ^1.2.2
   path_provider: ^2.1.5
   permission_handler: ^12.0.1
+  sentry_flutter: ^9.4.1
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
@@ -76,9 +77,10 @@ flutter:
 
   # To add assets to your application, add an assets section, like this:
   assets:
-    - assets/height_782n/data/
+    - assets/height_rules/data/
     - assets/poteu/data/
     - assets/pteep/data/
+    - assets/fz116/data/
   fonts:
     - family: Yandex
       fonts:
@@ -114,10 +116,10 @@ flutter_launcher_icons:
     # adaptive_icon_background: "#FFFFFF"
     # adaptive_icon_foreground: "assets/icons/poteu_foreground.png"
 
-  height_782n:
+  height_rules:
     android: true
     ios: true
-    image_path: "assets/images/height_782n_icon.png"
+    image_path: "assets/images/height_rules_icon.png"
     remove_alpha_ios: true
     
   pteep:

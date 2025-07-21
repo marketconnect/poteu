@@ -364,6 +364,29 @@ class _TableOfContentsPageState
                 ),
                 const SizedBox(height: 16),
                 const Text(
+                  'ИСТОЧНИК ИНФОРМАЦИИ',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 8),
+                InkWell(
+                  onTap: () {
+                    final url = AppConfig.instance.source;
+                    Clipboard.setData(ClipboardData(text: url));
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                          content: Text(
+                              'Ссылка на официальный источник скопирована')),
+                    );
+                  },
+                  child: const Text(
+                    'Приказ Минтруда России от 16.11.2020 N 782н взят с официального интернет-портала правовой информации (pravo.gov.ru).',
+                    style: TextStyle(
+                        color: Colors.blue,
+                        decoration: TextDecoration.underline),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                const Text(
                   'ПОЛИТИКА КОНФИДЕНЦИАЛЬНОСТИ',
                   style: TextStyle(fontWeight: FontWeight.bold),
                 ),

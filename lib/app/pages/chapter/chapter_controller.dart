@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_clean_architecture/flutter_clean_architecture.dart';
 import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
+import 'package:sentry_flutter/sentry_flutter.dart';
 import '../../../domain/entities/paragraph.dart';
 import '../../../domain/entities/formatting.dart';
 import '../../../domain/entities/tts_state.dart';
@@ -320,7 +321,8 @@ class ChapterController extends Controller {
           goToParagraph(_scrollToParagraphId!);
         });
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
+      await Sentry.captureException(e, stackTrace: stackTrace);
       stopwatch.stop();
       dev.log('❌ Ошибка загрузки за ${stopwatch.elapsedMilliseconds}ms: $e');
       _isLoading = false;
@@ -422,7 +424,8 @@ class ChapterController extends Controller {
       );
 
       await _loadChapterDataById(chapterInfo.id, chapterOrderNum);
-    } catch (e) {
+    } catch (e, stackTrace) {
+      await Sentry.captureException(e, stackTrace: stackTrace);
       dev.log('❌ Error loading chapter $chapterOrderNum: $e');
     }
   }
@@ -479,7 +482,8 @@ class ChapterController extends Controller {
           await Future.wait(loadTasks);
           dev.log('🔄 Соседние главы загружены в фоне (параллельно)');
         }
-      } catch (e) {
+      } catch (e, stackTrace) {
+        await Sentry.captureException(e, stackTrace: stackTrace);
         dev.log('❌ Error loading neighbor chapters: $e');
       }
     });
@@ -613,8 +617,8 @@ class ChapterController extends Controller {
     return null;
   }
 
-  void _scrollToParagraphInCurrentChapter(
-      int chapterOrderNum, int paragraphOrderNum) {
+  Future<void> _scrollToParagraphInCurrentChapter(
+      int chapterOrderNum, int paragraphOrderNum) async {
     // First try using ItemScrollController for precise navigation (like original)
     final itemScrollController =
         getItemScrollControllerForChapter(chapterOrderNum);
@@ -643,7 +647,8 @@ class ChapterController extends Controller {
       try {
         itemScrollController.jumpTo(index: targetItemIndex);
         return;
-      } catch (e) {
+      } catch (e, stackTrace) {
+        await Sentry.captureException(e, stackTrace: stackTrace);
         dev.log('❌ Error jumping to paragraph: $e');
       }
     } else {
@@ -691,7 +696,8 @@ class ChapterController extends Controller {
         duration: const Duration(milliseconds: 800),
         curve: Curves.easeInOutCubic,
       );
-    } catch (e) {
+    } catch (e, stackTrace) {
+      await Sentry.captureException(e, stackTrace: stackTrace);
       _scrollToParagraphFallback(chapterOrderNum,
           paragraphOrderNum - 1); // Convert to 0-based for fallback
     }
@@ -854,7 +860,7 @@ class ChapterController extends Controller {
 
   // ========== TEXT SELECTION MANAGEMENT (like SaveParagraphCubit) ==========
 
-  void setTextSelection(Paragraph paragraph, int start, int end) {
+  Future<void> setTextSelection(Paragraph paragraph, int start, int end) async {
     try {
       _selectedParagraph = paragraph;
 
@@ -879,7 +885,8 @@ class ChapterController extends Controller {
             end <= plainText.length) {
           try {
             _lastSelectedText = plainText.substring(start, end);
-          } catch (e) {
+          } catch (e, stackTrace) {
+            await Sentry.captureException(e, stackTrace: stackTrace);
             _lastSelectedText = '';
             _error = 'Ошибка выделения текста';
           }
@@ -892,7 +899,8 @@ class ChapterController extends Controller {
 
       _error = null; // Clear any previous errors
       refreshUI();
-    } catch (e) {
+    } catch (e, stackTrace) {
+      await Sentry.captureException(e, stackTrace: stackTrace);
       _lastSelectedText = '';
       _error = 'Ошибка при обработке выделения';
       refreshUI();
@@ -1025,7 +1033,8 @@ class ChapterController extends Controller {
 
       _error = null;
       refreshUI();
-    } catch (e) {
+    } catch (e, stackTrace) {
+      await Sentry.captureException(e, stackTrace: stackTrace);
       _error = 'Ошибка форматирования: ${e.toString()}';
       refreshUI();
     }
@@ -1081,7 +1090,8 @@ class ChapterController extends Controller {
 
       // You can implement actual persistence here later
       // For example: await _dataRepository.saveColorsList(_colorsList);
-    } catch (e) {
+    } catch (e, stackTrace) {
+      await Sentry.captureException(e, stackTrace: stackTrace);
       _error = 'Ошибка сохранения цветов: ${e.toString()}';
       refreshUI();
     }
@@ -1140,14 +1150,15 @@ class ChapterController extends Controller {
       // Additional processing for complex content
       if (textToSpeak.trim().isEmpty && paragraph.isTable) {
         // For tables, try to extract more meaningful text
-        textToSpeak = _extractTableText(paragraph.content);
+        textToSpeak = await _extractTableText(paragraph.content);
       }
 
       if (textToSpeak.trim().isNotEmpty) {
         _ttsUseCase.execute(_TTSUseCaseObserver(this),
             TTSUseCaseParams.speak(textToSpeak.trim()));
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
+      await Sentry.captureException(e, stackTrace: stackTrace);
       _error = e.toString();
       _currentTTSParagraph = null; // Очищаем при ошибке
       dev.log('🎵 TTS: Error occurred, clearing current paragraph');
@@ -1187,7 +1198,7 @@ class ChapterController extends Controller {
           }
 
           if (textToSpeak.trim().isEmpty && paragraph.isTable) {
-            textToSpeak = _extractTableText(paragraph.content);
+            textToSpeak = await _extractTableText(paragraph.content);
           }
 
           if (textToSpeak.trim().isNotEmpty) {
@@ -1206,7 +1217,8 @@ class ChapterController extends Controller {
         // Воспроизводим чанки
         await _playChapterInChunks(chunksInfo);
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
+      await Sentry.captureException(e, stackTrace: stackTrace);
       dev.log('❌ Error in playChapterTTS: $e');
       _error = e.toString();
       refreshUI();
@@ -1214,7 +1226,7 @@ class ChapterController extends Controller {
   }
 
   /// Extracts readable text from table HTML content
-  String _extractTableText(String htmlContent) {
+  Future<String> _extractTableText(String htmlContent) async {
     try {
       dev.log(
           '📊 Extracting table text from HTML (${htmlContent.length} chars)');
@@ -1266,7 +1278,8 @@ class ChapterController extends Controller {
       dev.log(
           '📊 Final extracted table text: "${text.substring(0, text.length > 100 ? 100 : text.length)}..."');
       return text;
-    } catch (e) {
+    } catch (e, stackTrace) {
+      await Sentry.captureException(e, stackTrace: stackTrace);
       dev.log('📊 Error extracting table text: $e');
       // Fallback to simple HTML parsing
       return TextUtils.parseHtmlString(htmlContent);
@@ -1345,7 +1358,8 @@ class ChapterController extends Controller {
       // Очищаем выделение после завершения всей главы
       _currentTTSParagraph = null;
       refreshUI();
-    } catch (e) {
+    } catch (e, stackTrace) {
+      await Sentry.captureException(e, stackTrace: stackTrace);
       dev.log('❌ Error in _playChapterInChunks: $e');
       _error = 'Ошибка воспроизведения главы: ${e.toString()}';
       _isPlayingChapter = false;
@@ -1398,7 +1412,8 @@ class ChapterController extends Controller {
       } else {
         dev.log('🎵 _waitForTTSCompletion: TTS completed successfully');
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
+      await Sentry.captureException(e, stackTrace: stackTrace);
       dev.log('⚠️ _waitForTTSCompletion: Error or timeout: $e');
     }
   }
@@ -1457,7 +1472,8 @@ class ChapterController extends Controller {
             const Duration(milliseconds: 200)); // Небольшая задержка
         _ttsUseCase.execute(_TTSUseCaseObserver(this), TTSUseCaseParams.stop());
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
+      await Sentry.captureException(e, stackTrace: stackTrace);
       dev.log('🎵 Error in stopTTS(): $e');
       _error = e.toString();
       _currentTTSParagraph = null; // Очищаем при ошибке
@@ -1470,7 +1486,8 @@ class ChapterController extends Controller {
     try {
       dev.log('🎵 PAUSE TTS CALLED');
       _ttsUseCase.execute(_TTSUseCaseObserver(this), TTSUseCaseParams.pause());
-    } catch (e) {
+    } catch (e, stackTrace) {
+      await Sentry.captureException(e, stackTrace: stackTrace);
       _error = e.toString();
       refreshUI();
     }
@@ -1480,7 +1497,8 @@ class ChapterController extends Controller {
     try {
       dev.log('🎵 RESUME TTS CALLED');
       _ttsUseCase.execute(_TTSUseCaseObserver(this), TTSUseCaseParams.resume());
-    } catch (e) {
+    } catch (e, stackTrace) {
+      await Sentry.captureException(e, stackTrace: stackTrace);
       _error = e.toString();
       refreshUI();
     }
@@ -1572,7 +1590,8 @@ class ChapterController extends Controller {
 
       _error = null;
       refreshUI();
-    } catch (e) {
+    } catch (e, stackTrace) {
+      await Sentry.captureException(e, stackTrace: stackTrace);
       _error = 'Ошибка сохранения: ${e.toString()}';
       refreshUI();
     }
@@ -1595,7 +1614,8 @@ class ChapterController extends Controller {
         dev.log(
             '🔄 Форматирование обновлено для главы $_currentChapterOrderNum');
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
+      await Sentry.captureException(e, stackTrace: stackTrace);
       dev.log('❌ Ошибка обновления форматирования: $e');
     }
   }

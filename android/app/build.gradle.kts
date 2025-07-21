@@ -86,9 +86,9 @@ android {
             versionCode = versionsProperties["POTEU_VERSION_CODE"].toString().toInt()
             versionName = versionsProperties["POTEU_VERSION_NAME"] as String
         }
-        create("height_782n") {
+        create("height_rules") {
             dimension = "default"
-            applicationIdSuffix = ".height_782n"
+            applicationId = "com.i_rm.height_rules"
             resValue("string", "app_name", "782н")
             versionCode = versionsProperties["HEIGHT_VERSION_CODE"].toString().toInt()
             versionName = versionsProperties["HEIGHT_VERSION_NAME"] as String
@@ -99,7 +99,14 @@ android {
             resValue("string", "app_name", "ПТЭЭП")
             versionCode = versionsProperties["PTEEP_VERSION_CODE"].toString().toInt()
             versionName = versionsProperties["PTEEP_VERSION_NAME"] as String
-        }        
+        }
+        create("fz116") {
+            dimension = "default"
+            applicationIdSuffix = ".fz116"
+            resValue("string", "app_name", "116-ФЗ")
+            versionCode = versionsProperties["FZ116_VERSION_CODE"].toString().toInt()
+            versionName = versionsProperties["FZ116_VERSION_NAME"] as String
+        }                
     }
 
 }
