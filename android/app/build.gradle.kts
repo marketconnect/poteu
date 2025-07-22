@@ -109,7 +109,7 @@ android {
         }
         create("fire_reg") {
             dimension = "default"
-            applicationIdSuffix = ".fire_reg"
+            applicationId = "com.i_rm.fire_reg"
             resValue("string", "app_name", "ПП №1479")
             versionCode = versionsProperties["FIRE_REG_VERSION_CODE"].toString().toInt()
             versionName = versionsProperties["FIRE_REG_VERSION_NAME"] as String
