@@ -378,9 +378,9 @@ class _TableOfContentsPageState
                               'Ссылка на официальный источник скопирована')),
                     );
                   },
-                  child: const Text(
-                    'Приказ Минтруда России от 16.11.2020 N 782н взят с официального интернет-портала правовой информации (pravo.gov.ru).',
-                    style: TextStyle(
+                  child: Text(
+                    AppConfig.instance.sourceName,
+                    style: const TextStyle(
                         color: Colors.blue,
                         decoration: TextDecoration.underline),
                   ),

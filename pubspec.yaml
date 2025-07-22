@@ -81,6 +81,7 @@ flutter:
     - assets/poteu/data/
     - assets/pteep/data/
     - assets/fz116/data/
+    - assets/fire_reg/data/
   fonts:
     - family: Yandex
       fonts:
@@ -113,8 +114,7 @@ flutter_launcher_icons:
     ios: true
     image_path: "assets/images/poteu_icon.png" 
     remove_alpha_ios: true
-    # adaptive_icon_background: "#FFFFFF"
-    # adaptive_icon_foreground: "assets/icons/poteu_foreground.png"
+ 
 
   height_rules:
     android: true
@@ -127,4 +127,5 @@ flutter_launcher_icons:
     ios: true
     image_path: "assets/images/pteep_icon.png"
     remove_alpha_ios: true
-    
+  
+

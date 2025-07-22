@@ -647,11 +647,11 @@ class ChapterViewState extends ViewState<ChapterView, ChapterController> {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Theme.of(context).primaryColor.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(
-          color: Theme.of(context).primaryColor.withValues(alpha: 0.3),
-        ),
+        color: Theme.of(context).scaffoldBackgroundColor,
+        // borderRadius: BorderRadius.circular(8),
+        // border: Border.all(
+        //   color: Theme.of(context).primaryColor.withValues(alpha: 0.3),
+        // ),
       ),
       child: HtmlWidget(
         content,

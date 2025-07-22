@@ -40,6 +40,16 @@
                 "--flavor",
                 "fz116"
             ]
+        }, 
+        {
+            "name": "Пожарная безопасность (fire_reg)",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "debug",
+            "args": [
+                "--flavor",
+                "fire_reg"
+            ]
         }
     ]
 }

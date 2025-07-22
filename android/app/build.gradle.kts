@@ -106,7 +106,15 @@ android {
             resValue("string", "app_name", "116-ФЗ")
             versionCode = versionsProperties["FZ116_VERSION_CODE"].toString().toInt()
             versionName = versionsProperties["FZ116_VERSION_NAME"] as String
-        }                
+        }
+        create("fire_reg") {
+            dimension = "default"
+            applicationIdSuffix = ".fire_reg"
+            resValue("string", "app_name", "ПП №1479")
+            versionCode = versionsProperties["FIRE_REG_VERSION_CODE"].toString().toInt()
+            versionName = versionsProperties["FIRE_REG_VERSION_NAME"] as String
+        }        
+        
     }
 
 }
