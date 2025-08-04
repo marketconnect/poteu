@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:poteu/app/pages/chapter/model/chapter_arguments.dart';
 import 'package:poteu/app/pages/chapter/chapter_view.dart';
+import 'package:poteu/app/pages/library/library_view.dart';
 import 'package:poteu/app/pages/notes/notes_view.dart';
 import 'package:poteu/app/pages/search/search_view.dart';
 import 'package:poteu/app/pages/table_of_contents/table_of_contents_page.dart';
-import 'package:poteu/config.dart';
+import 'package:poteu/app/services/active_regulation_service.dart';
 import 'package:poteu/domain/repositories/settings_repository.dart';
 import 'package:poteu/domain/repositories/tts_repository.dart';
 import 'package:poteu/data/repositories/data_regulation_repository.dart';
@@ -17,6 +18,7 @@ abstract class AppRouteNames {
   static const contents = '/';
   static const chapter = '/chapter';
   static const notesList = '/notesList';
+  static const library = '/library';
   static const search = '/search';
 }
 
@@ -43,7 +45,7 @@ class AppRouter {
             settingsRepository: _settingsRepository,
             ttsRepository: _ttsRepository,
             notesRepository: _notesRepository,
-            regulationId: AppConfig.instance.regulationId, // <-- добавлено
+            regulationId: ActiveRegulationService().currentRegulationId,
           ),
         );
       case AppRouteNames.notesList:
@@ -51,6 +53,10 @@ class AppRouter {
           builder: (_) => NotesView(
             notesRepository: _notesRepository,
           ),
+        );
+      case AppRouteNames.library:
+        return MaterialPageRoute(
+          builder: (_) => const LibraryView(),
         );
       case AppRouteNames.chapter:
         final arguments = routeSettings.arguments;
@@ -61,8 +67,7 @@ class AppRouter {
 
         return MaterialPageRoute(
           builder: (_) => ChapterView(
-            regulationId:
-                AppConfig.instance.regulationId, // POTEU regulation ID
+            regulationId: ActiveRegulationService().currentRegulationId,
             initialChapterOrderNum: chapterArguments.chapterOrderNum,
             scrollToParagraphId: chapterArguments.scrollTo > 0
                 ? chapterArguments.scrollTo

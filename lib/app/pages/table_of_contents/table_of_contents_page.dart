@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_clean_architecture/flutter_clean_architecture.dart'
     as fca;
 import 'package:flutter/services.dart';
-import 'package:poteu/config.dart';
+import 'package:poteu/app/services/active_regulation_service.dart';
 import 'package:rolling_switch/rolling_switch.dart';
 import '../../../domain/repositories/regulation_repository.dart';
 import '../../../domain/repositories/settings_repository.dart';
@@ -62,8 +62,8 @@ class _TableOfContentsPageState
             ),
             child: RegulationAppBar(
               child: TableOfContentsAppBar(
-                title: AppConfig.instance.appName,
-                name: 'Правила охраны труда при эксплуатации электроустановок',
+                title: ActiveRegulationService().currentAppName,
+                name: ActiveRegulationService().currentSourceName,
                 regulationRepository: widget.regulationRepository,
                 settingsRepository: widget.settingsRepository,
                 ttsRepository: widget.ttsRepository,
@@ -126,6 +126,23 @@ class _TableOfContentsPageState
                       Expanded(
                         child: ListView(
                           children: [
+                            // Библиотека
+                            ListTile(
+                              leading: const Icon(Icons.library_books_outlined),
+                              title: const Text('Библиотека'),
+                              onTap: () {
+                                Navigator.of(context).pop();
+                                Navigator.of(context).pushNamed('/library');
+                              },
+                              iconColor: Theme.of(context)
+                                  .navigationRailTheme
+                                  .selectedIconTheme!
+                                  .color,
+                              textColor: Theme.of(context)
+                                  .navigationRailTheme
+                                  .selectedLabelTextStyle!
+                                  .color,
+                            ),
                             // Заметки
                             ExpansionTile(
                               onExpansionChanged: (bool val) async {
@@ -370,7 +387,7 @@ class _TableOfContentsPageState
                 const SizedBox(height: 8),
                 InkWell(
                   onTap: () {
-                    final url = AppConfig.instance.source;
+                    final url = ActiveRegulationService().currentSourceUrl;
                     Clipboard.setData(ClipboardData(text: url));
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
@@ -379,7 +396,7 @@ class _TableOfContentsPageState
                     );
                   },
                   child: Text(
-                    AppConfig.instance.sourceName,
+                    ActiveRegulationService().currentSourceName,
                     style: const TextStyle(
                         color: Colors.blue,
                         decoration: TextDecoration.underline),

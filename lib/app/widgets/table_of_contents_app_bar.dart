@@ -44,9 +44,11 @@ class TableOfContentsAppBar extends StatelessWidget {
         Expanded(
           child: GestureDetector(
             onTap: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text(name)),
-              );
+              if (name.isNotEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text(name)),
+                );
+              }
             },
             child: Text(
               title,

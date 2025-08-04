@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:poteu/app/services/active_regulation_service.dart';
 import 'package:poteu/config.dart';
 import 'package:poteu/data/helpers/duckdb_provider.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
@@ -228,6 +229,8 @@ void main() async {
 
       AppConfig.initialize(flavor);
 
+      await ActiveRegulationService().init();
+
       await DuckDBProvider.instance.initialize();
 
       final prefs = await SharedPreferences.getInstance();
@@ -286,11 +289,17 @@ class _PoteuAppState extends State<PoteuApp> {
   @override
   void initState() {
     super.initState();
+    // Listen to changes in the active regulation and rebuild the widget tree
+    ActiveRegulationService().addListener(_onRegulationChanged);
     _appRouter = AppRouter(
       settingsRepository: widget.settingsRepository,
       ttsRepository: widget.ttsRepository,
       notesRepository: widget.notesRepository,
     );
+  }
+
+  void _onRegulationChanged() {
+    setState(() {});
   }
 
   @override
@@ -336,6 +345,7 @@ class _PoteuAppState extends State<PoteuApp> {
   void dispose() {
     ThemeManager().dispose();
     FontManager().dispose();
+    ActiveRegulationService().removeListener(_onRegulationChanged);
     super.dispose();
   }
 }

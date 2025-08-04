@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_clean_architecture/flutter_clean_architecture.dart';
-import 'package:poteu/config.dart';
+import 'package:poteu/app/services/active_regulation_service.dart';
 
 import '../../../domain/entities/search_result.dart';
 import '../../../domain/repositories/regulation_repository.dart';
@@ -54,7 +54,7 @@ class SearchPageController extends Controller {
 
       try {
         _searchResults = await _regulationRepository.searchInRegulation(
-          regulationId: AppConfig.instance.regulationId, // POTEU regulation ID
+          regulationId: ActiveRegulationService().currentRegulationId,
           query: _searchController.text,
         );
       } catch (e) {
