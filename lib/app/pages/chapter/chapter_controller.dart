@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_clean_architecture/flutter_clean_architecture.dart';
 import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
+import 'chapter_view.dart';
 import '../../../domain/entities/paragraph.dart';
 import '../../../domain/entities/formatting.dart';
 import '../../../domain/entities/tts_state.dart';
 import '../../../domain/usecases/tts_usecase.dart';
-import '../../../data/repositories/static_regulation_repository.dart';
 import '../../../data/repositories/data_regulation_repository.dart';
 import '../../../domain/repositories/settings_repository.dart';
 import '../../../domain/repositories/tts_repository.dart';
@@ -21,7 +21,9 @@ class ChapterController extends Controller {
   final int _regulationId;
   final int _initialChapterOrderNum;
   final int? _scrollToParagraphId;
-  final StaticRegulationRepository _repository = StaticRegulationRepository();
+  final RegulationRepository _repository;
+  final SettingsRepository _settingsRepository;
+  final TTSRepository _ttsRepository;
   final DataRegulationRepository _dataRepository =
       DataRegulationRepository(); // No longer needs DatabaseHelper
   final TTSUseCase _ttsUseCase;
@@ -178,7 +180,10 @@ class ChapterController extends Controller {
         _initialChapterOrderNum = initialChapterOrderNum,
         _scrollToParagraphId = scrollToParagraphId,
         _currentChapterOrderNum = initialChapterOrderNum,
-        _ttsUseCase = TTSUseCase(ttsRepository) {
+        _repository = regulationRepository,
+        _ttsUseCase = TTSUseCase(ttsRepository),
+        _settingsRepository = settingsRepository,
+        _ttsRepository = ttsRepository {
     pageController = PageController(initialPage: initialChapterOrderNum - 1);
     pageTextController = TextEditingController(
       text: initialChapterOrderNum.toString(),
@@ -388,7 +393,8 @@ class ChapterController extends Controller {
     dev.log('📖 Загрузка главы $chapterOrderNum (ID: $chapterId)...');
 
     // Use the new optimized method to get chapter content
-    final chapter = await _repository.getChapterContent(chapterId);
+    final chapter =
+        await _repository.getChapterContent(_regulationId, chapterId);
 
     // Применяем форматирование ко всем главам
     List<Paragraph> updatedParagraphs =
@@ -1617,6 +1623,32 @@ class ChapterController extends Controller {
     } catch (e, stackTrace) {
       await Sentry.captureException(e, stackTrace: stackTrace);
       dev.log('❌ Ошибка обновления форматирования: $e');
+    }
+  }
+
+  Future<void> navigateToDifferentDocument(
+      int documentId, int chapterNum, int paragraphNum) async {
+    bool isCached = await _repository.isRegulationCached(documentId);
+
+    if (isCached) {
+      Navigator.of(getContext()).push(
+        MaterialPageRoute(
+          builder: (context) => ChapterView(
+            regulationId: documentId,
+            initialChapterOrderNum: chapterNum,
+            scrollToParagraphId: paragraphNum,
+            settingsRepository: _settingsRepository,
+            ttsRepository: _ttsRepository,
+            regulationRepository: _repository, // Pass the static repo instance
+          ),
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(getContext()).showSnackBar(
+        const SnackBar(
+            content:
+                Text('Документ не загружен. Загрузите его из Библиотеки.')),
+      );
     }
   }
 }

@@ -9,7 +9,7 @@ class TableOfContentsPresenter extends Presenter {
   final RegulationRepository _regulationRepository;
   // final SettingsRepository _settingsRepository;
   // final TTSRepository _ttsRepository;
-  // final int _regulationId;
+  final int _regulationId;
 
   Function(List<Chapter>)? onChaptersLoaded;
   Function(dynamic)? onError;
@@ -19,14 +19,14 @@ class TableOfContentsPresenter extends Presenter {
     required SettingsRepository settingsRepository,
     required TTSRepository ttsRepository,
     required int regulationId,
-  }) : _regulationRepository = regulationRepository;
+  })  : _regulationRepository = regulationRepository,
+        _regulationId = regulationId;
   // _settingsRepository = settingsRepository,
-  // _ttsRepository = ttsRepository,
-  // _regulationId = regulationId;
+  // _ttsRepository = ttsRepository;
 
   void getChapters() {
     final useCase = GetTableOfContents(_regulationRepository);
-    useCase.execute(_TableOfContentsObserver(this), null);
+    useCase.execute(_TableOfContentsObserver(this), _regulationId);
   }
 
   @override

@@ -35,6 +35,7 @@ class Note {
   final int paragraphId;
   final int originalParagraphId;
   final int chapterId;
+  final int regulationId;
   final int chapterOrderNum;
   final String regulationTitle;
   final String chapterName;
@@ -47,6 +48,7 @@ class Note {
     required this.paragraphId,
     required this.originalParagraphId,
     required this.chapterId,
+    required this.regulationId,
     required this.chapterOrderNum,
     required this.regulationTitle,
     required this.chapterName,
@@ -60,6 +62,7 @@ class Note {
     int? paragraphId,
     int? originalParagraphId,
     int? chapterId,
+    int? regulationId,
     int? chapterOrderNum,
     String? regulationTitle,
     String? chapterName,
@@ -72,6 +75,7 @@ class Note {
       paragraphId: paragraphId ?? this.paragraphId,
       originalParagraphId: originalParagraphId ?? this.originalParagraphId,
       chapterId: chapterId ?? this.chapterId,
+      regulationId: regulationId ?? this.regulationId,
       chapterOrderNum: chapterOrderNum ?? this.chapterOrderNum,
       regulationTitle: regulationTitle ?? this.regulationTitle,
       chapterName: chapterName ?? this.chapterName,
@@ -89,6 +93,7 @@ class Note {
         other.paragraphId == paragraphId &&
         other.originalParagraphId == originalParagraphId &&
         other.chapterId == chapterId &&
+        other.regulationId == regulationId &&
         other.chapterOrderNum == chapterOrderNum &&
         other.regulationTitle == regulationTitle &&
         other.chapterName == chapterName &&
@@ -103,6 +108,7 @@ class Note {
     return paragraphId.hashCode ^
         originalParagraphId.hashCode ^
         chapterId.hashCode ^
+        regulationId.hashCode ^
         chapterOrderNum.hashCode ^
         regulationTitle.hashCode ^
         chapterName.hashCode ^
@@ -114,6 +120,6 @@ class Note {
 
   @override
   String toString() {
-    return 'Note(paragraphId: $paragraphId, originalParagraphId: $originalParagraphId, chapterId: $chapterId, chapterOrderNum: $chapterOrderNum, regulationTitle: $regulationTitle, chapterName: $chapterName, content: $content, lastTouched: $lastTouched, isEdited: $isEdited, link: $link)';
+    return 'Note(paragraphId: $paragraphId, originalParagraphId: $originalParagraphId, chapterId: $chapterId, regulationId: $regulationId, chapterOrderNum: $chapterOrderNum, regulationTitle: $regulationTitle, chapterName: $chapterName, content: $content, lastTouched: $lastTouched, isEdited: $isEdited, link: $link)';
   }
 }

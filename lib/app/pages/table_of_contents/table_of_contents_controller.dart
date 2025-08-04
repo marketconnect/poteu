@@ -61,7 +61,7 @@ class TableOfContentsController extends Controller {
   void onChapterSelected(Chapter chapter) {
     AppNavigator.navigateToChapter(
       getContext(),
-      regulationId: regulationId,
+      regulationId: chapter.regulationId,
       chapterOrderNum: chapter.level,
       regulationRepository: regulationRepository,
       settingsRepository: settingsRepository,

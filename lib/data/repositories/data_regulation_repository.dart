@@ -6,6 +6,7 @@ import "../../domain/entities/search_result.dart";
 import "../helpers/duckdb_provider.dart";
 import 'dart:developer' as dev;
 import "dart:async";
+import "static_regulation_repository.dart";
 
 class DataRegulationRepository implements RegulationRepository {
   final DuckDBProvider _dbProvider = DuckDBProvider.instance;
@@ -368,5 +369,27 @@ class DataRegulationRepository implements RegulationRepository {
       dev.log('Paragraph ID: ${originalParagraph.id}');
       rethrow;
     }
+  }
+
+  @override
+  Future<bool> isRegulationCached(int regulationId) async {
+    final conn = await _dbProvider.connection;
+    final result = await conn
+        .query('SELECT 1 FROM chapters WHERE rule_id = $regulationId LIMIT 1');
+    return result.fetchAll().isNotEmpty;
+  }
+
+  @override
+  Future<List<ChapterInfo>> getChapterList(int regulationId) async {
+    // For data repository, delegate to static repository
+    final staticRepo = StaticRegulationRepository();
+    return await staticRepo.getChapterList(regulationId);
+  }
+
+  @override
+  Future<Chapter> getChapterContent(int regulationId, int chapterId) async {
+    // For data repository, delegate to static repository
+    final staticRepo = StaticRegulationRepository();
+    return await staticRepo.getChapterContent(regulationId, chapterId);
   }
 }

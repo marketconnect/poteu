@@ -46,18 +46,32 @@ class DataCloudRegulationRepository implements CloudRegulationRepository {
       final ResultSet result = await conn.query(
           "SELECT id, name, abbreviation FROM read_parquet('${tempFile.path}')");
 
-      final regulations = result.fetchAll().map((row) {
-        return Regulation(
-          id: row[0] as int,
-          title: row[1] as String,
-          description: row[2] as String,
-          // Остальные поля пока не доступны в rules.parquet, используем заглушки
-          lastUpdated: DateTime.now(), // Можно будет добавить в parquet
-          isDownloaded: false, // По определению не скачан
-          isFavorite: false, // Управляется локально
-          chapters: [], // Главы будут загружаться отдельно при выборе
-        );
+      final rawRegulations = result.fetchAll().map((row) {
+        return {
+          'id': row[0] as int,
+          'title': row[1] as String,
+          'description': row[2] as String,
+        };
       }).toList();
+
+      // Проверяем статус кеширования параллельно
+      final cacheChecks =
+          rawRegulations.map((reg) => isRegulationDataCached(reg['id'] as int));
+      final cacheResults = await Future.wait(cacheChecks);
+
+      final regulations = <Regulation>[];
+      for (int i = 0; i < rawRegulations.length; i++) {
+        regulations.add(Regulation(
+          id: rawRegulations[i]['id'] as int,
+          title: rawRegulations[i]['title'] as String,
+          description: rawRegulations[i]['description'] as String,
+          lastUpdated: DateTime.now(),
+          isDownloaded:
+              cacheResults[i], // Используем результат параллельной проверки
+          isFavorite: false,
+          chapters: [],
+        ));
+      }
 
       dev.log('Successfully fetched ${regulations.length} regulations.');
       return regulations;
@@ -98,6 +112,7 @@ class DataCloudRegulationRepository implements CloudRegulationRepository {
       tableName: 'paragraphs',
       ruleId: ruleId,
     );
+    await _dbProvider.forceCheckpoint();
     dev.log('Successfully downloaded and cached data for regulation $ruleId.');
   }
 
@@ -122,11 +137,29 @@ class DataCloudRegulationRepository implements CloudRegulationRepository {
 
       String query;
       if (tableName == 'chapters') {
-        // For chapters, we need to add the rule_id manually as it's not in the parquet file
-        query =
-            "INSERT INTO chapters (id, name, num, orderNum, rule_id) SELECT id, name, num, orderNum, $ruleId FROM read_parquet('${tempFile.path}')";
+        // Трансформируем 'id' на лету при вставке
+        query = '''
+          INSERT INTO chapters (id, name, num, orderNum, rule_id)
+          SELECT
+            ($ruleId * 1000000) + id, -- Создаем глобально уникальный ID
+            name,
+            num,
+            orderNum,
+            $ruleId
+          FROM read_parquet('${tempFile.path}')
+        ''';
+      } else if (tableName == 'paragraphs') {
+        // Для параграфов нужно трансформировать и 'id', и 'chapterID'
+        query = '''
+          INSERT INTO paragraphs (id, chapterID, num, content, text_to_speech, isTable, isNFT, paragraphClass)
+          SELECT
+            ($ruleId * 1000000) + id, -- Создаем глобально уникальный ID для параграфа
+            ($ruleId * 1000000) + chapterID, -- Обновляем foreign key, чтобы он соответствовал новому ID главы
+            num, content, text_to_speech, isTable, isNFT, paragraphClass
+          FROM read_parquet('${tempFile.path}')
+        ''';
       } else {
-        // For other tables (like paragraphs), assume columns match
+        // Для других таблиц, если они появятся
         query =
             "INSERT INTO $tableName SELECT * FROM read_parquet('${tempFile.path}')";
       }

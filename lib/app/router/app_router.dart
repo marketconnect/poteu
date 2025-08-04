@@ -63,11 +63,17 @@ class AppRouter {
         final chapterArguments = arguments is ChapterArguments
             ? arguments
             : const ChapterArguments(
-                totalChapters: 6, chapterOrderNum: 1, scrollTo: 0);
+                totalChapters: 6,
+                chapterOrderNum: 1,
+                scrollTo: 0,
+                regulationId: 0);
 
         return MaterialPageRoute(
           builder: (_) => ChapterView(
-            regulationId: ActiveRegulationService().currentRegulationId,
+            // Use the regulationId from arguments if provided, otherwise use the active one.
+            regulationId: chapterArguments.regulationId > 0
+                ? chapterArguments.regulationId
+                : ActiveRegulationService().currentRegulationId,
             initialChapterOrderNum: chapterArguments.chapterOrderNum,
             scrollToParagraphId: chapterArguments.scrollTo > 0
                 ? chapterArguments.scrollTo

@@ -99,6 +99,12 @@ class LibraryViewState extends ViewState<LibraryView, LibraryController> {
                       ),
                     ),
                     child: ListTile(
+                      leading: regulation.isDownloaded
+                          ? const Icon(
+                              Icons.check_circle,
+                              color: Colors.green,
+                            )
+                          : null,
                       title: Text(regulation.title,
                           style: Theme.of(context).textTheme.bodyLarge),
                       subtitle: Text(regulation.description,

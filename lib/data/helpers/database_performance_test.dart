@@ -20,15 +20,16 @@ class DatabasePerformanceTest {
 
       // Тест 1: Загрузка списка глав (оптимизированный метод)
       stopwatch.reset();
-      final chapterList = await repository.getChapterList(1);
+      const testRegulationId = 1;
+      final chapterList = await repository.getChapterList(testRegulationId);
       dev.log(
           '📚 Chapter list loaded in ${stopwatch.elapsedMilliseconds}ms (${chapterList.length} chapters)');
 
       // Тест 2: Загрузка содержимого одной главы
       if (chapterList.isNotEmpty) {
         stopwatch.reset();
-        final chapterContent =
-            await repository.getChapterContent(chapterList.first.id);
+        final chapterContent = await repository.getChapterContent(
+            testRegulationId, chapterList.first.id);
         dev.log(
             '📖 Chapter content loaded in ${stopwatch.elapsedMilliseconds}ms (${chapterContent.paragraphs.length} paragraphs)');
       }

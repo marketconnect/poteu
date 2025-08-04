@@ -395,6 +395,7 @@ class NotesViewState extends ViewState<NotesView, NotesController> {
       context,
       '/chapter',
       arguments: ChapterArguments(
+        regulationId: note.regulationId,
         totalChapters: 6, // Would need to be dynamic in a real app
         chapterOrderNum:
             note.chapterOrderNum, // Use the correct chapter order number

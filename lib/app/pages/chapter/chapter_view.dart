@@ -1447,10 +1447,8 @@ class ChapterViewState extends ViewState<ChapterView, ChapterController> {
                 );
               }
             } else {
-              // TODO: Handle navigation to different document
-              // This would require loading the new document first
-              dev.log(
-                  'Navigation to different document not yet implemented: $documentId');
+              await controller.navigateToDifferentDocument(
+                  documentId, chapterNum, paragraphNum);
             }
             return true;
           }

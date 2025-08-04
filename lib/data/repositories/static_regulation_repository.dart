@@ -110,11 +110,28 @@ class StaticRegulationRepository implements RegulationRepository {
 
   @override
   Future<List<Chapter>> getChapters(int regulationId) async {
-    final reg = await getRegulation(regulationId);
-    return reg.chapters;
+    return await _dbProvider.executeTransaction((conn) async {
+      final chRs = await conn.query(
+          'SELECT id, name, orderNum, num FROM chapters WHERE rule_id = $regulationId ORDER BY orderNum');
+      final chapters = <Chapter>[];
+      for (final ch in chRs.fetchAll()) {
+        chapters.add(Chapter(
+          id: ch[0] as int,
+          title: ch[1] as String,
+          level: ch[2] as int,
+          num: ch[3] as String,
+          regulationId: regulationId,
+          content: '',
+          paragraphs: [],
+          subChapters: [],
+        ));
+      }
+      return chapters;
+    });
   }
 
   /// Загружает только список глав (ID, номер, название) без их содержимого
+  @override
   Future<List<ChapterInfo>> getChapterList(int regulationId) async {
     return await _dbProvider.executeTransaction((conn) async {
       // 3. Чтение только списка глав без параграфов
@@ -140,11 +157,12 @@ class StaticRegulationRepository implements RegulationRepository {
   }
 
   /// Загружает полное содержимое (все параграфы) только для одной конкретной главы по ее ID
-  Future<Chapter> getChapterContent(int chapterId) async {
+  @override
+  Future<Chapter> getChapterContent(int regulationId, int chapterId) async {
     return await _dbProvider.executeTransaction((conn) async {
       // 3. Чтение информации о главе
       final chRs = await conn.query(
-          'SELECT id, rule_id, name, orderNum, num FROM chapters WHERE id = $chapterId');
+          'SELECT id, rule_id, name, orderNum, num FROM chapters WHERE id = $chapterId AND rule_id = $regulationId');
 
       if (chRs.fetchAll().isEmpty) {
         throw Exception('Chapter not found: $chapterId');
@@ -390,6 +408,15 @@ class StaticRegulationRepository implements RegulationRepository {
       }
 
       return results;
+    });
+  }
+
+  @override
+  Future<bool> isRegulationCached(int regulationId) async {
+    return await _dbProvider.executeTransaction((conn) async {
+      final result = await conn.query(
+          'SELECT 1 FROM chapters WHERE rule_id = $regulationId LIMIT 1');
+      return result.fetchAll().isNotEmpty;
     });
   }
 }

@@ -26,6 +26,7 @@ class DataNotesRepository implements NotesRepository {
           c.id as chapter_id,
           c.orderNum as chapter_order_num,
           c.name as chapter_name,
+          r.id as regulation_id,
           r.name as regulation_title,
           orig_p.content as original_content
         FROM user_paragraph_edits p
@@ -56,8 +57,9 @@ class DataNotesRepository implements NotesRepository {
           final chapterId = paragraphMap[4] as int;
           final chapterOrderNum = paragraphMap[5] as int;
           final chapterName = paragraphMap[6] as String;
-          final regulationTitle = paragraphMap[7] as String;
-          final originalContent = paragraphMap[8] as String;
+          final regulationId = paragraphMap[7] as int;
+          final regulationTitle = paragraphMap[8] as String;
+          final originalContent = paragraphMap[9] as String;
 
           dev.log('Paragraph ID: $originalId');
           dev.log('Chapter ID: $chapterId');
@@ -98,6 +100,7 @@ class DataNotesRepository implements NotesRepository {
                 paragraphId: originalId,
                 originalParagraphId: originalId,
                 chapterId: chapterId,
+                regulationId: regulationId,
                 chapterOrderNum: chapterOrderNum,
                 regulationTitle: regulationTitle,
                 chapterName: chapterName,
@@ -145,6 +148,7 @@ class DataNotesRepository implements NotesRepository {
                 paragraphId: originalId,
                 originalParagraphId: originalId,
                 chapterId: chapterId,
+                regulationId: regulationId,
                 chapterOrderNum: chapterOrderNum,
                 regulationTitle: regulationTitle,
                 chapterName: chapterName,

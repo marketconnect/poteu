@@ -14,6 +14,8 @@ abstract class RegulationRepository {
   Future<Map<String, dynamic>> getChapter(int id);
   Future<List<Chapter>> getChapters(int regulationId);
   Future<List<Chapter>> getChaptersByParentId(int parentId);
+  Future<List<ChapterInfo>> getChapterList(int regulationId);
+  Future<Chapter> getChapterContent(int regulationId, int chapterId);
   Future<List<Map<String, dynamic>>> searchChapters(String query);
   Future<List<Paragraph>> getParagraphsByChapterOrderNum(
       int regulationId, int chapterOrderNum);
@@ -44,4 +46,7 @@ abstract class RegulationRepository {
   /// Saves edited paragraph content
   Future<void> saveEditedParagraph(
       int paragraphId, String editedContent, Paragraph originalParagraph);
+
+  // Check if a regulation's data is cached locally
+  Future<bool> isRegulationCached(int regulationId);
 }
