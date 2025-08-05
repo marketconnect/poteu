@@ -49,4 +49,7 @@ abstract class RegulationRepository {
 
   // Check if a regulation's data is cached locally
   Future<bool> isRegulationCached(int regulationId);
+
+  // Deletes all content associated with premium documents
+  Future<void> deletePremiumContent();
 }

@@ -392,4 +392,35 @@ class DataRegulationRepository implements RegulationRepository {
     final staticRepo = StaticRegulationRepository();
     return await staticRepo.getChapterContent(regulationId, chapterId);
   }
+
+  @override
+  Future<void> deletePremiumContent() async {
+    dev.log('Deleting all premium content from local database...');
+    final conn = await _dbProvider.connection;
+
+    // We assume premium documents are identified by a flag in the `rules` table.
+    // Since this is a client-side implementation, we'll hardcode the logic
+    // based on what the server provides. Let's assume `is_premium` column exists.
+
+    // For this example, let's assume the `rules` table has an `is_premium` column.
+    // If not, this query needs adjustment.
+    final premiumRuleIdsResult = await conn.query(
+        "SELECT id FROM rules WHERE is_premium = TRUE");
+    final premiumRuleIds = premiumRuleIdsResult.fetchAll().map((row) => row[0] as int).toList();
+
+    if (premiumRuleIds.isEmpty) {
+      dev.log('No premium documents found to delete.');
+      return;
+    }
+
+    final idsString = premiumRuleIds.join(',');
+    dev.log('Found premium document IDs to delete: $idsString');
+
+    await conn.query('BEGIN TRANSACTION;');
+    await conn.query('DELETE FROM paragraphs WHERE chapterID IN (SELECT id FROM chapters WHERE rule_id IN ($idsString))');
+    await conn.query('DELETE FROM chapters WHERE rule_id IN ($idsString)');
+    await conn.query('DELETE FROM rules WHERE id IN ($idsString)');
+    await conn.query('COMMIT;');
+    dev.log('Successfully deleted premium content.');
+  }
 }

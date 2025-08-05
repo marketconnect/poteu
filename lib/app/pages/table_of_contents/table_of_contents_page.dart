@@ -303,6 +303,7 @@ class _TableOfContentsPageState
                         padding: const EdgeInsets.only(bottom: 25),
                         child: StreamBuilder<bool>(
                           stream: ThemeManager().themeStream,
+                          initialData: ThemeManager().isDarkMode,
                           builder: (context, snapshot) {
                             final isDark = snapshot.data ?? false;
                             return ListTile(

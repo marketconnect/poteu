@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:dart_duckdb/dart_duckdb.dart';
 import 'package:http/http.dart' as http;
 import 'package:poteu/data/helpers/duckdb_provider.dart';
+
 import 'package:poteu/data/helpers/remote_data_provider.dart';
 import 'package:poteu/domain/entities/regulation.dart';
 import 'package:poteu/domain/repositories/cloud_regulation_repository.dart';
@@ -66,6 +67,7 @@ class DataCloudRegulationRepository implements CloudRegulationRepository {
           title: rawRegulations[i]['title'] as String,
           description: rawRegulations[i]['description'] as String,
           lastUpdated: DateTime.now(),
+          isPremium: true,
           isDownloaded:
               cacheResults[i], // Используем результат параллельной проверки
           isFavorite: false,

@@ -4,9 +4,11 @@ import 'package:poteu/app/pages/chapter/chapter_view.dart';
 import 'package:poteu/app/pages/library/library_view.dart';
 import 'package:poteu/app/pages/notes/notes_view.dart';
 import 'package:poteu/app/pages/search/search_view.dart';
+import 'package:poteu/app/pages/subscription/subscription_view.dart';
 import 'package:poteu/app/pages/table_of_contents/table_of_contents_page.dart';
 import 'package:poteu/app/services/active_regulation_service.dart';
 import 'package:poteu/domain/repositories/settings_repository.dart';
+import 'package:poteu/domain/repositories/subscription_repository.dart';
 import 'package:poteu/domain/repositories/tts_repository.dart';
 import 'package:poteu/data/repositories/data_regulation_repository.dart';
 import 'package:poteu/data/repositories/static_regulation_repository.dart';
@@ -20,6 +22,7 @@ abstract class AppRouteNames {
   static const notesList = '/notesList';
   static const library = '/library';
   static const search = '/search';
+  static const subscription = '/subscription';
 }
 
 class AppRouter {
@@ -27,14 +30,17 @@ class AppRouter {
   final SettingsRepository _settingsRepository;
   final TTSRepository _ttsRepository;
   final NotesRepository _notesRepository;
+  final SubscriptionRepository _subscriptionRepository;
 
   AppRouter({
     required SettingsRepository settingsRepository,
     required TTSRepository ttsRepository,
     required NotesRepository notesRepository,
+    required SubscriptionRepository subscriptionRepository,
   })  : _settingsRepository = settingsRepository,
         _ttsRepository = ttsRepository,
-        _notesRepository = notesRepository;
+        _notesRepository = notesRepository,
+        _subscriptionRepository = subscriptionRepository;
 
   Route? onGenerateRoute(RouteSettings routeSettings) {
     switch (routeSettings.name) {
@@ -56,7 +62,9 @@ class AppRouter {
         );
       case AppRouteNames.library:
         return MaterialPageRoute(
-          builder: (_) => const LibraryView(),
+          builder: (_) => LibraryView(
+            subscriptionRepository: _subscriptionRepository,
+          ),
         );
       case AppRouteNames.chapter:
         final arguments = routeSettings.arguments;
@@ -89,6 +97,12 @@ class AppRouter {
             regulationRepository: _repository,
             settingsRepository: _settingsRepository,
             ttsRepository: _ttsRepository,
+          ),
+        );
+      case AppRouteNames.subscription:
+        return MaterialPageRoute(
+          builder: (_) => SubscriptionView(
+            subscriptionRepository: _subscriptionRepository,
           ),
         );
       default:

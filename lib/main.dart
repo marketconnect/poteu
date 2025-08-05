@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:http/http.dart' as http;
 import 'package:poteu/app/services/active_regulation_service.dart';
+import 'package:poteu/app/services/user_id_service.dart';
 import 'package:poteu/config.dart';
 import 'package:poteu/data/helpers/duckdb_provider.dart';
+import 'package:poteu/data/repositories/data_subscription_repository.dart';
+import 'package:poteu/domain/repositories/subscription_repository.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 import 'data/repositories/data_settings_repository.dart';
 import 'data/repositories/data_tts_repository.dart';
@@ -239,6 +243,10 @@ void main() async {
       final ttsRepository = DataTTSRepository(settingsRepository, FlutterTts());
       final notesRepository = DataNotesRepository();
       final dataRegulationRepository = DataRegulationRepository();
+      final userIdService = UserIdService();
+      final httpClient = http.Client();
+      final subscriptionRepository =
+          DataSubscriptionRepository(httpClient, userIdService);
 
       final migrationService = MigrationService(
         staticRepo: regulationRepository,
@@ -258,6 +266,7 @@ void main() async {
         regulationRepository: regulationRepository,
         ttsRepository: ttsRepository,
         notesRepository: notesRepository,
+        subscriptionRepository: subscriptionRepository,
       ));
     },
   );
@@ -269,6 +278,7 @@ class PoteuApp extends StatefulWidget {
   final RegulationRepository regulationRepository;
   final DataTTSRepository ttsRepository;
   final DataNotesRepository notesRepository;
+  final SubscriptionRepository subscriptionRepository;
 
   const PoteuApp({
     Key? key,
@@ -277,6 +287,7 @@ class PoteuApp extends StatefulWidget {
     required this.regulationRepository,
     required this.ttsRepository,
     required this.notesRepository,
+    required this.subscriptionRepository,
   }) : super(key: key);
 
   @override
@@ -295,6 +306,7 @@ class _PoteuAppState extends State<PoteuApp> {
       settingsRepository: widget.settingsRepository,
       ttsRepository: widget.ttsRepository,
       notesRepository: widget.notesRepository,
+      subscriptionRepository: widget.subscriptionRepository,
     );
   }
 

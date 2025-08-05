@@ -419,4 +419,10 @@ class StaticRegulationRepository implements RegulationRepository {
       return result.fetchAll().isNotEmpty;
     });
   }
+
+  @override
+  Future<void> deletePremiumContent() async {
+    // Static repository is read-only, so this is a no-op.
+    return;
+  }
 }

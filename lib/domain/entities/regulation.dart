@@ -7,6 +7,7 @@ class Regulation {
   final DateTime lastUpdated;
   final bool isDownloaded;
   final bool isFavorite;
+  final bool isPremium;
   final List<Chapter> chapters;
 
   const Regulation({
@@ -16,9 +17,33 @@ class Regulation {
     required this.lastUpdated,
     required this.isDownloaded,
     required this.isFavorite,
+    this.isPremium = false,
     required this.chapters,
   });
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'title': title,
+      'description': description,
+      'lastUpdated': lastUpdated.toIso8601String(),
+      'isDownloaded': isDownloaded,
+      'isFavorite': isFavorite,
+      'isPremium': isPremium,
+    };
+  }
 
+  factory Regulation.fromJson(Map<String, dynamic> json) {
+    return Regulation(
+      id: json['id'] as int,
+      title: json['title'] as String,
+      description: json['description'] as String,
+      lastUpdated: DateTime.parse(json['lastUpdated'] as String),
+      isDownloaded: json['isDownloaded'] as bool,
+      isFavorite: json['isFavorite'] as bool,
+      isPremium: json['isPremium'] as bool,
+      chapters: const [], // Cloud regulations don't have chapters in this context
+    );
+  }
   Regulation copyWith({
     int? id,
     String? title,
@@ -26,6 +51,7 @@ class Regulation {
     DateTime? lastUpdated,
     bool? isDownloaded,
     bool? isFavorite,
+    bool? isPremium,
     List<Chapter>? chapters,
   }) {
     return Regulation(
@@ -35,6 +61,7 @@ class Regulation {
       lastUpdated: lastUpdated ?? this.lastUpdated,
       isDownloaded: isDownloaded ?? this.isDownloaded,
       isFavorite: isFavorite ?? this.isFavorite,
+      isPremium: isPremium ?? this.isPremium,
       chapters: chapters ?? this.chapters,
     );
   }
@@ -49,7 +76,8 @@ class Regulation {
         other.description == description &&
         other.lastUpdated == lastUpdated &&
         other.isDownloaded == isDownloaded &&
-        other.isFavorite == isFavorite;
+        other.isFavorite == isFavorite &&
+        other.isPremium == isPremium;
   }
 
   @override
@@ -59,11 +87,12 @@ class Regulation {
         description.hashCode ^
         lastUpdated.hashCode ^
         isDownloaded.hashCode ^
-        isFavorite.hashCode;
+        isFavorite.hashCode ^
+        isPremium.hashCode;
   }
 
   @override
   String toString() {
-    return 'Regulation(id: $id, title: $title, description: $description, lastUpdated: $lastUpdated, isDownloaded: $isDownloaded, isFavorite: $isFavorite, chapters: ${chapters.length})';
+    return 'Regulation(id: $id, title: $title, description: $description, lastUpdated: $lastUpdated, isDownloaded: $isDownloaded, isFavorite: $isFavorite, isPremium: $isPremium, chapters: ${chapters.length})';
   }
 }

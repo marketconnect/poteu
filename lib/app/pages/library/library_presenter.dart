@@ -1,5 +1,7 @@
 import 'package:flutter_clean_architecture/flutter_clean_architecture.dart';
 import '../../../data/repositories/cloud_regulation_repository.dart';
+import '../../../data/repositories/data_regulation_repository.dart';
+import '../../../domain/repositories/regulation_repository.dart';
 import '../../../domain/entities/regulation.dart';
 import '../../../domain/usecases/get_available_regulations_usecase.dart';
 import '../../../domain/usecases/is_regulation_cached_usecase.dart';
@@ -15,6 +17,9 @@ class LibraryPresenter extends Presenter {
   final GetAvailableRegulationsUseCase _getAvailableRegulationsUseCase;
   final IsRegulationCachedUseCase _isRegulationCachedUseCase;
   final DownloadRegulationDataUseCase _downloadRegulationDataUseCase;
+
+  // Expose the repository for use cases in the controller
+  final RegulationRepository regulationRepository = DataRegulationRepository();
 
   LibraryPresenter()
       : _getAvailableRegulationsUseCase =

@@ -1,18 +1,34 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_clean_architecture/flutter_clean_architecture.dart';
 import 'package:poteu/app/services/active_regulation_service.dart';
+import 'package:poteu/domain/entities/subscription.dart';
+import 'package:poteu/domain/repositories/subscription_repository.dart';
+import 'package:poteu/domain/usecases/check_subscription_usecase.dart';
+import 'package:poteu/domain/usecases/handle_expired_subscription_usecase.dart';
 import '../../../domain/entities/regulation.dart';
+import 'package:poteu/config.dart';
 import 'library_presenter.dart';
 import 'dart:developer' as dev;
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
 
 class LibraryController extends Controller {
   final LibraryPresenter _presenter;
+  final SubscriptionRepository _subscriptionRepository;
+
+  // Usecases
+  late final CheckSubscriptionUseCase _checkSubscriptionUseCase;
+  late final HandleExpiredSubscriptionUseCase _handleExpiredSubscriptionUseCase;
+  static const String _lastFetchDateKey = 'library_last_fetch_date';
+  static const String _regulationsCacheKey = 'library_regulations_cache';
+
   List<Regulation> _regulations = [];
   bool _isLoading = true;
   String? _error;
   Regulation? _selectedRegulation;
   bool _isCheckingCache = false;
   bool _isDownloading = false;
+  Subscription _subscription = Subscription.inactive();
 
   List<Regulation> get regulations => _regulations;
   bool get isLoading => _isLoading;
@@ -20,28 +36,42 @@ class LibraryController extends Controller {
   Regulation? get selectedRegulation => _selectedRegulation;
   bool get isCheckingCache => _isCheckingCache;
   bool get isDownloading => _isDownloading;
+  bool get isSubscribed => _subscription.isActive;
 
   final ActiveRegulationService _activeRegulationService;
 
-  LibraryController()
+  LibraryController(this._subscriptionRepository)
       : _presenter = LibraryPresenter(),
-        _activeRegulationService = ActiveRegulationService() {
+        _activeRegulationService = ActiveRegulationService(),
+        super() {
+    _checkSubscriptionUseCase =
+        CheckSubscriptionUseCase(_subscriptionRepository);
+    _handleExpiredSubscriptionUseCase = HandleExpiredSubscriptionUseCase(
+        _subscriptionRepository, _presenter.regulationRepository);
+
     initListeners();
-    _presenter.getAvailableRegulations();
+    // Check subscription status first
+    checkSubscriptionStatus();
+    // Then load regulations
+    loadRegulationsWithCache();
   }
 
   @override
   void initListeners() {
     _presenter.onRegulationsLoaded = (List<Regulation> regulations) {
-      _regulations = regulations;
+      _regulations = regulations
+          .where((r) => r.id != AppConfig.instance.regulationId)
+          .toList(); // Loading is considered finished after both subscription check and regulations are loaded
       _isLoading = false;
       _error = null;
       refreshUI();
+      _cacheRegulations(regulations);
     };
 
     _presenter.onError = (e) {
       _error = e.toString();
       _isLoading = false;
+      _selectedRegulation = null;
       refreshUI();
     };
 
@@ -77,6 +107,67 @@ class LibraryController extends Controller {
     };
   }
 
+  void _cacheRegulations(List<Regulation> regulations) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final today = DateTime.now().toIso8601String().substring(0, 10);
+      final regulationsJsonList = regulations.map((r) => r.toJson()).toList();
+      final regulationsJsonString = json.encode(regulationsJsonList);
+      await prefs.setString(_lastFetchDateKey, today);
+      await prefs.setString(_regulationsCacheKey, regulationsJsonString);
+      dev.log('Regulations cached for date: $today');
+    } catch (e) {
+      dev.log('Failed to cache regulations: $e');
+    }
+  }
+
+  void loadRegulationsWithCache() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final lastFetchDate = prefs.getString(_lastFetchDateKey);
+      final today = DateTime.now().toIso8601String().substring(0, 10);
+      if (lastFetchDate == today) {
+        dev.log('Loading regulations from cache for date: $today');
+        final cachedJson = prefs.getString(_regulationsCacheKey);
+        if (cachedJson != null) {
+          final List<dynamic> decodedList = json.decode(cachedJson);
+          final cachedRegulations = decodedList
+              .map((jsonItem) =>
+                  Regulation.fromJson(jsonItem as Map<String, dynamic>))
+              .toList();
+          _presenter.onRegulationsLoaded(cachedRegulations);
+          return;
+        }
+      }
+    } catch (e) {
+      dev.log('Failed to load from cache: $e. Fetching from network.');
+    }
+    dev.log('Cache is old or invalid. Fetching regulations from network.');
+    _presenter.getAvailableRegulations();
+  }
+
+  void checkSubscriptionStatus() {
+    _isLoading = true;
+    refreshUI();
+
+    _checkSubscriptionUseCase.execute(_CheckSubscriptionObserver(this));
+  }
+
+  void _onSubscriptionStatusChecked(Subscription status) {
+    _subscription = status;
+    dev.log('Subscription status updated: isActive=${status.isActive}');
+
+    // If subscription has expired, handle it
+    if (!status.isActive && status.expirationDate != null) {
+      if (status.expirationDate!.isBefore(DateTime.now())) {
+        dev.log('Subscription expired. Handling cleanup...');
+        _handleExpiredSubscriptionUseCase.execute(_HandleExpiredObserver(this));
+      }
+    }
+
+    refreshUI();
+  }
+
   Future<void> selectRegulation(Regulation regulation) async {
     _selectedRegulation = regulation;
     _isCheckingCache = true;
@@ -99,12 +190,42 @@ class LibraryController extends Controller {
     _error = null;
     _selectedRegulation = null;
     refreshUI();
+    // First check subscription, then get regulations
+    checkSubscriptionStatus();
     _presenter.getAvailableRegulations();
   }
 
   @override
   void onDisposed() {
     _presenter.dispose();
+    _checkSubscriptionUseCase.dispose();
+    _handleExpiredSubscriptionUseCase.dispose();
     super.onDisposed();
   }
+}
+
+class _CheckSubscriptionObserver extends Observer<Subscription> {
+  final LibraryController _controller;
+  _CheckSubscriptionObserver(this._controller);
+
+  @override
+  void onComplete() {}
+  @override
+  void onError(e) =>
+      _controller._onSubscriptionStatusChecked(Subscription.inactive());
+  @override
+  void onNext(Subscription? response) => _controller
+      ._onSubscriptionStatusChecked(response ?? Subscription.inactive());
+}
+
+class _HandleExpiredObserver extends Observer<void> {
+  final LibraryController _controller;
+  _HandleExpiredObserver(this._controller);
+
+  @override
+  void onComplete() => _controller.refreshRegulations();
+  @override
+  void onError(e) => dev.log('Error handling expired subscription: $e');
+  @override
+  void onNext(void response) {}
 }

@@ -1,17 +1,22 @@
 import 'package:flutter/material.dart' hide View;
 import 'package:flutter_clean_architecture/flutter_clean_architecture.dart';
+import 'package:poteu/domain/repositories/subscription_repository.dart';
 import 'library_controller.dart';
 import '../../widgets/regulation_app_bar.dart';
 
 class LibraryView extends View {
-  const LibraryView({Key? key}) : super(key: key);
+  final SubscriptionRepository subscriptionRepository;
+
+  const LibraryView({Key? key, required this.subscriptionRepository})
+      : super(key: key);
 
   @override
-  LibraryViewState createState() => LibraryViewState();
+  LibraryViewState createState() => LibraryViewState(subscriptionRepository);
 }
 
 class LibraryViewState extends ViewState<LibraryView, LibraryController> {
-  LibraryViewState() : super(LibraryController());
+  LibraryViewState(SubscriptionRepository subscriptionRepository)
+      : super(LibraryController(subscriptionRepository));
 
   @override
   Widget get view {
@@ -85,6 +90,8 @@ class LibraryViewState extends ViewState<LibraryView, LibraryController> {
                     controller.selectedRegulation?.id == regulation.id;
                 final isProcessing = isSelected &&
                     (controller.isCheckingCache || controller.isDownloading);
+                final isPremium = regulation.isPremium;
+                final canAccess = !isPremium || controller.isSubscribed;
 
                 return AbsorbPointer(
                   absorbing: isProcessing,
@@ -99,17 +106,30 @@ class LibraryViewState extends ViewState<LibraryView, LibraryController> {
                       ),
                     ),
                     child: ListTile(
-                      leading: regulation.isDownloaded
-                          ? const Icon(
-                              Icons.check_circle,
-                              color: Colors.green,
+                      leading: isPremium
+                          ? Icon(
+                              canAccess
+                                  ? Icons.lock_open_outlined
+                                  : Icons.lock_outline,
+                              color: canAccess ? Colors.green : Colors.orange,
                             )
-                          : null,
+                          : (regulation.isDownloaded
+                              ? const Icon(
+                                  Icons.check_circle_outline_outlined,
+                                  color: Colors.blue,
+                                )
+                              : null),
                       title: Text(regulation.title,
                           style: Theme.of(context).textTheme.bodyLarge),
                       subtitle: Text(regulation.description,
                           style: Theme.of(context).textTheme.bodyMedium),
-                      onTap: () => controller.selectRegulation(regulation),
+                      onTap: () {
+                        if (canAccess) {
+                          controller.selectRegulation(regulation);
+                        } else {
+                          Navigator.of(context).pushNamed('/subscription');
+                        }
+                      },
                       trailing: isProcessing
                           ? const CircularProgressIndicator()
                           : const Icon(Icons.arrow_forward_ios),
