@@ -77,37 +77,40 @@ class SubscriptionViewState
               ),
             );
           } else {
-            body = Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const Icon(Icons.workspace_premium,
-                      size: 80, color: Colors.amber),
-                  const SizedBox(height: 24),
-                  Text(
-                    'Доступ к дополнительным документам',
-                    textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.headlineSmall,
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Подписка открывает доступ ко всем документам в библиотеке.',
-                    textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.bodyMedium,
-                  ),
-                  const SizedBox(height: 48),
-                  ..._buildPlanWidgets(context, controller),
-                  if (controller.error != null && controller.plans.isNotEmpty) ...[
+            body = SingleChildScrollView(
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const Icon(Icons.workspace_premium,
+                        size: 80, color: Colors.amber),
                     const SizedBox(height: 24),
                     Text(
-                      '${controller.error}',
+                      'Доступ к дополнительным документам',
                       textAlign: TextAlign.center,
-                      style: const TextStyle(color: Colors.red),
+                      style: Theme.of(context).textTheme.headlineSmall,
                     ),
-                  ]
-                ],
+                    const SizedBox(height: 16),
+                    Text(
+                      'Подписка открывает доступ ко всем документам в библиотеке.',
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                    const SizedBox(height: 48),
+                    ..._buildPlanWidgets(context, controller),
+                    if (controller.error != null &&
+                        controller.plans.isNotEmpty) ...[
+                      const SizedBox(height: 24),
+                      Text(
+                        '${controller.error}',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(color: Colors.red),
+                      ),
+                    ]
+                  ],
+                ),
               ),
             );
           }

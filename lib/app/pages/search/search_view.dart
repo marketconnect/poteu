@@ -4,6 +4,7 @@ import 'package:flutter_clean_architecture/flutter_clean_architecture.dart';
 import '../../../domain/repositories/regulation_repository.dart';
 import '../../../domain/repositories/settings_repository.dart';
 import '../../../domain/repositories/tts_repository.dart';
+import '../../../domain/repositories/subscription_repository.dart';
 import '../../widgets/regulation_app_bar.dart';
 import '../chapter/chapter_view.dart';
 import 'search_controller.dart';
@@ -13,12 +14,14 @@ class SearchView extends View {
   final RegulationRepository regulationRepository;
   final SettingsRepository settingsRepository;
   final TTSRepository ttsRepository;
+  final SubscriptionRepository subscriptionRepository;
 
   const SearchView({
     Key? key,
     required this.regulationRepository,
     required this.settingsRepository,
     required this.ttsRepository,
+    required this.subscriptionRepository,
   }) : super(key: key);
 
   @override
@@ -28,6 +31,7 @@ class SearchView extends View {
           regulationRepository: regulationRepository,
           settingsRepository: settingsRepository,
           ttsRepository: ttsRepository,
+          subscriptionRepository: subscriptionRepository,
         ),
       );
 }
@@ -39,6 +43,7 @@ class SearchViewState extends ViewState<SearchView, SearchPageController> {
   Widget get view {
     return ControlledWidgetBuilder<SearchPageController>(
       builder: (context, controller) {
+        final theme = Theme.of(context);
         return Scaffold(
           appBar: PreferredSize(
             preferredSize: Size.fromHeight(
@@ -102,115 +107,180 @@ class SearchViewState extends ViewState<SearchView, SearchPageController> {
               ),
             ),
           ),
-          body: Column(
-            children: [
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 8.0),
-                child: SegmentedButton<SearchScope>(
-                  segments: const <ButtonSegment<SearchScope>>[
-                    ButtonSegment<SearchScope>(
-                        value: SearchScope.currentDocument,
-                        label: Text('В текущем')),
-                    ButtonSegment<SearchScope>(
-                        value: SearchScope.allDocuments,
-                        label: Text('Во всех')),
-                  ],
-                  selected: <SearchScope>{controller.searchScope},
-                  onSelectionChanged: (Set<SearchScope> newSelection) {
-                    controller.setSearchScope(newSelection.first);
-                  },
-                ),
-              ),
-              Expanded(
-                child: controller.isLoading
-                    ? const Center(child: CircularProgressIndicator())
-                    : controller.searchResults.isEmpty
-                        ? Container(
-                            color: Theme.of(context).scaffoldBackgroundColor,
-                            child: Center(
-                              child: Text(
-                                'По вашему запросу ничего не найдено.',
-                                style: Theme.of(context).textTheme.bodyLarge,
-                              ),
+          body: controller.isLoading && controller.searchResults.isEmpty
+              ? const Center(child: CircularProgressIndicator())
+              : Column(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                          vertical: 8.0, horizontal: 16.0),
+                      child: SegmentedButton<SearchScope>(
+                        style: ButtonStyle(
+                          shape: MaterialStateProperty.all(
+                            RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10.0),
                             ),
-                          )
-                        : ListView.builder(
-                            itemCount: controller.searchResults.length,
-                            itemBuilder: (context, index) {
-                              final result = controller.searchResults[index];
-                              return Card(
-                                elevation: 0,
-                                color: Theme.of(context).scaffoldBackgroundColor,
-                                margin: EdgeInsets.zero,
-                                shape: Border(
-                                  bottom: BorderSide(
-                                    width: 1.0,
-                                    color: Theme.of(context).shadowColor,
+                          ),
+                          side: MaterialStateProperty.all(
+                            BorderSide(color: theme.shadowColor),
+                          ),
+                          backgroundColor:
+                              MaterialStateProperty.resolveWith<Color?>(
+                            (Set<MaterialState> states) {
+                              if (states.contains(MaterialState.selected)) {
+                                return theme.navigationRailTheme.indicatorColor;
+                              }
+                              return theme.navigationRailTheme.backgroundColor;
+                            },
+                          ),
+                          foregroundColor:
+                              MaterialStateProperty.resolveWith<Color?>(
+                            (Set<MaterialState> states) {
+                              if (states.contains(MaterialState.selected)) {
+                                return theme
+                                    .navigationRailTheme.selectedIconTheme?.color;
+                              }
+                              return theme.navigationRailTheme
+                                  .unselectedLabelTextStyle?.color;
+                            },
+                          ),
+                        ),
+                        segments: <ButtonSegment<SearchScope>>[
+                          const ButtonSegment<SearchScope>(
+                              value: SearchScope.currentDocument,
+                              label: Text('В текущем')),
+                          ButtonSegment<SearchScope>(
+                            value: SearchScope.allDocuments,
+                            label: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Text('Во всех'),
+                                if (!controller.isSubscribed) ...[
+                                  const SizedBox(width: 4),
+                                  const Icon(Icons.lock, size: 16),
+                                ]
+                              ],
+                            ),
+                          ),
+                        ],
+                        selected: <SearchScope>{controller.searchScope},
+                        onSelectionChanged: (Set<SearchScope> newSelection) {
+                          final newScope = newSelection.first;
+                          if (newScope == SearchScope.allDocuments &&
+                              !controller.isSubscribed) {
+                            FocusScope.of(context).unfocus();
+                            Navigator.of(context).pushNamed('/subscription');
+                          } else {
+                            controller.setSearchScope(newScope);
+                          }
+                        },
+                      ),
+                    ),
+                    Expanded(
+                      child: controller.isLoading
+                          ? const Center(child: CircularProgressIndicator())
+                          : controller.searchResults.isEmpty
+                              ? Container(
+                                  color:
+                                      Theme.of(context).scaffoldBackgroundColor,
+                                  child: Center(
+                                    child: Text(
+                                      'По вашему запросу ничего не найдено.',
+                                      style:
+                                          Theme.of(context).textTheme.bodyLarge,
+                                    ),
                                   ),
-                                ),
-                                child: InkWell(
-                                  onTap: () {
-                                    // Navigate to chapter with search result
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (context) => ChapterView(
-                                          regulationId: result.regulationId,
-                                          initialChapterOrderNum:
-                                              result.chapterOrderNum,
-                                          scrollToParagraphId:
-                                              result.paragraphId,
-                                          settingsRepository:
-                                              widget.settingsRepository,
-                                          ttsRepository: widget.ttsRepository,
-                                          regulationRepository:
-                                              widget.regulationRepository,
+                                )
+                              : ListView.builder(
+                                  itemCount: controller.searchResults.length,
+                                  itemBuilder: (context, index) {
+                                    final result =
+                                        controller.searchResults[index];
+                                    return Card(
+                                      elevation: 0,
+                                      color: Theme.of(context)
+                                          .scaffoldBackgroundColor,
+                                      margin: EdgeInsets.zero,
+                                      shape: Border(
+                                        bottom: BorderSide(
+                                          width: 1.0,
+                                          color: Theme.of(context).shadowColor,
+                                        ),
+                                      ),
+                                      child: InkWell(
+                                        onTap: () {
+                                          // Navigate to chapter with search result
+                                          Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (context) => ChapterView(
+                                                regulationId:
+                                                    result.regulationId,
+                                                initialChapterOrderNum:
+                                                    result.chapterOrderNum,
+                                                scrollToParagraphId:
+                                                    result.paragraphId,
+                                                settingsRepository:
+                                                    widget.settingsRepository,
+                                                ttsRepository:
+                                                    widget.ttsRepository,
+                                                regulationRepository:
+                                                    widget.regulationRepository,
+                                              ),
+                                            ),
+                                          );
+                                        },
+                                        child: Padding(
+                                          padding: EdgeInsets.fromLTRB(
+                                            MediaQuery.of(context).size.width *
+                                                0.05,
+                                            MediaQuery.of(context).size.width *
+                                                0.06,
+                                            MediaQuery.of(context).size.width *
+                                                0.05,
+                                            MediaQuery.of(context).size.width *
+                                                0.05,
+                                          ),
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              if (controller.searchScope ==
+                                                      SearchScope
+                                                          .allDocuments &&
+                                                  result.regulationTitle !=
+                                                      null)
+                                                Padding(
+                                                  padding:
+                                                      const EdgeInsets.only(
+                                                          bottom: 8.0),
+                                                  child: Text(
+                                                    result.regulationTitle!,
+                                                    style: Theme.of(context)
+                                                        .textTheme
+                                                        .bodySmall
+                                                        ?.copyWith(
+                                                            fontWeight:
+                                                                FontWeight
+                                                                    .bold),
+                                                    overflow:
+                                                        TextOverflow.ellipsis,
+                                                  ),
+                                                ),
+                                              RichText(
+                                                text: _buildHighlightedText(
+                                                    context, result),
+                                              ),
+                                            ],
+                                          ),
                                         ),
                                       ),
                                     );
                                   },
-                                  child: Padding(
-                                    padding: EdgeInsets.fromLTRB(
-                                      MediaQuery.of(context).size.width * 0.05,
-                                      MediaQuery.of(context).size.width * 0.06,
-                                      MediaQuery.of(context).size.width * 0.05,
-                                      MediaQuery.of(context).size.width * 0.05,
-                                    ),
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        if (controller.searchScope ==
-                                                SearchScope.allDocuments &&
-                                            result.regulationTitle != null)
-                                          Padding(
-                                            padding: const EdgeInsets.only(
-                                                bottom: 8.0),
-                                            child: Text(
-                                              result.regulationTitle!,
-                                              style: Theme.of(context)
-                                                  .textTheme
-                                                  .bodySmall
-                                                  ?.copyWith(
-                                                      fontWeight:
-                                                          FontWeight.bold),
-                                              overflow: TextOverflow.ellipsis,
-                                            ),
-                                          ),
-                                        RichText(
-                                          text: _buildHighlightedText(
-                                              context, result),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
                                 ),
-                              );
-                            },
-                          ),
-              ),
-            ],
-          ),
+                    ),
+                  ],
+                ),
         );
       },
     );

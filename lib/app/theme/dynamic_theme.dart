@@ -20,6 +20,9 @@ class DynamicTheme {
           color: Color(0xFFe98c14),
         ),
       ),
+      progressIndicatorTheme: const ProgressIndicatorThemeData(
+        color: Color(0xFFe98c14),
+      ),
       focusColor: Colors.blueGrey[900],
       appBarTheme: AppBarTheme(
         elevation: 0,
@@ -82,6 +85,9 @@ class DynamicTheme {
 
   static ThemeData getDark(Settings settings) {
     return ThemeData(
+      progressIndicatorTheme: const ProgressIndicatorThemeData(
+        color: Color(0xFFf49315),
+      ),
       dividerColor: Colors.transparent,
       focusColor: Colors.blueGrey[900],
       shadowColor: const Color(0xFF353535),

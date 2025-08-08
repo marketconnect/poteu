@@ -97,6 +97,7 @@ class AppRouter {
             regulationRepository: _repository,
             settingsRepository: _settingsRepository,
             ttsRepository: _ttsRepository,
+            subscriptionRepository: _subscriptionRepository,
           ),
         );
       case AppRouteNames.subscription:
