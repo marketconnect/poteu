@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart' hide View, SearchController;
 import 'package:flutter_clean_architecture/flutter_clean_architecture.dart';
-import 'package:poteu/config.dart';
 
 import '../../../domain/repositories/regulation_repository.dart';
 import '../../../domain/repositories/settings_repository.dart';
@@ -8,6 +7,7 @@ import '../../../domain/repositories/tts_repository.dart';
 import '../../widgets/regulation_app_bar.dart';
 import '../chapter/chapter_view.dart';
 import 'search_controller.dart';
+import '../../../domain/entities/search_result.dart';
 
 class SearchView extends View {
   final RegulationRepository regulationRepository;
@@ -102,131 +102,146 @@ class SearchViewState extends ViewState<SearchView, SearchPageController> {
               ),
             ),
           ),
-          body: controller.isLoading
-              ? const Center(child: CircularProgressIndicator())
-              : controller.searchResults.isEmpty
-                  ? Container(
-                      color: Theme.of(context).scaffoldBackgroundColor,
-                      child: Center(
-                        child: Text(
-                          'По вашему запросу ничего не найдено.',
-                          style: Theme.of(context).textTheme.bodyLarge,
-                        ),
-                      ),
-                    )
-                  : ListView.builder(
-                      itemCount: controller.searchResults.length,
-                      itemBuilder: (context, index) {
-                        final result = controller.searchResults[index];
-                        return Card(
-                          elevation: 0,
-                          color: Theme.of(context).scaffoldBackgroundColor,
-                          margin: EdgeInsets.zero,
-                          shape: Border(
-                            bottom: BorderSide(
-                              width: 1.0,
-                              color: Theme.of(context).shadowColor,
+          body: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8.0),
+                child: SegmentedButton<SearchScope>(
+                  segments: const <ButtonSegment<SearchScope>>[
+                    ButtonSegment<SearchScope>(
+                        value: SearchScope.currentDocument,
+                        label: Text('В текущем')),
+                    ButtonSegment<SearchScope>(
+                        value: SearchScope.allDocuments,
+                        label: Text('Во всех')),
+                  ],
+                  selected: <SearchScope>{controller.searchScope},
+                  onSelectionChanged: (Set<SearchScope> newSelection) {
+                    controller.setSearchScope(newSelection.first);
+                  },
+                ),
+              ),
+              Expanded(
+                child: controller.isLoading
+                    ? const Center(child: CircularProgressIndicator())
+                    : controller.searchResults.isEmpty
+                        ? Container(
+                            color: Theme.of(context).scaffoldBackgroundColor,
+                            child: Center(
+                              child: Text(
+                                'По вашему запросу ничего не найдено.',
+                                style: Theme.of(context).textTheme.bodyLarge,
+                              ),
                             ),
-                          ),
-                          child: Padding(
-                            padding: EdgeInsets.fromLTRB(
-                              MediaQuery.of(context).size.width * 0.01,
-                              MediaQuery.of(context).size.width * 0.06,
-                              MediaQuery.of(context).size.width * 0.01,
-                              MediaQuery.of(context).size.width * 0.05,
-                            ),
-                            child: Column(
-                              children: [
-                                Row(
-                                  children: [
-                                    Expanded(
-                                      child: GestureDetector(
-                                        onTap: () {
-                                          // Navigate to chapter with search result
-                                          Navigator.push(
-                                            context,
-                                            MaterialPageRoute(
-                                              builder: (context) => ChapterView(
-                                                regulationId: AppConfig.instance
-                                                    .regulationId, // POTEU regulation ID
-                                                initialChapterOrderNum:
-                                                    result.chapterOrderNum,
-                                                scrollToParagraphId:
-                                                    result.paragraphId,
-                                                settingsRepository:
-                                                    widget.settingsRepository,
-                                                ttsRepository:
-                                                    widget.ttsRepository,
-                                                regulationRepository:
-                                                    widget.regulationRepository,
-                                              ),
-                                            ),
-                                          );
-                                        },
-                                        child: Row(
-                                          children: [
-                                            SizedBox(
-                                              width: MediaQuery.of(context)
-                                                      .size
-                                                      .width *
-                                                  0.05,
-                                            ),
-                                            Expanded(
-                                              child: RichText(
-                                                text: TextSpan(
-                                                  children: [
-                                                    TextSpan(
-                                                      text: result.text
-                                                          .substring(
-                                                              0,
-                                                              result
-                                                                  .matchStart),
-                                                      style: Theme.of(context)
-                                                          .textTheme
-                                                          .bodyMedium,
-                                                    ),
-                                                    TextSpan(
-                                                      text:
-                                                          result.text.substring(
-                                                        result.matchStart,
-                                                        result.matchEnd,
-                                                      ),
-                                                      style: Theme.of(context)
-                                                          .textTheme
-                                                          .bodyMedium
-                                                          ?.copyWith(
-                                                            backgroundColor:
-                                                                Colors.yellow,
-                                                            fontWeight:
-                                                                FontWeight.bold,
-                                                          ),
-                                                    ),
-                                                    TextSpan(
-                                                      text: result.text
-                                                          .substring(
-                                                              result.matchEnd),
-                                                      style: Theme.of(context)
-                                                          .textTheme
-                                                          .bodyMedium,
-                                                    ),
-                                                  ],
-                                                ),
-                                              ),
-                                            ),
-                                          ],
+                          )
+                        : ListView.builder(
+                            itemCount: controller.searchResults.length,
+                            itemBuilder: (context, index) {
+                              final result = controller.searchResults[index];
+                              return Card(
+                                elevation: 0,
+                                color: Theme.of(context).scaffoldBackgroundColor,
+                                margin: EdgeInsets.zero,
+                                shape: Border(
+                                  bottom: BorderSide(
+                                    width: 1.0,
+                                    color: Theme.of(context).shadowColor,
+                                  ),
+                                ),
+                                child: InkWell(
+                                  onTap: () {
+                                    // Navigate to chapter with search result
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) => ChapterView(
+                                          regulationId: result.regulationId,
+                                          initialChapterOrderNum:
+                                              result.chapterOrderNum,
+                                          scrollToParagraphId:
+                                              result.paragraphId,
+                                          settingsRepository:
+                                              widget.settingsRepository,
+                                          ttsRepository: widget.ttsRepository,
+                                          regulationRepository:
+                                              widget.regulationRepository,
                                         ),
                                       ),
+                                    );
+                                  },
+                                  child: Padding(
+                                    padding: EdgeInsets.fromLTRB(
+                                      MediaQuery.of(context).size.width * 0.05,
+                                      MediaQuery.of(context).size.width * 0.06,
+                                      MediaQuery.of(context).size.width * 0.05,
+                                      MediaQuery.of(context).size.width * 0.05,
                                     ),
-                                  ],
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        if (controller.searchScope ==
+                                                SearchScope.allDocuments &&
+                                            result.regulationTitle != null)
+                                          Padding(
+                                            padding: const EdgeInsets.only(
+                                                bottom: 8.0),
+                                            child: Text(
+                                              result.regulationTitle!,
+                                              style: Theme.of(context)
+                                                  .textTheme
+                                                  .bodySmall
+                                                  ?.copyWith(
+                                                      fontWeight:
+                                                          FontWeight.bold),
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ),
+                                        RichText(
+                                          text: _buildHighlightedText(
+                                              context, result),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
                                 ),
-                              ],
-                            ),
+                              );
+                            },
                           ),
-                        );
-                      },
-                    ),
+              ),
+            ],
+          ),
         );
       },
+    );
+  }
+
+  TextSpan _buildHighlightedText(BuildContext context, SearchResult result) {
+    final theme = Theme.of(context);
+    final defaultStyle = theme.textTheme.bodyMedium;
+    final highlightStyle = defaultStyle?.copyWith(
+      backgroundColor: Colors.yellow,
+      fontWeight: FontWeight.bold,
+    );
+
+    return TextSpan(
+      children: [
+        TextSpan(
+          text: result.text.substring(0, result.matchStart),
+          style: defaultStyle,
+        ),
+        TextSpan(
+          text: result.text.substring(
+            result.matchStart,
+            result.matchEnd,
+          ),
+          style: highlightStyle,
+        ),
+        TextSpan(
+          text: result.text.substring(result.matchEnd),
+          style: defaultStyle,
+        ),
+      ],
     );
   }
 }

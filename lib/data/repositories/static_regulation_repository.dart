@@ -359,6 +359,16 @@ class StaticRegulationRepository implements RegulationRepository {
       final results = <SearchResult>[];
       int searchResultId = 0;
 
+      // Get regulation name
+      final ruleNameRs =
+          await conn.query('SELECT name FROM rules WHERE id = $regulationId');
+      final ruleRows = ruleNameRs.fetchAll();
+      if (ruleRows.isEmpty) {
+        // Regulation not found, return empty list
+        return [];
+      }
+      final regulationName = ruleRows.first[0] as String;
+
       // Получаем все главы для данного regulation
       final chRs = await conn.query(
           'SELECT id, orderNum FROM chapters WHERE rule_id = $regulationId ORDER BY orderNum');
@@ -396,6 +406,8 @@ class StaticRegulationRepository implements RegulationRepository {
 
             results.add(SearchResult(
               id: searchResultId++,
+              regulationId: regulationId,
+              regulationTitle: regulationName,
               paragraphId: paragraphId,
               chapterOrderNum: chapterOrderNum,
               text: contextText,
@@ -409,6 +421,76 @@ class StaticRegulationRepository implements RegulationRepository {
         }
       }
 
+      return results;
+    });
+  }
+
+  @override
+  Future<List<SearchResult>> searchInAllRegulations(
+      {required String query}) async {
+    if (query.isEmpty) return [];
+
+    return await _dbProvider.executeTransaction((conn) async {
+      final results = <SearchResult>[];
+      int searchResultId = 0;
+
+      // Get all rules
+      final rulesRs = await conn.query('SELECT id, name FROM rules');
+      final allRules = rulesRs.fetchAll();
+
+      for (final rule in allRules) {
+        final regulationId = rule[0] as int;
+        final regulationName = rule[1] as String;
+
+        // Get all chapters for this regulation
+        final chRs = await conn.query(
+            'SELECT id, orderNum FROM chapters WHERE rule_id = $regulationId ORDER BY orderNum');
+        final chapters = chRs.fetchAll();
+
+        for (final ch in chapters) {
+          final chapterId = ch[0] as int;
+          final chapterOrderNum = ch[1] as int;
+
+          // Get paragraphs for the chapter
+          final pRs = await conn.query(
+              'SELECT id, content FROM paragraphs WHERE chapterID = $chapterId ORDER BY num');
+          final paragraphs = pRs.fetchAll();
+
+          for (final p in paragraphs) {
+            final paragraphId = p[0] as int;
+            final content = p[1] as String;
+
+            final text = TextUtils.parseHtmlString(content);
+            final lowerText = text.toLowerCase();
+            final lowerQuery = query.toLowerCase();
+
+            int startIndex = lowerText.indexOf(lowerQuery);
+            while (startIndex != -1) {
+              int contextStart = startIndex - 50;
+              if (contextStart < 0) contextStart = 0;
+
+              int contextEnd = startIndex + query.length + 50;
+              if (contextEnd > text.length) contextEnd = text.length;
+
+              final contextText = text.substring(contextStart, contextEnd);
+              final matchStartInContext = startIndex - contextStart;
+              final matchEndInContext = matchStartInContext + query.length;
+
+              results.add(SearchResult(
+                  id: searchResultId++,
+                  regulationId: regulationId,
+                  regulationTitle: regulationName,
+                  paragraphId: paragraphId,
+                  chapterOrderNum: chapterOrderNum,
+                  text: contextText,
+                  matchStart: matchStartInContext,
+                  matchEnd: matchEndInContext));
+
+              startIndex = lowerText.indexOf(lowerQuery, startIndex + 1);
+            }
+          }
+        }
+      }
       return results;
     });
   }

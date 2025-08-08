@@ -43,6 +43,9 @@ abstract class RegulationRepository {
     required String query,
   });
 
+  Future<List<SearchResult>> searchInAllRegulations(
+      {required String query});
+
   /// Saves edited paragraph content
   Future<void> saveEditedParagraph(
       int paragraphId, String editedContent, Paragraph originalParagraph);

@@ -323,6 +323,14 @@ class DataRegulationRepository implements RegulationRepository {
   }
 
   @override
+  Future<List<SearchResult>> searchInAllRegulations(
+      {required String query}) async {
+    if (query.isEmpty) return [];
+    throw UnimplementedError(
+        "Search in all regulations should be handled by Static repository");
+  }
+
+  @override
   Future<void> saveEditedParagraph(int paragraphId, String editedContent,
       Paragraph originalParagraph) async {
     await saveParagraphEditByOriginalId(

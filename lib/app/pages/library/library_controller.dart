@@ -59,13 +59,27 @@ class LibraryController extends Controller {
   @override
   void initListeners() {
     _presenter.onRegulationsLoaded = (List<Regulation> regulations) {
-      // Show all regulations, but ensure the main document is not treated as premium.
-      _regulations = regulations.map((r) {
+      // Process regulations: ensure the main document is not treated as premium.
+      var processedRegulations = regulations.map((r) {
         if (r.id == AppConfig.instance.regulationId) {
           return r.copyWith(isPremium: false);
         }
         return r;
       }).toList();
+
+      // Sort regulations: downloaded (saved) first, then alphabetically by title.
+      processedRegulations.sort((a, b) {
+        if (a.isDownloaded && !b.isDownloaded) {
+          return -1; // a (downloaded) comes before b (not downloaded)
+        } else if (!a.isDownloaded && b.isDownloaded) {
+          return 1; // b (downloaded) comes before a (not downloaded)
+        } else {
+          // If both have the same download status, sort alphabetically by title.
+          return a.title.compareTo(b.title);
+        }
+      });
+
+      _regulations = processedRegulations;
       _isLoading = false;
       _error = null;
       refreshUI();

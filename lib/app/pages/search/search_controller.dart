@@ -9,6 +9,8 @@ import '../../../domain/repositories/settings_repository.dart';
 import '../../../domain/repositories/tts_repository.dart';
 import 'dart:developer' as dev;
 
+enum SearchScope { currentDocument, allDocuments }
+
 class SearchPageController extends Controller {
   final RegulationRepository _regulationRepository;
   // final SettingsRepository _settingsRepository;
@@ -19,6 +21,7 @@ class SearchPageController extends Controller {
   Timer? _debounceTimer;
   bool _isLoading = false;
   List<SearchResult> _searchResults = [];
+  SearchScope _searchScope = SearchScope.currentDocument;
 
   // Callback for navigation
   Function(SearchResult)? onResultSelected;
@@ -35,6 +38,13 @@ class SearchPageController extends Controller {
   TextEditingController get searchController => _searchController;
   bool get isLoading => _isLoading;
   List<SearchResult> get searchResults => _searchResults;
+  SearchScope get searchScope => _searchScope;
+
+  void setSearchScope(SearchScope scope) {
+    _searchScope = scope;
+    search();
+    refreshUI();
+  }
 
   @override
   void initListeners() {}
@@ -53,10 +63,16 @@ class SearchPageController extends Controller {
       refreshUI();
 
       try {
-        _searchResults = await _regulationRepository.searchInRegulation(
-          regulationId: ActiveRegulationService().currentRegulationId,
-          query: _searchController.text,
-        );
+        if (_searchScope == SearchScope.currentDocument) {
+          _searchResults = await _regulationRepository.searchInRegulation(
+            regulationId: ActiveRegulationService().currentRegulationId,
+            query: _searchController.text,
+          );
+        } else {
+          _searchResults = await _regulationRepository.searchInAllRegulations(
+            query: _searchController.text,
+          );
+        }
       } catch (e) {
         dev.log('Search error: $e');
         _searchResults = [];
