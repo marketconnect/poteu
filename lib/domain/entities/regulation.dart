@@ -4,6 +4,8 @@ class Regulation {
   final int id;
   final String title;
   final String description;
+  final String sourceName;
+  final String sourceUrl;
   final DateTime lastUpdated;
   final bool isDownloaded;
   final bool isFavorite;
@@ -14,6 +16,8 @@ class Regulation {
     required this.id,
     required this.title,
     required this.description,
+    required this.sourceName,
+    required this.sourceUrl,
     required this.lastUpdated,
     required this.isDownloaded,
     required this.isFavorite,
@@ -25,6 +29,8 @@ class Regulation {
       'id': id,
       'title': title,
       'description': description,
+      'sourceName': sourceName,
+      'sourceUrl': sourceUrl,
       'lastUpdated': lastUpdated.toIso8601String(),
       'isDownloaded': isDownloaded,
       'isFavorite': isFavorite,
@@ -37,6 +43,8 @@ class Regulation {
       id: json['id'] as int,
       title: json['title'] as String,
       description: json['description'] as String,
+      sourceName: json['sourceName'] as String? ?? '',
+      sourceUrl: json['sourceUrl'] as String? ?? '',
       lastUpdated: DateTime.parse(json['lastUpdated'] as String),
       isDownloaded: json['isDownloaded'] as bool,
       isFavorite: json['isFavorite'] as bool,
@@ -48,6 +56,8 @@ class Regulation {
     int? id,
     String? title,
     String? description,
+    String? sourceName,
+    String? sourceUrl,
     DateTime? lastUpdated,
     bool? isDownloaded,
     bool? isFavorite,
@@ -58,6 +68,8 @@ class Regulation {
       id: id ?? this.id,
       title: title ?? this.title,
       description: description ?? this.description,
+      sourceName: sourceName ?? this.sourceName,
+      sourceUrl: sourceUrl ?? this.sourceUrl,
       lastUpdated: lastUpdated ?? this.lastUpdated,
       isDownloaded: isDownloaded ?? this.isDownloaded,
       isFavorite: isFavorite ?? this.isFavorite,
@@ -74,6 +86,8 @@ class Regulation {
         other.id == id &&
         other.title == title &&
         other.description == description &&
+        other.sourceName == sourceName &&
+        other.sourceUrl == sourceUrl &&
         other.lastUpdated == lastUpdated &&
         other.isDownloaded == isDownloaded &&
         other.isFavorite == isFavorite &&
@@ -85,6 +99,8 @@ class Regulation {
     return id.hashCode ^
         title.hashCode ^
         description.hashCode ^
+        sourceName.hashCode ^
+        sourceUrl.hashCode ^
         lastUpdated.hashCode ^
         isDownloaded.hashCode ^
         isFavorite.hashCode ^
@@ -93,6 +109,6 @@ class Regulation {
 
   @override
   String toString() {
-    return 'Regulation(id: $id, title: $title, description: $description, lastUpdated: $lastUpdated, isDownloaded: $isDownloaded, isFavorite: $isFavorite, isPremium: $isPremium, chapters: ${chapters.length})';
+    return 'Regulation(id: $id, title: $title, description: $description, sourceName: $sourceName, sourceUrl: $sourceUrl, lastUpdated: $lastUpdated, isDownloaded: $isDownloaded, isFavorite: $isFavorite, isPremium: $isPremium, chapters: ${chapters.length})';
   }
 }

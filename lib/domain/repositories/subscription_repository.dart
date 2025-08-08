@@ -1,4 +1,5 @@
 import '../entities/subscription.dart';
+import '../entities/subscription_plan.dart';
 
 abstract class SubscriptionRepository {
   Future<String> getUserId();
@@ -6,4 +7,5 @@ abstract class SubscriptionRepository {
   Future<Subscription> checkSubscriptionStatus();
   Future<void> saveSubscriptionStatus(Subscription subscription);
   Future<Subscription> getCachedSubscriptionStatus();
+  Future<List<SubscriptionPlan>> getSubscriptionPlans();
 }

@@ -51,14 +51,14 @@ class ActiveRegulationService extends ChangeNotifier {
     _currentRegulationId = newRegulation.id;
     _currentAppName = newRegulation.description; // Abbreviation is used as AppName
     _currentAbbreviation = newRegulation.description;
-
-    // For now, source information is not available in the cloud data.
-    // We will persist the new ID and names, but source info will remain from the initial flavor.
-    // This could be enhanced by adding more data to `rules.parquet`.
+    _currentSourceName = newRegulation.sourceName;
+    _currentSourceUrl = newRegulation.sourceUrl;
 
     await _prefs.setInt(_keyId, _currentRegulationId);
     await _prefs.setString(_keyName, _currentAppName);
     await _prefs.setString(_keyAbbr, _currentAbbreviation);
+    await _prefs.setString(_keySourceName, _currentSourceName);
+    await _prefs.setString(_keySourceUrl, _currentSourceUrl);
 
     notifyListeners();
   }

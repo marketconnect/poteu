@@ -6,13 +6,14 @@ class AppConfig {
   final String flavorName;
   final String source;
 
-  AppConfig(
-      {required this.databasePath,
-      required this.appName,
-      required this.sourceName,
-      required this.regulationId,
-      required this.flavorName,
-      required this.source});
+  AppConfig({
+    required this.databasePath,
+    required this.appName,
+    required this.sourceName,
+    required this.regulationId,
+    required this.flavorName,
+    required this.source,
+  });
 
   static AppConfig? _instance;
 
@@ -64,18 +65,20 @@ class AppConfig {
     }
 
     _instance = AppConfig(
-        databasePath: dbPath,
-        appName: name,
-        flavorName: flavor,
-        sourceName: sourceName,
-        regulationId: regulationId,
-        source: source);
+      databasePath: dbPath,
+      appName: name,
+      flavorName: flavor,
+      sourceName: sourceName,
+      regulationId: regulationId,
+      source: source,
+    );
   }
 
   static AppConfig get instance {
     if (_instance == null) {
       throw Exception(
-          "AppConfig не был инициализирован! Вызовите AppConfig.initialize() в main.");
+        "AppConfig не был инициализирован! Вызовите AppConfig.initialize() в main.",
+      );
     }
     return _instance!;
   }

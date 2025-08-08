@@ -53,69 +53,109 @@ class SubscriptionViewState
       ),
       body: ControlledWidgetBuilder<SubscriptionController>(
         builder: (context, controller) {
-          if (controller.isLoading) {
-            return const Center(
+          Widget body;
+          if (controller.isLoadingPlans) {
+            body = const Center(child: CircularProgressIndicator());
+          } else if (controller.error != null && controller.plans.isEmpty) {
+            body = Center(
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      'Ошибка загрузки тарифов: ${controller.error}',
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 16),
+                    ElevatedButton(
+                      onPressed: controller.fetchPlans,
+                      child: const Text('Попробовать снова'),
+                    )
+                  ],
+                ),
+              ),
+            );
+          } else {
+            body = Padding(
+              padding: const EdgeInsets.all(16.0),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  CircularProgressIndicator(),
-                  SizedBox(height: 16),
-                  Text('Создаем ссылку на оплату...'),
+                  const Icon(Icons.workspace_premium,
+                      size: 80, color: Colors.amber),
+                  const SizedBox(height: 24),
+                  Text(
+                    'Доступ к дополнительным документам',
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.headlineSmall,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Подписка открывает доступ ко всем документам в библиотеке.',
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
+                  const SizedBox(height: 48),
+                  ..._buildPlanWidgets(context, controller),
+                  if (controller.error != null && controller.plans.isNotEmpty) ...[
+                    const SizedBox(height: 24),
+                    Text(
+                      '${controller.error}',
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(color: Colors.red),
+                    ),
+                  ]
                 ],
               ),
             );
           }
 
-          return Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                const Icon(Icons.workspace_premium,
-                    size: 80, color: Colors.amber),
-                const SizedBox(height: 24),
-                Text(
-                  'Доступ к дополнительным документам',
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.headlineSmall,
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  'Подписка открывает доступ ко всем документам в библиотеке.',
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.bodyMedium,
-                ),
-                const SizedBox(height: 48),
-                _buildPlanButton(
-                  context,
-                  controller,
-                  title: '1 месяц',
-                  price: '100 ₽',
-                  planType: 'monthly',
-                ),
-                const SizedBox(height: 16),
-                _buildPlanButton(
-                  context,
-                  controller,
-                  title: '1 год',
-                  price: '600 ₽',
-                  planType: 'yearly',
-                ),
-                if (controller.error != null) ...[
-                  const SizedBox(height: 24),
-                  Text(
-                    'Ошибка: ${controller.error}',
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(color: Colors.red),
+          return Stack(
+            children: [
+              body,
+              if (controller.isLoading)
+                Container(
+                  color: Colors.black.withOpacity(0.5),
+                  child: const Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        CircularProgressIndicator(
+                            valueColor:
+                                AlwaysStoppedAnimation<Color>(Colors.white)),
+                        SizedBox(height: 16),
+                        Text('Создаем ссылку на оплату...',
+                            style: TextStyle(color: Colors.white)),
+                      ],
+                    ),
                   ),
-                ]
-              ],
-            ),
+                ),
+            ],
           );
         },
       ),
     );
+  }
+
+  List<Widget> _buildPlanWidgets(
+      BuildContext context, SubscriptionController controller) {
+    final widgets = <Widget>[];
+    for (var i = 0; i < controller.plans.length; i++) {
+      final plan = controller.plans[i];
+      widgets.add(_buildPlanButton(
+        context,
+        controller,
+        title: plan.title,
+        price: plan.price,
+        planType: plan.planType,
+      ));
+      if (i < controller.plans.length - 1) {
+        widgets.add(const SizedBox(height: 16));
+      }
+    }
+    return widgets;
   }
 
   Widget _buildPlanButton(

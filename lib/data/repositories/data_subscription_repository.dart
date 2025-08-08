@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:poteu/app/services/user_id_service.dart';
+import 'package:poteu/domain/entities/subscription_plan.dart';
 import 'package:poteu/domain/entities/subscription.dart';
 import 'package:poteu/domain/repositories/subscription_repository.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -94,5 +95,29 @@ class DataSubscriptionRepository implements SubscriptionRepository {
     }
     dev.log('No cached subscription found.');
     return Subscription.inactive();
+  }
+
+  @override
+  Future<List<SubscriptionPlan>> getSubscriptionPlans() async {
+    final uri = Uri.parse('$_baseUrl/api/v1/subscriptions/plans');
+    dev.log('Fetching subscription plans from $uri');
+
+    try {
+      final response = await _client.get(uri);
+
+      if (response.statusCode == 200) {
+        // Use utf8.decode to handle Cyrillic characters correctly
+        final List<dynamic> data = json.decode(utf8.decode(response.bodyBytes));
+        final plans = data.map((json) => SubscriptionPlan.fromJson(json)).toList();
+        dev.log('Successfully fetched ${plans.length} subscription plans.');
+        return plans;
+      } else {
+        dev.log('Failed to fetch subscription plans. Status: ${response.statusCode}, Body: ${response.body}');
+        throw Exception('Не удалось загрузить тарифы');
+      }
+    } catch (e) {
+      dev.log('Network error fetching subscription plans: $e');
+      throw Exception('Ошибка сети при загрузке тарифов');
+    }
   }
 }

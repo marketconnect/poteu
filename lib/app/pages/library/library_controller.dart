@@ -190,9 +190,11 @@ class LibraryController extends Controller {
     _error = null;
     _selectedRegulation = null;
     refreshUI();
-    // First check subscription, then get regulations
+    // Сначала проверяем статус подписки
     checkSubscriptionStatus();
-    _presenter.getAvailableRegulations();
+    // Затем пытаемся загрузить документы, используя логику кэширования.
+    // Это вызовет сетевой запрос только если кэш устарел.
+    loadRegulationsWithCache();
   }
 
   @override

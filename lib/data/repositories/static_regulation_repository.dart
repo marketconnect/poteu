@@ -71,6 +71,8 @@ class StaticRegulationRepository implements RegulationRepository {
           id: ruleId,
           title: title,
           description: description,
+          sourceName: '',
+          sourceUrl: '',
           lastUpdated: DateTime.now(),
           isDownloaded: true,
           isFavorite: false,
