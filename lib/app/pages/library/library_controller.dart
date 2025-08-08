@@ -59,9 +59,13 @@ class LibraryController extends Controller {
   @override
   void initListeners() {
     _presenter.onRegulationsLoaded = (List<Regulation> regulations) {
-      _regulations = regulations
-          .where((r) => r.id != AppConfig.instance.regulationId)
-          .toList(); // Loading is considered finished after both subscription check and regulations are loaded
+      // Show all regulations, but ensure the main document is not treated as premium.
+      _regulations = regulations.map((r) {
+        if (r.id == AppConfig.instance.regulationId) {
+          return r.copyWith(isPremium: false);
+        }
+        return r;
+      }).toList();
       _isLoading = false;
       _error = null;
       refreshUI();
