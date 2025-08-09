@@ -2,6 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_clean_architecture/flutter_clean_architecture.dart';
 import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
+import 'package:poteu/domain/repositories/subscription_repository.dart';
+import 'package:poteu/data/repositories/data_subscription_repository.dart';
+import 'package:poteu/domain/usecases/check_subscription_usecase.dart';
+import 'package:poteu/domain/usecases/download_regulation_data_usecase.dart';
+import 'package:poteu/data/repositories/cloud_regulation_repository.dart';
+
+import 'package:http/http.dart' as http;
+import 'package:poteu/app/services/user_id_service.dart';
 import 'chapter_view.dart';
 import '../../../domain/entities/paragraph.dart';
 import '../../../domain/entities/formatting.dart';
@@ -27,6 +35,9 @@ class ChapterController extends Controller {
   final DataRegulationRepository _dataRepository =
       DataRegulationRepository(); // No longer needs DatabaseHelper
   final TTSUseCase _ttsUseCase;
+  late final SubscriptionRepository _subscriptionRepository;
+  late final CheckSubscriptionUseCase _checkSubscriptionUseCase;
+  late final DownloadRegulationDataUseCase _downloadRegulationDataUseCase;
   late SearchPresenter _searchPresenter;
 
   // PageView управление как в оригинале
@@ -184,6 +195,12 @@ class ChapterController extends Controller {
         _ttsUseCase = TTSUseCase(ttsRepository),
         _settingsRepository = settingsRepository,
         _ttsRepository = ttsRepository {
+    _subscriptionRepository =
+        DataSubscriptionRepository(http.Client(), UserIdService());
+    _checkSubscriptionUseCase =
+        CheckSubscriptionUseCase(_subscriptionRepository);
+    _downloadRegulationDataUseCase =
+        DownloadRegulationDataUseCase(DataCloudRegulationRepository());
     pageController = PageController(initialPage: initialChapterOrderNum - 1);
     pageTextController = TextEditingController(
       text: initialChapterOrderNum.toString(),
@@ -572,7 +589,7 @@ class ChapterController extends Controller {
       // Also check HTML anchor IDs in content
       if (!found && paragraph.content.isNotEmpty) {
         // Look for anchor tags with matching ID
-        final anchorRegex = RegExp('<a\\s+id=["\']([0-9]+)["\']');
+        final anchorRegex = RegExp('<a\s+id=["\']([0-9]+)["\']');
         final matches = anchorRegex.allMatches(paragraph.content);
 
         for (final match in matches) {
@@ -823,7 +840,7 @@ class ChapterController extends Controller {
       final p = paragraphs[i];
 
       // Look for anchor IDs
-      final anchorRegex = RegExp('<a\\s+id=["\']([0-9]+)["\']');
+      final anchorRegex = RegExp('<a\s+id=["\']([0-9]+)["\']');
       final matches = anchorRegex.allMatches(p.content);
       final anchorIds = matches.map((m) => m.group(1)).toList();
       if (anchorIds.isNotEmpty) {}
@@ -1282,7 +1299,7 @@ class ChapterController extends Controller {
       }
 
       dev.log(
-          '📊 Final extracted table text: "${text.substring(0, text.length > 100 ? 100 : text.length)}..."');
+          '📊 Final extracted table text: "${text.substring(0, text.length > 100 ? 100 : text.length)}"');
       return text;
     } catch (e, stackTrace) {
       await Sentry.captureException(e, stackTrace: stackTrace);
@@ -1538,6 +1555,8 @@ class ChapterController extends Controller {
     _ttsStateSubscription?.cancel();
     _stopRequested = false;
     _isPlayingChapter = false;
+    _checkSubscriptionUseCase.dispose();
+    _downloadRegulationDataUseCase.dispose();
 
     _searchPresenter.dispose();
 
@@ -1626,6 +1645,45 @@ class ChapterController extends Controller {
     }
   }
 
+  Future<void> _handleDownloadAction(
+      int documentId, int chapterNum, int paragraphNum) async {
+    _isLoading = true;
+    refreshUI();
+
+    try {
+      final subscriptionStream =
+          await _checkSubscriptionUseCase.buildUseCaseStream(null);
+      final subscription = await subscriptionStream.first;
+      if (subscription.isActive) {
+        final downloadStream =
+            await _downloadRegulationDataUseCase.buildUseCaseStream(documentId);
+        await downloadStream.drain();
+        _isLoading = false;
+        refreshUI();
+        Navigator.of(getContext()).push(
+          MaterialPageRoute(
+            builder: (context) => ChapterView(
+              regulationId: documentId,
+              initialChapterOrderNum: chapterNum,
+              scrollToParagraphId: paragraphNum,
+              settingsRepository: _settingsRepository,
+              ttsRepository: _ttsRepository,
+              regulationRepository: _repository,
+            ),
+          ),
+        );
+      } else {
+        _isLoading = false;
+        refreshUI();
+        Navigator.of(getContext()).pushNamed('/subscription');
+      }
+    } catch (e) {
+      _isLoading = false;
+      _error = 'Ошибка: ${e.toString()}';
+      refreshUI();
+    }
+  }
+
   Future<void> navigateToDifferentDocument(
       int documentId, int chapterNum, int paragraphNum) async {
     bool isCached = await _repository.isRegulationCached(documentId);
@@ -1644,10 +1702,30 @@ class ChapterController extends Controller {
         ),
       );
     } else {
-      ScaffoldMessenger.of(getContext()).showSnackBar(
-        const SnackBar(
-            content:
-                Text('Документ не загружен. Загрузите его из Библиотеки.')),
+      showDialog(
+        context: getContext(),
+        builder: (BuildContext context) {
+          return AlertDialog(
+            backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+            content: const Text(
+                'Документ не загружен. Загрузите его из Библиотеки.'),
+            actions: <Widget>[
+              TextButton(
+                child: const Text('Отмена'),
+                onPressed: () {
+                  Navigator.of(context).pop();
+                },
+              ),
+              TextButton(
+                child: const Text('Загрузить'),
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  _handleDownloadAction(documentId, chapterNum, paragraphNum);
+                },
+              ),
+            ],
+          );
+        },
       );
     }
   }

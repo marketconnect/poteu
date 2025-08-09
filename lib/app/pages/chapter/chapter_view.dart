@@ -66,6 +66,7 @@ class ChapterViewState extends ViewState<ChapterView, ChapterController> {
         return Theme(
           data: Theme.of(context),
           child: Scaffold(
+            key: globalKey,
             backgroundColor: Theme.of(context).scaffoldBackgroundColor,
             appBar: PreferredSize(
               preferredSize: Size.fromHeight(

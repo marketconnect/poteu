@@ -112,6 +112,18 @@ class LibraryController extends Controller {
       dev.log(
           'Download complete for regulation ${_selectedRegulation!.id}. Proceeding.');
       _isDownloading = false;
+      // Update the regulation in the list to mark it as downloaded
+      if (_selectedRegulation != null) {
+        final index =
+            _regulations.indexWhere((r) => r.id == _selectedRegulation!.id);
+        if (index != -1) {
+          _regulations[index] =
+              _regulations[index].copyWith(isDownloaded: true);
+          // Re-cache the updated list of regulations to persist the downloaded state
+          _cacheRegulations(_regulations);
+        }
+        _selectedRegulation = _selectedRegulation!.copyWith(isDownloaded: true);
+      }
       _proceedToSetActiveRegulation();
     };
 
