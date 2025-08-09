@@ -19,8 +19,8 @@ class LibraryController extends Controller {
   // Usecases
   late final CheckSubscriptionUseCase _checkSubscriptionUseCase;
   late final HandleExpiredSubscriptionUseCase _handleExpiredSubscriptionUseCase;
-  static const String _lastFetchDateKey = 'library_last_fetch_date';
-  static const String _regulationsCacheKey = 'library_regulations_cache';
+  static const String lastFetchDateKey = 'library_last_fetch_date';
+  static const String regulationsCacheKey = 'library_regulations_cache';
 
   List<Regulation> _regulations = [];
   bool _isLoading = true;
@@ -143,8 +143,8 @@ class LibraryController extends Controller {
       final today = DateTime.now().toIso8601String().substring(0, 10);
       final regulationsJsonList = regulations.map((r) => r.toJson()).toList();
       final regulationsJsonString = json.encode(regulationsJsonList);
-      await prefs.setString(_lastFetchDateKey, today);
-      await prefs.setString(_regulationsCacheKey, regulationsJsonString);
+      await prefs.setString(lastFetchDateKey, today);
+      await prefs.setString(regulationsCacheKey, regulationsJsonString);
       dev.log('Regulations cached for date: $today');
     } catch (e) {
       dev.log('Failed to cache regulations: $e');
@@ -154,11 +154,11 @@ class LibraryController extends Controller {
   void loadRegulationsWithCache() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final lastFetchDate = prefs.getString(_lastFetchDateKey);
+      final lastFetchDate = prefs.getString(lastFetchDateKey);
       final today = DateTime.now().toIso8601String().substring(0, 10);
       if (lastFetchDate == today) {
         dev.log('Loading regulations from cache for date: $today');
-        final cachedJson = prefs.getString(_regulationsCacheKey);
+        final cachedJson = prefs.getString(regulationsCacheKey);
         if (cachedJson != null) {
           final List<dynamic> decodedList = json.decode(cachedJson);
           final cachedRegulations = decodedList

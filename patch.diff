@@ -1,0 +1,46 @@
+--- a/lib/app/pages/chapter/chapter_view.dart
++++ b/lib/app/pages/chapter/chapter_view.dart
+@@ -63,6 +63,33 @@
+ class ChapterViewState extends ViewState<ChapterView, ChapterController> {
+   ChapterViewState(ChapterController controller) : super(controller);
+ 
++  String _removeInvalidLinks(String html) {
++    // This regex finds <a> tags with an href attribute, capturing the href value
++    // and the tag's inner content.
++    final regex = RegExp(
++      r'<a\s+[^>]*?href=(["\'])(.*?)\1[^>]*?>(.*?)<\/a>',
++      caseSensitive: false,
++      multiLine: true,
++      dotAll: true, // Allows matching across newlines within the tag content.
++    );
++
++    return html.replaceAllMapped(regex, (match) {
++      final href = match.group(2) ?? '';
++      final content = match.group(3) ?? '';
++
++      // Per the task, a valid link for navigation can only contain digits and '/'.
++      // This check filters out links with text like 'cons_doc_LAW_' or hex hashes.
++      final isValid = RegExp(r'^[0-9/]*$').hasMatch(href);
++
++      if (isValid && href.isNotEmpty) {
++        // It's a valid link, so we keep the original <a> tag.
++        return match.group(0)!;
++      } else {
++        // It's an invalid link, so we strip the <a> tag and keep only the content.
++        return content;
++      }
++    });
++  }
++
+   @override
+   Widget get view {
+     return ControlledWidgetBuilder<ChapterController>(
+@@ -520,7 +547,7 @@
+     } else {
+       // Use HtmlWidget for normal display
+       return HtmlWidget(
+-        paragraph.content,
++        _removeInvalidLinks(paragraph.content),
+         textStyle: Theme.of(context).textTheme.bodyMedium,
+         customStylesBuilder: textAlign != null
+             ? (element) => {

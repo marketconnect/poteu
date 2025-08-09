@@ -16,6 +16,9 @@ import '../../widgets/regulation_app_bar.dart';
 import '../../utils/text_utils.dart';
 import 'chapter_controller.dart';
 
+import 'package:html/parser.dart' as html_parser;
+import 'package:html/dom.dart' as dom;
+
 class ChapterView extends View {
   final int regulationId;
   final int initialChapterOrderNum;
@@ -50,6 +53,37 @@ class ChapterView extends View {
 
 class ChapterViewState extends ViewState<ChapterView, ChapterController> {
   ChapterViewState(ChapterController controller) : super(controller);
+
+  String _removeInvalidLinks(String html) {
+    if (html.isEmpty) return '';
+
+    final document = html_parser.parseFragment(html);
+    final isValidHref = RegExp(r'^\d+(?:/\d+)*$'); // только цифры и '/'
+
+    for (final a in document.querySelectorAll('a').toList()) {
+      final href = a.attributes['href'];
+      final isValid = href != null && isValidHref.hasMatch(href);
+
+      if (!isValid) {
+        // Заменяем <a> на <span>, переносим детей и базовые стили, чтобы текст остался
+        final replacement = dom.Element.tag('span');
+
+        final classAttr = a.attributes['class'];
+        if (classAttr != null && classAttr.isNotEmpty) {
+          replacement.attributes['class'] = classAttr;
+        }
+        final styleAttr = a.attributes['style'];
+        if (styleAttr != null && styleAttr.isNotEmpty) {
+          replacement.attributes['style'] = styleAttr;
+        }
+
+        replacement.nodes.addAll(a.nodes.toList());
+        a.replaceWith(replacement);
+      }
+    }
+
+    return document.outerHtml;
+  }
 
   @override
   Widget get view {
@@ -441,19 +475,20 @@ class ChapterViewState extends ViewState<ChapterView, ChapterController> {
 
       if (isCurrentTTSParagraph) {
         cardColor = Colors.green
-            .withValues(alpha: 0.2); // Приятный зелёный цвет для TTS
+            .withAlpha((255 * 0.2).round()); // Приятный зелёный цвет для TTS
         decoration = BoxDecoration(
           border: Border.all(color: Colors.green, width: 3), // Зелёная рамка
           borderRadius: BorderRadius.circular(4),
         );
       } else if (isSelected) {
-        cardColor = Theme.of(context).primaryColor.withValues(alpha: 0.1);
+        cardColor =
+            Theme.of(context).primaryColor.withAlpha((255 * 0.1).round());
         decoration = BoxDecoration(
           border: Border.all(color: Theme.of(context).primaryColor, width: 2),
           borderRadius: BorderRadius.circular(4),
         );
       } else if (hasFormatting) {
-        cardColor = Colors.yellow.withValues(alpha: 0.1);
+        cardColor = Colors.yellow.withAlpha((255 * 0.1).round());
         decoration = BoxDecoration(borderRadius: BorderRadius.circular(4));
       } else {
         cardColor = Theme.of(context).scaffoldBackgroundColor;
@@ -568,7 +603,8 @@ class ChapterViewState extends ViewState<ChapterView, ChapterController> {
   Widget _buildRegularContent(Paragraph paragraph, TextAlign? textAlign,
       ChapterController controller, bool isSelectable) {
     if (isSelectable) {
-      // Use SelectableText with plain text for selection mode
+      // Use SelectableText with plain text for selection mode.
+
       String plainText = TextUtils.parseHtmlString(paragraph.content);
 
       return SelectableText(
@@ -607,7 +643,7 @@ class ChapterViewState extends ViewState<ChapterView, ChapterController> {
     } else {
       // Use HtmlWidget for normal display
       return HtmlWidget(
-        paragraph.content,
+        _removeInvalidLinks(paragraph.content),
         textStyle: Theme.of(context).textTheme.bodyMedium,
         customStylesBuilder: textAlign != null
             ? (element) => {
@@ -732,7 +768,7 @@ class ChapterViewState extends ViewState<ChapterView, ChapterController> {
       child: Container(
         decoration: BoxDecoration(
           borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
-          color: Colors.black.withValues(alpha: 0.8),
+          color: Colors.black.withAlpha((255 * 0.8).round()),
         ),
         width: MediaQuery.of(context).size.width,
         height: height,
@@ -849,8 +885,8 @@ class ChapterViewState extends ViewState<ChapterView, ChapterController> {
         height: size,
         width: size,
         decoration: BoxDecoration(
-          border:
-              Border.all(color: Colors.white.withValues(alpha: 0.3), width: 1),
+          border: Border.all(
+              color: Colors.white.withAlpha((255 * 0.3).round()), width: 1),
           borderRadius: BorderRadius.circular(8),
         ),
         child: Center(
@@ -868,7 +904,7 @@ class ChapterViewState extends ViewState<ChapterView, ChapterController> {
     return Container(
       height: height,
       width: 1,
-      color: Colors.white.withValues(alpha: 0.3),
+      color: Colors.white.withAlpha((255 * 0.3).round()),
     );
   }
 
@@ -1099,7 +1135,7 @@ class ChapterViewState extends ViewState<ChapterView, ChapterController> {
               final color = predefinedColors[index];
               return GestureDetector(
                 onTap: () {
-                  controller.setActiveColor(color.toARGB32());
+                  controller.setActiveColor(color.value);
                   Navigator.pop(context);
                 },
                 child: Container(
@@ -1199,20 +1235,20 @@ class ChapterViewState extends ViewState<ChapterView, ChapterController> {
     BoxDecoration? decoration;
 
     if (isCurrentTTSParagraph) {
-      cardColor =
-          Colors.green.withValues(alpha: 0.2); // Приятный зелёный цвет для TTS
+      cardColor = Colors.green
+          .withAlpha((255 * 0.2).round()); // Приятный зелёный цвет для TTS
       decoration = BoxDecoration(
         border: Border.all(color: Colors.green, width: 3), // Зелёная рамка
         borderRadius: BorderRadius.circular(4),
       );
     } else if (isSelected) {
-      cardColor = Theme.of(context).primaryColor.withValues(alpha: 0.1);
+      cardColor = Theme.of(context).primaryColor.withAlpha((255 * 0.1).round());
       decoration = BoxDecoration(
         border: Border.all(color: Theme.of(context).primaryColor, width: 2),
         borderRadius: BorderRadius.circular(4),
       );
     } else if (hasFormatting) {
-      cardColor = Colors.yellow.withValues(alpha: 0.1);
+      cardColor = Colors.yellow.withAlpha((255 * 0.1).round());
       decoration = BoxDecoration(borderRadius: BorderRadius.circular(4));
     } else {
       cardColor = Theme.of(context).scaffoldBackgroundColor;

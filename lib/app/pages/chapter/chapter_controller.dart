@@ -7,7 +7,9 @@ import 'package:poteu/data/repositories/data_subscription_repository.dart';
 import 'package:poteu/domain/usecases/check_subscription_usecase.dart';
 import 'package:poteu/domain/usecases/download_regulation_data_usecase.dart';
 import 'package:poteu/data/repositories/cloud_regulation_repository.dart';
-
+import 'package:poteu/domain/entities/subscription.dart';
+import 'package:poteu/app/pages/library/library_controller.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 import 'package:poteu/app/services/user_id_service.dart';
 import 'chapter_view.dart';
@@ -1658,6 +1660,13 @@ class ChapterController extends Controller {
         final downloadStream =
             await _downloadRegulationDataUseCase.buildUseCaseStream(documentId);
         await downloadStream.drain();
+
+        // Invalidate library cache so it re-fetches the download status
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.remove(LibraryController.lastFetchDateKey);
+        await prefs.remove(LibraryController.regulationsCacheKey);
+        dev.log('Library cache invalidated after download from ChapterView.');
+
         _isLoading = false;
         refreshUI();
         Navigator.of(getContext()).push(
