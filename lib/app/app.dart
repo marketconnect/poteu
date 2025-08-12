@@ -6,12 +6,14 @@ import '../domain/repositories/notes_repository.dart';
 import '../app/theme/theme.dart';
 import 'pages/main/main_view.dart';
 import '../data/repositories/static_regulation_repository.dart';
+import '../domain/repositories/subscription_repository.dart';
 
 class App extends StatelessWidget {
   final RegulationRepository regulationRepository;
   final SettingsRepository settingsRepository;
   final TTSRepository ttsRepository;
   final NotesRepository notesRepository;
+  final SubscriptionRepository subscriptionRepository;
 
   const App({
     Key? key,
@@ -19,6 +21,7 @@ class App extends StatelessWidget {
     required this.settingsRepository,
     required this.ttsRepository,
     required this.notesRepository,
+    required this.subscriptionRepository,
   }) : super(key: key);
 
   @override
@@ -33,6 +36,7 @@ class App extends StatelessWidget {
         settingsRepository: settingsRepository,
         ttsRepository: ttsRepository,
         notesRepository: notesRepository,
+        subscriptionRepository: subscriptionRepository,
       ),
       debugShowCheckedModeBanner: false,
     );

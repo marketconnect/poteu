@@ -1,4 +1,10 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_clean_architecture/flutter_clean_architecture.dart';
+import 'package:poteu/app/pages/chapter/model/chapter_arguments.dart';
+import 'package:poteu/config.dart';
+import 'package:poteu/domain/entities/subscription.dart';
+import 'package:poteu/domain/repositories/subscription_repository.dart';
+import 'package:poteu/domain/usecases/check_subscription_usecase.dart';
 import '../../../domain/entities/note.dart';
 import '../../../domain/usecases/get_notes_usecase.dart';
 import '../../../domain/usecases/delete_note_usecase.dart';
@@ -7,9 +13,11 @@ import 'dart:developer' as dev;
 
 class NotesController extends Controller {
   final NotesRepository _notesRepository;
+  final SubscriptionRepository _subscriptionRepository;
 
   late GetNotesUseCase _getNotesUseCase;
   late DeleteNoteUseCase _deleteNoteUseCase;
+  late CheckSubscriptionUseCase _checkSubscriptionUseCase;
 
   List<Note> _notes = [];
   bool _isLoading = false;
@@ -23,11 +31,13 @@ class NotesController extends Controller {
   bool get sortByColor => _sortByColor;
   bool get hasNotes => _notes.isNotEmpty;
 
-  NotesController(this._notesRepository) {
+  NotesController(this._notesRepository, this._subscriptionRepository) {
     dev.log('=== NOTES CONTROLLER INITIALIZATION ===');
     dev.log('Creating use cases...');
     _getNotesUseCase = GetNotesUseCase(_notesRepository);
     _deleteNoteUseCase = DeleteNoteUseCase(_notesRepository);
+    _checkSubscriptionUseCase =
+        CheckSubscriptionUseCase(_subscriptionRepository);
     dev.log('Use cases created successfully');
     dev.log('Starting initial notes load...');
     refreshNotes();
@@ -103,6 +113,50 @@ class NotesController extends Controller {
     await _loadNotes();
   }
 
+  Future<void> handleNoteTap(Note note) async {
+    // If the note is for the main document, navigate directly.
+    if (note.regulationId == AppConfig.instance.regulationId) {
+      _navigateToChapter(note);
+      return;
+    }
+
+    // For other documents, check subscription.
+    _isLoading = true;
+    refreshUI();
+
+    try {
+      _checkSubscriptionUseCase.execute(
+        _CheckSubscriptionObserver(this, note),
+        null,
+      );
+    } catch (e) {
+      _error = 'Ошибка проверки подписки: ${e.toString()}';
+    } finally {
+      _isLoading = false;
+      refreshUI();
+    }
+  }
+
+  void _navigateToChapter(Note note) {
+    dev.log('=== NAVIGATING TO CHAPTER ===');
+    dev.log('Note chapterOrderNum: ${note.chapterOrderNum}');
+    dev.log('Note originalParagraphId: ${note.originalParagraphId}');
+
+    // Navigate to chapter with specific paragraph using ChapterArguments
+    Navigator.pushNamed(
+      getContext(),
+      '/chapter',
+      arguments: ChapterArguments(
+        regulationId: note.regulationId,
+        totalChapters: 6, // Would need to be dynamic in a real app
+        chapterOrderNum:
+            note.chapterOrderNum, // Use the correct chapter order number
+        scrollTo:
+            note.originalParagraphId, // Use originalParagraphId for scrolling
+      ),
+    );
+  }
+
   void _onNotesLoaded(List<Note> notes) {
     dev.log('=== NOTES LOADED ===');
     dev.log('Loaded ${notes.length} notes');
@@ -142,7 +196,32 @@ class NotesController extends Controller {
   void onDisposed() {
     _getNotesUseCase.dispose();
     _deleteNoteUseCase.dispose();
+    _checkSubscriptionUseCase.dispose();
     super.onDisposed();
+  }
+}
+
+class _CheckSubscriptionObserver extends Observer<Subscription> {
+  final NotesController _controller;
+  final Note _note;
+  _CheckSubscriptionObserver(this._controller, this._note);
+
+  @override
+  void onComplete() {}
+
+  @override
+  void onError(e) {
+    _controller._error = 'Ошибка проверки подписки: ${e.toString()}';
+    _controller.refreshUI();
+  }
+
+  @override
+  void onNext(Subscription? response) {
+    if (response != null && response.isActive) {
+      _controller._navigateToChapter(_note);
+    } else {
+      Navigator.pushNamed(_controller.getContext(), '/subscription');
+    }
   }
 }
 

@@ -6,7 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite/sqflite.dart' as old_db;
 import 'package:poteu/data/repositories/data_regulation_repository.dart';
 import 'package:poteu/data/repositories/static_regulation_repository.dart';
-import 'package:poteu/data/helpers/duckdb_provider.dart';
+
 import 'package:poteu/domain/entities/paragraph.dart';
 
 // Подключаем файл с функцией обфускации

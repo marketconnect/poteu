@@ -509,4 +509,10 @@ class StaticRegulationRepository implements RegulationRepository {
     // Static repository is read-only, so this is a no-op.
     return;
   }
+
+  @override
+  Future<void> saveRegulations(List<Regulation> regulations) {
+    // Static repository is read-only
+    throw UnimplementedError('StaticRegulationRepository is read-only.');
+  }
 }

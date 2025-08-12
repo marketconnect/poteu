@@ -4,23 +4,25 @@ import 'package:flutter_clean_architecture/flutter_clean_architecture.dart';
 
 import '../../../domain/entities/note.dart';
 import '../../../domain/repositories/notes_repository.dart';
+import '../../../domain/repositories/subscription_repository.dart';
 import '../../widgets/regulation_app_bar.dart';
 import 'notes_controller.dart';
-import '../chapter/model/chapter_arguments.dart';
 import '../../utils/text_utils.dart';
 
 class NotesView extends View {
   final NotesRepository notesRepository;
+  final SubscriptionRepository subscriptionRepository;
 
   const NotesView({
     Key? key,
     required this.notesRepository,
+    required this.subscriptionRepository,
   }) : super(key: key);
 
   @override
   NotesViewState createState() =>
       // ignore: no_logic_in_create_state
-      NotesViewState(NotesController(notesRepository));
+      NotesViewState(NotesController(notesRepository, subscriptionRepository));
 }
 
 class NotesViewState extends ViewState<NotesView, NotesController> {
@@ -31,6 +33,7 @@ class NotesViewState extends ViewState<NotesView, NotesController> {
     return ControlledWidgetBuilder<NotesController>(
       builder: (context, controller) {
         return Scaffold(
+          key: globalKey,
           appBar: PreferredSize(
             preferredSize: Size.fromHeight(
               Theme.of(context).appBarTheme.toolbarHeight ?? 74.0,
@@ -105,7 +108,7 @@ class NotesViewState extends ViewState<NotesView, NotesController> {
     final width = MediaQuery.of(context).size.width;
 
     return GestureDetector(
-      onTap: () => _navigateToChapter(note),
+      onTap: () => controller.handleNoteTap(note),
       child: Card(
         elevation: 0,
         color: Theme.of(context).scaffoldBackgroundColor,
@@ -381,26 +384,6 @@ class NotesViewState extends ViewState<NotesView, NotesController> {
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  void _navigateToChapter(Note note) {
-    dev.log('=== NAVIGATING TO CHAPTER ===');
-    dev.log('Note chapterOrderNum: ${note.chapterOrderNum}');
-    dev.log('Note originalParagraphId: ${note.originalParagraphId}');
-
-    // Navigate to chapter with specific paragraph using ChapterArguments
-    Navigator.pushNamed(
-      context,
-      '/chapter',
-      arguments: ChapterArguments(
-        regulationId: note.regulationId,
-        totalChapters: 6, // Would need to be dynamic in a real app
-        chapterOrderNum:
-            note.chapterOrderNum, // Use the correct chapter order number
-        scrollTo:
-            note.originalParagraphId, // Use originalParagraphId for scrolling
       ),
     );
   }

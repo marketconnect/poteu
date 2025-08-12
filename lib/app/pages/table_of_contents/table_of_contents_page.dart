@@ -5,6 +5,7 @@ import 'package:poteu/app/services/active_regulation_service.dart';
 import '../../../domain/repositories/regulation_repository.dart';
 import '../../../domain/repositories/settings_repository.dart';
 import '../../../domain/repositories/tts_repository.dart';
+import '../../../domain/repositories/subscription_repository.dart';
 import '../../../domain/repositories/notes_repository.dart';
 import '../../widgets/regulation_app_bar.dart';
 import '../../widgets/table_of_contents_app_bar.dart';
@@ -18,6 +19,7 @@ class TableOfContentsView extends fca.View {
   final TTSRepository ttsRepository;
   final NotesRepository notesRepository;
   final int regulationId;
+  final SubscriptionRepository subscriptionRepository;
 
   const TableOfContentsView({
     Key? key,
@@ -26,6 +28,7 @@ class TableOfContentsView extends fca.View {
     required this.ttsRepository,
     required this.notesRepository,
     required this.regulationId,
+    required this.subscriptionRepository,
   }) : super(key: key);
 
   @override
@@ -70,6 +73,7 @@ class _TableOfContentsPageState
           notesRepository: widget.notesRepository,
           settingsRepository: widget.settingsRepository,
           ttsRepository: widget.ttsRepository,
+          subscriptionRepository: widget.subscriptionRepository,
         ),
         body: fca.ControlledWidgetBuilder<TableOfContentsController>(
           builder: (context, controller) {

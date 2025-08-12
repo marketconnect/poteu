@@ -1,5 +1,6 @@
 import 'package:flutter_clean_architecture/flutter_clean_architecture.dart';
 import "package:poteu/config.dart";
+import 'package:poteu/domain/repositories/subscription_repository.dart';
 import "../../../domain/entities/regulation.dart";
 import "../../../domain/repositories/regulation_repository.dart";
 import "../../../domain/repositories/settings_repository.dart";
@@ -14,6 +15,7 @@ class MainController extends Controller {
   final SettingsRepository _settingsRepository;
   final TTSRepository _ttsRepository;
   final NotesRepository _notesRepository;
+  final SubscriptionRepository _subscriptionRepository;
 
   List<Regulation>? _regulations;
   bool _isLoading = true;
@@ -28,16 +30,19 @@ class MainController extends Controller {
     required SettingsRepository settingsRepository,
     required TTSRepository ttsRepository,
     required NotesRepository notesRepository,
+    required SubscriptionRepository subscriptionRepository,
   })  : _presenter = MainPresenter(
           regulationRepository: regulationRepository,
           settingsRepository: settingsRepository,
           ttsRepository: ttsRepository,
           notesRepository: notesRepository,
+          subscriptionRepository: subscriptionRepository,
         ),
         _regulationRepository = regulationRepository,
         _settingsRepository = settingsRepository,
         _ttsRepository = ttsRepository,
-        _notesRepository = notesRepository {
+        _notesRepository = notesRepository,
+        _subscriptionRepository = subscriptionRepository {
     _initializePresenter();
     _loadRegulations();
   }
@@ -92,6 +97,7 @@ class MainController extends Controller {
       settingsRepository: _settingsRepository,
       ttsRepository: _ttsRepository,
       notesRepository: _notesRepository,
+      subscriptionRepository: _subscriptionRepository,
     );
   }
 
@@ -99,6 +105,7 @@ class MainController extends Controller {
     AppNavigator.navigateToNotes(
       getContext(),
       notesRepository: _notesRepository,
+      subscriptionRepository: _subscriptionRepository,
     );
   }
 

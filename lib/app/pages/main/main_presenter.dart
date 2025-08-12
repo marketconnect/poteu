@@ -1,5 +1,6 @@
 import 'package:flutter_clean_architecture/flutter_clean_architecture.dart';
 import '../../../domain/repositories/regulation_repository.dart';
+import '../../../domain/repositories/subscription_repository.dart';
 import '../../../domain/repositories/settings_repository.dart';
 import '../../../domain/repositories/tts_repository.dart';
 import '../../../domain/repositories/notes_repository.dart';
@@ -11,6 +12,7 @@ class MainPresenter extends Presenter {
   // final SettingsRepository _settingsRepository;
   // final TTSRepository _ttsRepository;
   // final NotesRepository _notesRepository;
+  // final SubscriptionRepository _subscriptionRepository;
 
   Function(List<Regulation>)? onRegulationsLoaded;
   Function(dynamic)? onError;
@@ -20,6 +22,7 @@ class MainPresenter extends Presenter {
     required SettingsRepository settingsRepository,
     required TTSRepository ttsRepository,
     required NotesRepository notesRepository,
+    required SubscriptionRepository subscriptionRepository,
   }) : _regulationRepository = regulationRepository;
   // _settingsRepository = settingsRepository,
   // _ttsRepository = ttsRepository,

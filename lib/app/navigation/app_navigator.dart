@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../router/app_router.dart';
 import '../../domain/repositories/regulation_repository.dart';
 import '../../domain/repositories/settings_repository.dart';
+import '../../domain/repositories/subscription_repository.dart';
 import '../../domain/repositories/tts_repository.dart';
 import '../../domain/repositories/notes_repository.dart';
 import '../pages/chapter/chapter_view.dart';
@@ -57,6 +58,7 @@ class AppNavigator {
     required SettingsRepository settingsRepository,
     required TTSRepository ttsRepository,
     required NotesRepository notesRepository,
+    required SubscriptionRepository subscriptionRepository,
   }) {
     Navigator.push(
       context,
@@ -67,6 +69,7 @@ class AppNavigator {
           ttsRepository: ttsRepository,
           notesRepository: notesRepository,
           regulationId: regulationId,
+          subscriptionRepository: subscriptionRepository,
         ),
       ),
     );
@@ -75,12 +78,14 @@ class AppNavigator {
   static void navigateToNotes(
     BuildContext context, {
     required NotesRepository notesRepository,
+    required SubscriptionRepository subscriptionRepository,
   }) {
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => NotesView(
           notesRepository: notesRepository,
+          subscriptionRepository: subscriptionRepository,
         ),
       ),
     );

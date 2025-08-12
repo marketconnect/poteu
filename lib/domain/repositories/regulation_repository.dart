@@ -55,4 +55,7 @@ abstract class RegulationRepository {
 
   // Deletes all content associated with premium documents
   Future<void> deletePremiumContent();
+
+  // Saves a list of regulations (rules) to the local database
+  Future<void> saveRegulations(List<Regulation> regulations);
 }

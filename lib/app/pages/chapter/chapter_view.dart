@@ -55,6 +55,7 @@ class ChapterViewState extends ViewState<ChapterView, ChapterController> {
   ChapterViewState(ChapterController controller) : super(controller);
 
   String _removeInvalidLinks(String html) {
+    print(html);
     if (html.isEmpty) return '';
 
     final document = html_parser.parseFragment(html);

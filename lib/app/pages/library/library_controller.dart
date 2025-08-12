@@ -84,6 +84,7 @@ class LibraryController extends Controller {
       _error = null;
       refreshUI();
       _cacheRegulations(regulations);
+      _presenter.saveRegulations(regulations);
     };
 
     _presenter.onError = (e) {
@@ -134,6 +135,14 @@ class LibraryController extends Controller {
       _error = "Ошибка загрузки документа: $e";
       _selectedRegulation = null; // Deselect on error
       refreshUI();
+    };
+
+    _presenter.onRegulationsSaved = () {
+      dev.log("Local rules table updated successfully.");
+    };
+
+    _presenter.onSaveRegulationsError = (e) {
+      dev.log("Error updating local rules table: $e");
     };
   }
 

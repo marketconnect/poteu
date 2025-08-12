@@ -26,13 +26,13 @@ class DataNotesRepository implements NotesRepository {
           c.id as chapter_id,
           c.orderNum as chapter_order_num,
           c.name as chapter_name,
-          r.id as regulation_id,
+          c.rule_id as regulation_id,
           r.name as regulation_title,
           orig_p.content as original_content
         FROM user_paragraph_edits p
         JOIN paragraphs orig_p ON p.original_id = orig_p.id
         JOIN chapters c ON orig_p.chapterID = c.id
-        JOIN rules r ON c.rule_id = r.id
+        LEFT JOIN rules r ON c.rule_id = r.id
       ''';
 
       dev.log('Executing query: $query');
@@ -58,7 +58,7 @@ class DataNotesRepository implements NotesRepository {
           final chapterOrderNum = paragraphMap[5] as int;
           final chapterName = paragraphMap[6] as String;
           final regulationId = paragraphMap[7] as int;
-          final regulationTitle = paragraphMap[8] as String;
+          final regulationTitle = paragraphMap[8] as String?;
           final originalContent = paragraphMap[9] as String;
 
           dev.log('Paragraph ID: $originalId');
@@ -102,7 +102,7 @@ class DataNotesRepository implements NotesRepository {
                 chapterId: chapterId,
                 regulationId: regulationId,
                 chapterOrderNum: chapterOrderNum,
-                regulationTitle: regulationTitle,
+                regulationTitle: regulationTitle ?? 'Загруженный документ',
                 chapterName: chapterName,
                 content: editedContent ?? '',
                 lastTouched: updatedAt ?? DateTime.now(),
@@ -150,7 +150,7 @@ class DataNotesRepository implements NotesRepository {
                 chapterId: chapterId,
                 regulationId: regulationId,
                 chapterOrderNum: chapterOrderNum,
-                regulationTitle: regulationTitle,
+                regulationTitle: regulationTitle ?? 'Загруженный документ',
                 chapterName: chapterName,
                 content: originalContent,
                 lastTouched: updatedAt ?? DateTime.now(),
@@ -315,13 +315,13 @@ class DataNotesRepository implements NotesRepository {
     dev.log('=== EXTRACTING EDITED PARAGRAPH LINKS ===');
     dev.log('Content length: ${content.length}');
     dev.log(
-        'Content preview: "${content.substring(0, content.length > 200 ? 200 : content.length)}..."');
+        'Content preview: "${content.substring(0, content.length > 200 ? 200 : content.length)}"...');
 
     final links = <EditedParagraphLink>[];
 
     // Extract highlighted text (span tags with background-color)
     final spanRegex = RegExp(
-        r'<span[^>]*style="[^"]*background-color:\s*([^;"]+)[^"]*"[^>]*>([^<]+)</span>');
+        r'<span[^>]*style="[^\"]*background-color:\s*([^;\"]+)[^\"]*"[^>]*>([^<]+)<\/span>');
     final spanMatches = spanRegex.allMatches(content);
     dev.log('Found ${spanMatches.length} span matches');
 
@@ -342,7 +342,7 @@ class DataNotesRepository implements NotesRepository {
 
     // Extract underlined text (u tags with text-decoration-color)
     final underlineRegex = RegExp(
-        r'<u[^>]*style="[^"]*text-decoration-color:\s*([^;"]+)[^"]*"[^>]*>([^<]+)</u>');
+        r'<u[^>]*style="[^\"]*text-decoration-color:\s*([^;\"]+)[^\"]*"[^>]*>([^<]+)<\/u>');
     final underlineMatches = underlineRegex.allMatches(content);
     dev.log('Found ${underlineMatches.length} underline matches');
 
@@ -378,7 +378,7 @@ class DataNotesRepository implements NotesRepository {
   String _removeSpecificFormatting(String content, EditedParagraphLink link) {
     // Remove highlighted text (span tags)
     final spanRegex = RegExp(
-        r'<span[^>]*style="[^"]*background-color:\s*([^;"]+)[^"]*"[^>]*>([^<]+)</span>');
+        r'<span[^>]*style="[^\"]*background-color:\s*([^;\"]+)[^\"]*"[^>]*>([^<]+)<\/span>');
     content = content.replaceAllMapped(spanRegex, (match) {
       final colorHex = match.group(1)?.trim();
       final text = match.group(2)?.trim();
@@ -398,7 +398,7 @@ class DataNotesRepository implements NotesRepository {
 
     // Remove underlined text (u tags)
     final underlineRegex = RegExp(
-        r'<u[^>]*style="[^"]*text-decoration-color:\s*([^;"]+)[^"]*"[^>]*>([^<]+)</u>');
+        r'<u[^>]*style="[^\"]*text-decoration-color:\s*([^;\"]+)[^\"]*"[^>]*>([^<]+)<\/u>');
     content = content.replaceAllMapped(underlineRegex, (match) {
       final colorHex = match.group(1)?.trim();
       final text = match.group(2)?.trim();

@@ -7,7 +7,7 @@ import 'package:poteu/data/repositories/data_subscription_repository.dart';
 import 'package:poteu/domain/usecases/check_subscription_usecase.dart';
 import 'package:poteu/domain/usecases/download_regulation_data_usecase.dart';
 import 'package:poteu/data/repositories/cloud_regulation_repository.dart';
-import 'package:poteu/domain/entities/subscription.dart';
+
 import 'package:poteu/app/pages/library/library_controller.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;

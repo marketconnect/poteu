@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:poteu/config.dart';
+import 'package:poteu/domain/repositories/subscription_repository.dart';
 import '../table_of_contents/table_of_contents_page.dart';
 import '../../../data/repositories/static_regulation_repository.dart';
 import '../../../domain/repositories/settings_repository.dart';
@@ -11,6 +12,7 @@ class MainView extends StatelessWidget {
   final SettingsRepository settingsRepository;
   final TTSRepository ttsRepository;
   final NotesRepository notesRepository;
+  final SubscriptionRepository subscriptionRepository;
 
   const MainView({
     Key? key,
@@ -18,6 +20,7 @@ class MainView extends StatelessWidget {
     required this.settingsRepository,
     required this.ttsRepository,
     required this.notesRepository,
+    required this.subscriptionRepository,
   }) : super(key: key);
 
   @override
@@ -29,6 +32,7 @@ class MainView extends StatelessWidget {
       ttsRepository: ttsRepository,
       notesRepository: notesRepository,
       regulationId: AppConfig.instance.regulationId, // <-- добавлено
+      subscriptionRepository: subscriptionRepository,
     );
   }
 }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:poteu/app/services/active_regulation_service.dart';
 import 'package:rolling_switch/rolling_switch.dart';
+import '../../../domain/repositories/subscription_repository.dart';
 import '../../../domain/repositories/settings_repository.dart';
 import '../../../domain/repositories/tts_repository.dart';
 import '../../../domain/repositories/notes_repository.dart';
@@ -14,12 +15,14 @@ class AppDrawer extends StatelessWidget {
   final SettingsRepository settingsRepository;
   final TTSRepository ttsRepository;
   final NotesRepository notesRepository;
+  final SubscriptionRepository subscriptionRepository;
 
   const AppDrawer({
     Key? key,
     required this.settingsRepository,
     required this.ttsRepository,
     required this.notesRepository,
+    required this.subscriptionRepository,
   }) : super(key: key);
 
   @override
@@ -70,6 +73,8 @@ class AppDrawer extends StatelessWidget {
                                   AppNavigator.navigateToNotes(
                                     context,
                                     notesRepository: notesRepository,
+                                    subscriptionRepository:
+                                        subscriptionRepository,
                                   );
                                 }
                               },

@@ -51,6 +51,7 @@ class AppRouter {
             settingsRepository: _settingsRepository,
             ttsRepository: _ttsRepository,
             notesRepository: _notesRepository,
+            subscriptionRepository: _subscriptionRepository,
             regulationId: ActiveRegulationService().currentRegulationId,
           ),
         );
@@ -58,6 +59,7 @@ class AppRouter {
         return MaterialPageRoute(
           builder: (_) => NotesView(
             notesRepository: _notesRepository,
+            subscriptionRepository: _subscriptionRepository,
           ),
         );
       case AppRouteNames.library:

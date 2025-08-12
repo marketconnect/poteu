@@ -408,13 +408,13 @@ class DataRegulationRepository implements RegulationRepository {
 
     // We assume premium documents are identified by a flag in the `rules` table.
     // Since this is a client-side implementation, we'll hardcode the logic
-    // based on what the server provides. Let's assume `is_premium` column exists.
-
-    // For this example, let's assume the `rules` table has an `is_premium` column.
-    // If not, this query needs adjustment.
-    final premiumRuleIdsResult = await conn.query(
-        "SELECT id FROM rules WHERE is_premium = TRUE");
-    final premiumRuleIds = premiumRuleIdsResult.fetchAll().map((row) => row[0] as int).toList();
+    // based on what the server provides. Let's assume `is_premium` column exists. We will assume a premium document is any document that is not the default one.
+    // A better approach would be a flag from the backend.
+    final allRulesResult = await conn.query("SELECT id FROM rules");
+    final allRuleIds = allRulesResult.fetchAll().map((row) => row[0] as int).toList();
+    
+    // Assuming rule ID 1 is the default, non-premium one.
+    final premiumRuleIds = allRuleIds.where((id) => id != 1).toList();
 
     if (premiumRuleIds.isEmpty) {
       dev.log('No premium documents found to delete.');
@@ -430,5 +430,40 @@ class DataRegulationRepository implements RegulationRepository {
     await conn.query('DELETE FROM rules WHERE id IN ($idsString)');
     await conn.query('COMMIT;');
     dev.log('Successfully deleted premium content.');
+  }
+
+  @override
+  Future<void> saveRegulations(List<Regulation> regulations) async {
+    if (regulations.isEmpty) {
+      dev.log('No regulations to save.');
+      return;
+    }
+
+    final conn = await _dbProvider.connection;
+    await conn.query('BEGIN TRANSACTION;');
+    try {
+      // Prepare a list of IDs for the DELETE statement
+      final ids = regulations.map((r) => r.id).join(',');
+
+      // Delete existing records to avoid conflicts and ensure data is fresh
+      await conn.query('DELETE FROM rules WHERE id IN ($ids)');
+
+      // Insert all the new records
+      for (final regulation in regulations) {
+        final escapedTitle = regulation.title.replaceAll("'", "''");
+        final escapedDescription = regulation.description.replaceAll("'", "''");
+        await conn.query('''
+          INSERT INTO rules (id, name, abbreviation)
+          VALUES (${regulation.id}, '$escapedTitle', '$escapedDescription');
+        ''');
+      }
+      await conn.query('COMMIT;');
+      dev.log(
+          'Successfully saved/updated ${regulations.length} regulations to local DB.');
+    } catch (e) {
+      await conn.query('ROLLBACK;');
+      dev.log('Error saving regulations: $e');
+      rethrow;
+    }
   }
 }
