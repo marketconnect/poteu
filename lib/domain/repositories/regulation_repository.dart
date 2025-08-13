@@ -58,4 +58,10 @@ abstract class RegulationRepository {
 
   // Saves a list of regulations (rules) to the local database
   Future<void> saveRegulations(List<Regulation> regulations);
+
+  // Gets local rules with minimal metadata for sync purposes
+  Future<List<Regulation>> getLocalRulesWithMetadata();
+
+  // Deletes a single regulation and all its associated data (chapters, paragraphs)
+  Future<void> deleteRegulationData(int regulationId);
 }

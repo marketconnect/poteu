@@ -27,7 +27,8 @@ class LibraryPresenter extends Presenter {
 
   LibraryPresenter()
       : _getAvailableRegulationsUseCase =
-            GetAvailableRegulationsUseCase(DataCloudRegulationRepository()),
+            GetAvailableRegulationsUseCase(
+                DataCloudRegulationRepository(), DataRegulationRepository()),
         _isRegulationCachedUseCase =
             IsRegulationCachedUseCase(DataCloudRegulationRepository()),
         _downloadRegulationDataUseCase =

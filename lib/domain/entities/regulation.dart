@@ -10,6 +10,7 @@ class Regulation {
   final bool isDownloaded;
   final bool isFavorite;
   final bool isPremium;
+  final String? changeDate;
   final List<Chapter> chapters;
 
   const Regulation({
@@ -22,6 +23,7 @@ class Regulation {
     required this.isDownloaded,
     required this.isFavorite,
     this.isPremium = false,
+    this.changeDate,
     required this.chapters,
   });
   Map<String, dynamic> toJson() {
@@ -35,6 +37,7 @@ class Regulation {
       'isDownloaded': isDownloaded,
       'isFavorite': isFavorite,
       'isPremium': isPremium,
+      'changeDate': changeDate,
     };
   }
 
@@ -49,6 +52,7 @@ class Regulation {
       isDownloaded: json['isDownloaded'] as bool,
       isFavorite: json['isFavorite'] as bool,
       isPremium: json['isPremium'] as bool,
+      changeDate: json['changeDate'] as String?,
       chapters: const [], // Cloud regulations don't have chapters in this context
     );
   }
@@ -62,6 +66,7 @@ class Regulation {
     bool? isDownloaded,
     bool? isFavorite,
     bool? isPremium,
+    String? changeDate,
     List<Chapter>? chapters,
   }) {
     return Regulation(
@@ -74,6 +79,7 @@ class Regulation {
       isDownloaded: isDownloaded ?? this.isDownloaded,
       isFavorite: isFavorite ?? this.isFavorite,
       isPremium: isPremium ?? this.isPremium,
+      changeDate: changeDate ?? this.changeDate,
       chapters: chapters ?? this.chapters,
     );
   }
@@ -91,7 +97,8 @@ class Regulation {
         other.lastUpdated == lastUpdated &&
         other.isDownloaded == isDownloaded &&
         other.isFavorite == isFavorite &&
-        other.isPremium == isPremium;
+        other.isPremium == isPremium &&
+        other.changeDate == changeDate;
   }
 
   @override
@@ -104,11 +111,12 @@ class Regulation {
         lastUpdated.hashCode ^
         isDownloaded.hashCode ^
         isFavorite.hashCode ^
-        isPremium.hashCode;
+        isPremium.hashCode ^
+        changeDate.hashCode;
   }
 
   @override
   String toString() {
-    return 'Regulation(id: $id, title: $title, description: $description, sourceName: $sourceName, sourceUrl: $sourceUrl, lastUpdated: $lastUpdated, isDownloaded: $isDownloaded, isFavorite: $isFavorite, isPremium: $isPremium, chapters: ${chapters.length})';
+    return 'Regulation(id: $id, title: $title, description: $description, sourceName: $sourceName, sourceUrl: $sourceUrl, lastUpdated: $lastUpdated, isDownloaded: $isDownloaded, isFavorite: $isFavorite, isPremium: $isPremium, changeDate: $changeDate, chapters: ${chapters.length})';
   }
 }

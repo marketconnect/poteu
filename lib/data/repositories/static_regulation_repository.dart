@@ -515,4 +515,31 @@ class StaticRegulationRepository implements RegulationRepository {
     // Static repository is read-only
     throw UnimplementedError('StaticRegulationRepository is read-only.');
   }
+
+  @override
+  Future<List<Regulation>> getLocalRulesWithMetadata() async {
+    final conn = await _dbProvider.connection;
+    final result =
+        await conn.query('SELECT id, name, abbreviation, change_date FROM rules');
+    final rows = result.fetchAll();
+    return rows
+        .map((row) => Regulation(
+              id: row[0] as int,
+              title: row[1] as String,
+              description: row[2] as String,
+              changeDate: row[3] as String?,
+              sourceName: '',
+              sourceUrl: '',
+              lastUpdated: DateTime.now(),
+              isDownloaded: true, // If it's in local DB, it's downloaded
+              isFavorite: false,
+              chapters: [],
+            ))
+        .toList();
+  }
+
+  @override
+  Future<void> deleteRegulationData(int regulationId) {
+    throw UnimplementedError('StaticRegulationRepository is read-only.');
+  }
 }

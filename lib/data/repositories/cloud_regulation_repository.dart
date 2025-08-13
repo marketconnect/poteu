@@ -45,7 +45,7 @@ class DataCloudRegulationRepository implements CloudRegulationRepository {
       conn = await duckdb.connect(db);
 
       final ResultSet result = await conn.query(
-          "SELECT id, name, abbreviation, source_name, source_url FROM read_parquet('${tempFile.path}')");
+          "SELECT id, name, abbreviation, source_name, source_url, change_date FROM read_parquet('${tempFile.path}')");
 
       final rawRegulations = result.fetchAll().map((row) {
         return {
@@ -54,6 +54,7 @@ class DataCloudRegulationRepository implements CloudRegulationRepository {
           'description': row[2] as String,
           'sourceName': row[3] as String,
           'sourceUrl': row[4] as String,
+          'changeDate': row[5] as String?,
         };
       }).toList();
 
@@ -71,6 +72,7 @@ class DataCloudRegulationRepository implements CloudRegulationRepository {
           sourceName: rawRegulations[i]['sourceName'] as String,
           sourceUrl: rawRegulations[i]['sourceUrl'] as String,
           lastUpdated: DateTime.now(),
+          changeDate: rawRegulations[i]['changeDate'] as String?,
           isPremium: true,
           isDownloaded:
               cacheResults[i], // Используем результат параллельной проверки

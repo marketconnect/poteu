@@ -452,9 +452,10 @@ class DataRegulationRepository implements RegulationRepository {
       for (final regulation in regulations) {
         final escapedTitle = regulation.title.replaceAll("'", "''");
         final escapedDescription = regulation.description.replaceAll("'", "''");
+        final changeDate = regulation.changeDate;
         await conn.query('''
-          INSERT INTO rules (id, name, abbreviation)
-          VALUES (${regulation.id}, '$escapedTitle', '$escapedDescription');
+          INSERT INTO rules (id, name, abbreviation, change_date)
+          VALUES (${regulation.id}, '$escapedTitle', '$escapedDescription', ${changeDate == null ? 'NULL' : "'$changeDate'"});
         ''');
       }
       await conn.query('COMMIT;');
@@ -463,6 +464,58 @@ class DataRegulationRepository implements RegulationRepository {
     } catch (e) {
       await conn.query('ROLLBACK;');
       dev.log('Error saving regulations: $e');
+      rethrow;
+    }
+  }
+
+  @override
+  Future<List<Regulation>> getLocalRulesWithMetadata() async {
+    final conn = await _dbProvider.connection;
+    final result =
+        await conn.query('SELECT id, name, abbreviation, change_date FROM rules');
+    final rows = result.fetchAll();
+    return rows
+        .map((row) => Regulation(
+              id: row[0] as int,
+              title: row[1] as String,
+              description: row[2] as String,
+              changeDate: row[3] as String?,
+              sourceName: '',
+              sourceUrl: '',
+              lastUpdated: DateTime.now(),
+              isDownloaded: true, // If it's in local DB, it's downloaded
+              isFavorite: false,
+              chapters: [],
+            ))
+        .toList();
+  }
+
+  @override
+  Future<void> deleteRegulationData(int regulationId) async {
+    dev.log('Deleting all data for regulation ID: $regulationId');
+    final conn = await _dbProvider.connection;
+    await conn.query('BEGIN TRANSACTION;');
+    try {
+      // Delete paragraphs of the chapters of the rule
+      final deletedParagraphs = await conn.query(
+          'DELETE FROM paragraphs WHERE chapterID IN (SELECT id FROM chapters WHERE rule_id = $regulationId) RETURNING id;');
+      dev.log('Deleted ${deletedParagraphs.fetchAll().length} paragraphs.');
+
+      // Delete chapters of the rule
+      final deletedChapters = await conn
+          .query('DELETE FROM chapters WHERE rule_id = $regulationId RETURNING id;');
+      dev.log('Deleted ${deletedChapters.fetchAll().length} chapters.');
+
+      // Delete the rule itself
+      final deletedRules =
+          await conn.query('DELETE FROM rules WHERE id = $regulationId RETURNING id;');
+      dev.log('Deleted ${deletedRules.fetchAll().length} rules.');
+
+      await conn.query('COMMIT;');
+      dev.log('Successfully deleted data for regulation ID: $regulationId');
+    } catch (e) {
+      await conn.query('ROLLBACK;');
+      dev.log('Error deleting regulation data for ID $regulationId: $e');
       rethrow;
     }
   }

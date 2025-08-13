@@ -54,6 +54,10 @@ class DuckDBProvider {
         );
       ''');
 
+      // Add change_date column to rules table if it doesn't exist for version sync
+      await _connection!
+          .query('ALTER TABLE rules ADD COLUMN IF NOT EXISTS change_date TEXT;');
+
       _isInitialized = true;
       dev.log('🗄️ DuckDB initialized successfully');
     } catch (e) {
