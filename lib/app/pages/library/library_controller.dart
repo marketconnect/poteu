@@ -22,6 +22,7 @@ class LibraryController extends Controller {
   static const String lastFetchDateKey = 'library_last_fetch_date';
   static const String regulationsCacheKey = 'library_regulations_cache';
 
+  List<Regulation> _allRegulations = [];
   List<Regulation> _regulations = [];
   bool _isLoading = true;
   String? _error;
@@ -29,6 +30,8 @@ class LibraryController extends Controller {
   bool _isCheckingCache = false;
   bool _isDownloading = false;
   Subscription _subscription = Subscription.inactive();
+  bool _isSearching = false;
+  final TextEditingController searchController = TextEditingController();
 
   List<Regulation> get regulations => _regulations;
   bool get isLoading => _isLoading;
@@ -37,6 +40,7 @@ class LibraryController extends Controller {
   bool get isCheckingCache => _isCheckingCache;
   bool get isDownloading => _isDownloading;
   bool get isSubscribed => _subscription.isActive;
+  bool get isSearching => _isSearching;
 
   final ActiveRegulationService _activeRegulationService;
 
@@ -54,6 +58,7 @@ class LibraryController extends Controller {
     checkSubscriptionStatus();
     // Then load regulations
     loadRegulationsWithCache();
+    searchController.addListener(_filterRegulations);
   }
 
   @override
@@ -79,6 +84,7 @@ class LibraryController extends Controller {
         }
       });
 
+      _allRegulations = processedRegulations;
       _regulations = processedRegulations;
       _isLoading = false;
       _error = null;
@@ -144,6 +150,30 @@ class LibraryController extends Controller {
     _presenter.onSaveRegulationsError = (e) {
       dev.log("Error updating local rules table: $e");
     };
+  }
+
+  void _filterRegulations() {
+    final query = searchController.text.toLowerCase();
+    if (query.isEmpty) {
+      _regulations = _allRegulations;
+    } else {
+      _regulations = _allRegulations.where((regulation) {
+        final titleMatch =
+            regulation.title.toLowerCase().contains(query.toLowerCase());
+        final descriptionMatch =
+            regulation.description.toLowerCase().contains(query.toLowerCase());
+        return titleMatch || descriptionMatch;
+      }).toList();
+    }
+    refreshUI();
+  }
+
+  void toggleSearch() {
+    _isSearching = !_isSearching;
+    if (!_isSearching) {
+      searchController.clear();
+    }
+    refreshUI();
   }
 
   void _cacheRegulations(List<Regulation> regulations) async {
@@ -241,6 +271,8 @@ class LibraryController extends Controller {
     _presenter.dispose();
     _checkSubscriptionUseCase.dispose();
     _handleExpiredSubscriptionUseCase.dispose();
+    searchController.removeListener(_filterRegulations);
+    searchController.dispose();
     super.onDisposed();
   }
 }
