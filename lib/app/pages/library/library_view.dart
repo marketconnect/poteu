@@ -106,26 +106,24 @@ class LibraryViewState extends ViewState<LibraryView, LibraryController> {
                       ),
                     ),
                     child: ListTile(
-                      leading: (isPremium || regulation.isDownloaded) ?
-                          Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          if (isPremium)
-                            Icon(
-                              canAccess
-                                  ? Icons.lock_open_outlined
-                                  : Icons.lock_outline,
-                              color: canAccess ? Colors.green : Colors.orange,
-                            ),
-                          if (regulation.isDownloaded) ...[
-                            if (isPremium) const SizedBox(width: 8),
-                            const Icon(
-                              Icons.cloud_done_outlined,
-                              color: Colors.blue,
-                            ),
-                          ]
-                        ],
-                      ) : null,
+                      leading: (isPremium || regulation.isDownloaded)
+                          ? Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                if (isPremium && !canAccess)
+                                  const Icon(
+                                    Icons.lock_outline,
+                                    color: Colors.orange,
+                                  ),
+                                if (regulation.isDownloaded) ...[
+                                  const Icon(
+                                    Icons.cloud_done_outlined,
+                                    color: Colors.blue,
+                                  ),
+                                ]
+                              ],
+                            )
+                          : null,
                       title: Text(regulation.title,
                           style: Theme.of(context).textTheme.bodyLarge),
                       subtitle: Text(regulation.description,

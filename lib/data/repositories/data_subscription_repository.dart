@@ -6,10 +6,11 @@ import 'package:poteu/domain/entities/subscription.dart';
 import 'package:poteu/domain/repositories/subscription_repository.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:developer' as dev;
+import 'package:poteu/.env.dart';
 
 class DataSubscriptionRepository implements SubscriptionRepository {
   // TODO: Move to config
-  final String _baseUrl = 'http://192.168.0.13:8080';
+  final String _baseUrl = ServerInfo.subscriptionAddress;
   final http.Client _client;
   final UserIdService _userIdService;
 
@@ -49,7 +50,8 @@ class DataSubscriptionRepository implements SubscriptionRepository {
   @override
   Future<Subscription> checkSubscriptionStatus() async {
     final userId = await getUserId();
-    final uri = Uri.parse('$_baseUrl/api/v1/subscriptions/status?userId=$userId');
+    final uri =
+        Uri.parse('$_baseUrl/api/v1/subscriptions/status?userId=$userId');
     dev.log('Checking subscription status for userId: $userId');
 
     try {
@@ -108,11 +110,13 @@ class DataSubscriptionRepository implements SubscriptionRepository {
       if (response.statusCode == 200) {
         // Use utf8.decode to handle Cyrillic characters correctly
         final List<dynamic> data = json.decode(utf8.decode(response.bodyBytes));
-        final plans = data.map((json) => SubscriptionPlan.fromJson(json)).toList();
+        final plans =
+            data.map((json) => SubscriptionPlan.fromJson(json)).toList();
         dev.log('Successfully fetched ${plans.length} subscription plans.');
         return plans;
       } else {
-        dev.log('Failed to fetch subscription plans. Status: ${response.statusCode}, Body: ${response.body}');
+        dev.log(
+            'Failed to fetch subscription plans. Status: ${response.statusCode}, Body: ${response.body}');
         throw Exception('Не удалось загрузить тарифы');
       }
     } catch (e) {

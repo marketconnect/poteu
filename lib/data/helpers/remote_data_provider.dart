@@ -1,10 +1,11 @@
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:developer' as dev;
+import 'package:poteu/.env.dart';
 
 class RemoteDataProvider {
   // IP-адрес сервиса для получения временных ссылок
-  final String _baseUrl = 'http://192.168.0.13:8081';
+  final String _baseUrl = ServerInfo.ycDataProvider;
 
   Future<String> getPresignedUrl(String objectKey) async {
     final uri = Uri.parse('$_baseUrl/api/v1/generate-url?objectKey=$objectKey');
