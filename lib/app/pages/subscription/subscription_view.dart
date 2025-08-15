@@ -23,6 +23,7 @@ class SubscriptionViewState
   @override
   Widget get view {
     return Scaffold(
+      key: globalKey,
       appBar: PreferredSize(
         preferredSize: Size.fromHeight(
           Theme.of(context).appBarTheme.toolbarHeight ?? 74.0,

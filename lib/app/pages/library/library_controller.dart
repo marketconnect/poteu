@@ -195,7 +195,7 @@ class LibraryController extends Controller {
       final prefs = await SharedPreferences.getInstance();
       final lastFetchDate = prefs.getString(lastFetchDateKey);
       final today = DateTime.now().toIso8601String().substring(0, 10);
-      if (false && lastFetchDate == today) {
+      if (lastFetchDate == today) {
         dev.log('Loading regulations from cache for date: $today');
         final cachedJson = prefs.getString(regulationsCacheKey);
         if (cachedJson != null) {

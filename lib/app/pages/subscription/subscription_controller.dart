@@ -1,12 +1,13 @@
 import 'dart:convert';
 
+import 'package:flutter/material.dart';
 import 'package:flutter_clean_architecture/flutter_clean_architecture.dart';
 import 'package:poteu/domain/entities/subscription_plan.dart';
 import 'package:poteu/domain/repositories/subscription_repository.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'subscription_presenter.dart';
 import 'dart:developer' as dev;
+import 'payment_webview_page.dart';
 
 class SubscriptionController extends Controller {
   final SubscriptionPresenter _presenter;
@@ -35,19 +36,29 @@ class SubscriptionController extends Controller {
   void initListeners() {
     _presenter.onPaymentLinkCreated = (String url) async {
       dev.log('Payment link received: $url');
-      final uri = Uri.parse(url);
-      if (await canLaunchUrl(uri)) {
-        await launchUrl(uri, mode: LaunchMode.externalApplication);
-      } else {
-        _error = 'Не удалось открыть ссылку на оплату.';
-        dev.log('Could not launch $url');
-      }
       _isLoading = false;
       refreshUI();
+
+      final result = await Navigator.of(getContext()).push<bool>(
+        MaterialPageRoute(
+          builder: (context) => PaymentWebviewPage(url: url),
+        ),
+      );
+
+      if (result == true) {
+        // Payment successful, navigate back or show success message
+        // For now, just pop the subscription page
+        Navigator.of(getContext()).pop(true); // Pop with a success result
+      } else if (result == false) {
+        // Payment failed or was cancelled by the user
+        _error = 'Оплата не удалась или была отменена.';
+        refreshUI();
+      }
+      // If result is null (e.g. user presses back button), do nothing.
     };
 
     _presenter.onError = (e) {
-      _error = 'Ошибка: ${e.toString()}';
+      _error = e.toString().replaceFirst('Exception: ', '');
       _isLoading = false;
       refreshUI();
       dev.log('Error creating payment link: $e');
@@ -111,11 +122,15 @@ class SubscriptionController extends Controller {
     _presenter.getPlans();
   }
 
-  void purchase(String planType) {
+  void purchase(String planType) async {
     _isLoading = true;
     _error = null;
     refreshUI();
-    _presenter.createPaymentLink(planType);
+    // The backend requires an email for the receipt, as per Tinkoff API.
+    // We'll construct a dummy email from the user ID since we don't collect it.
+    final userId = await _presenter.subscriptionRepository.getUserId();
+    final userEmail = '$userId@poteu.app';
+    _presenter.createPaymentLink(planType, userEmail);
   }
 
   @override

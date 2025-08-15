@@ -2,19 +2,22 @@ import 'dart:async';
 import 'package:flutter_clean_architecture/flutter_clean_architecture.dart';
 import 'package:poteu/domain/repositories/subscription_repository.dart';
 
-class CreatePaymentLinkUseCase extends UseCase<String, String> {
+class CreatePaymentLinkUseCase
+    extends UseCase<String, CreatePaymentLinkParams> {
   final SubscriptionRepository _subscriptionRepository;
 
   CreatePaymentLinkUseCase(this._subscriptionRepository);
 
   @override
-  Future<Stream<String>> buildUseCaseStream(String? planType) async {
+  Future<Stream<String>> buildUseCaseStream(
+      CreatePaymentLinkParams? params) async {
     final controller = StreamController<String>();
     try {
-      if (planType == null) {
-        throw ArgumentError("planType cannot be null");
+      if (params == null) {
+        throw ArgumentError("params cannot be null");
       }
-      final url = await _subscriptionRepository.createPaymentLink(planType);
+      final url = await _subscriptionRepository.createPaymentLink(
+          params.planType, params.email);
       controller.add(url);
       controller.close();
     } catch (e) {
@@ -22,4 +25,11 @@ class CreatePaymentLinkUseCase extends UseCase<String, String> {
     }
     return controller.stream;
   }
+}
+
+class CreatePaymentLinkParams {
+  final String planType;
+  final String email;
+
+  CreatePaymentLinkParams({required this.planType, required this.email});
 }

@@ -12,16 +12,18 @@ class SubscriptionPresenter extends Presenter {
 
   final CreatePaymentLinkUseCase _createPaymentLinkUseCase;
   final GetSubscriptionPlansUseCase _getSubscriptionPlansUseCase;
+  final SubscriptionRepository subscriptionRepository;
 
   SubscriptionPresenter(SubscriptionRepository subscriptionRepository)
-      : _createPaymentLinkUseCase =
+      : this.subscriptionRepository = subscriptionRepository,
+        _createPaymentLinkUseCase =
             CreatePaymentLinkUseCase(subscriptionRepository),
         _getSubscriptionPlansUseCase =
             GetSubscriptionPlansUseCase(subscriptionRepository);
 
-  void createPaymentLink(String planType) {
-    _createPaymentLinkUseCase.execute(
-        _CreatePaymentLinkObserver(this), planType);
+  void createPaymentLink(String planType, String email) {
+    _createPaymentLinkUseCase.execute(_CreatePaymentLinkObserver(this),
+        CreatePaymentLinkParams(planType: planType, email: email));
   }
 
   void getPlans() {

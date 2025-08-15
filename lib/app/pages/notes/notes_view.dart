@@ -1,4 +1,3 @@
-import 'dart:developer' as dev;
 import 'package:flutter/material.dart' hide View;
 import 'package:flutter_clean_architecture/flutter_clean_architecture.dart';
 

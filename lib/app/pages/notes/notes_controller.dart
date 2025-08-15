@@ -212,6 +212,7 @@ class _CheckSubscriptionObserver extends Observer<Subscription> {
   @override
   void onError(e) {
     _controller._error = 'Ошибка проверки подписки: ${e.toString()}';
+    // ignore: invalid_use_of_protected_member
     _controller.refreshUI();
   }
 
@@ -220,6 +221,7 @@ class _CheckSubscriptionObserver extends Observer<Subscription> {
     if (response != null && response.isActive) {
       _controller._navigateToChapter(_note);
     } else {
+      // ignore: invalid_use_of_protected_member
       Navigator.pushNamed(_controller.getContext(), '/subscription');
     }
   }
