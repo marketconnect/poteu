@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:poteu/app/pages/exam/exam_view.dart';
 import 'package:poteu/app/services/active_regulation_service.dart';
 import 'package:rolling_switch/rolling_switch.dart';
 import '../../../domain/repositories/subscription_repository.dart';
@@ -218,6 +219,28 @@ class AppDrawer extends StatelessWidget {
                               ),
                               leading: const Icon(Icons.info_outline),
                               children: [Container()],
+                            ),
+                            // Экзамен
+                            ListTile(
+                              leading: const Icon(Icons.quiz_outlined),
+                              title: const Text('Экзамен'),
+                              onTap: () {
+                                final regulationId = ActiveRegulationService()
+                                    .currentRegulationId;
+                                Navigator.of(context).pop(); // Close drawer
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (context) => ExamView(
+                                      arguments: ExamArguments(
+                                          regulationId: regulationId),
+                                    ),
+                                  ),
+                                );
+                              },
+                              iconColor: Theme.of(context)
+                                  .navigationRailTheme
+                                  .unselectedIconTheme!
+                                  .color,
                             ),
                           ],
                         ),

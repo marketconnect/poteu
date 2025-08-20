@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:poteu/app/pages/chapter/model/chapter_arguments.dart';
 import 'package:poteu/app/pages/chapter/chapter_view.dart';
 import 'package:poteu/app/pages/library/library_view.dart';
+import 'package:poteu/app/pages/exam/exam_view.dart';
 import 'package:poteu/app/pages/notes/notes_view.dart';
 import 'package:poteu/app/pages/search/search_view.dart';
 import 'package:poteu/app/pages/subscription/subscription_view.dart';
@@ -23,6 +24,7 @@ abstract class AppRouteNames {
   static const library = '/library';
   static const search = '/search';
   static const subscription = '/subscription';
+  static const exam = '/exam';
 }
 
 class AppRouter {
@@ -106,6 +108,13 @@ class AppRouter {
         return MaterialPageRoute(
           builder: (_) => SubscriptionView(
             subscriptionRepository: _subscriptionRepository,
+          ),
+        );
+      case AppRouteNames.exam:
+        final arguments = routeSettings.arguments as ExamArguments;
+        return MaterialPageRoute(
+          builder: (_) => ExamView(
+            arguments: arguments,
           ),
         );
       default:

@@ -32,8 +32,8 @@ class DataSubscriptionRepository implements SubscriptionRepository {
     final response = await _client.post(
       uri,
       headers: {'Content-Type': 'application/json'},
-      body: json.encode(
-          {'userId': userId, 'planType': planType, 'email': email}),
+      body:
+          json.encode({'userId': userId, 'planType': planType, 'email': email}),
     );
 
     if (response.statusCode == 200) {
@@ -50,7 +50,8 @@ class DataSubscriptionRepository implements SubscriptionRepository {
         final details = errorData['Details'] ?? '';
         throw Exception('Ошибка инициации платежа: $message $details');
       } catch (e) {
-        if (e is Exception && e.toString().contains('Ошибка инициации платежа')) {
+        if (e is Exception &&
+            e.toString().contains('Ошибка инициации платежа')) {
           rethrow;
         }
         throw Exception(
@@ -113,7 +114,9 @@ class DataSubscriptionRepository implements SubscriptionRepository {
 
   @override
   Future<List<SubscriptionPlan>> getSubscriptionPlans() async {
-    final uri = Uri.parse('$_baseUrl/api/v1/subscriptions/plans');
+    final timestamp = DateTime.now().millisecondsSinceEpoch;
+    final uri =
+        Uri.parse('$_baseUrl/api/v1/subscriptions/plans?_cb=$timestamp');
     dev.log('Fetching subscription plans from $uri');
 
     try {

@@ -64,7 +64,6 @@ android {
         }
     }
 
-
     buildTypes {
         release {
             // TODO: Add your own signing config for the release build.
@@ -114,9 +113,7 @@ android {
             versionCode = versionsProperties["FIRE_REG_VERSION_CODE"].toString().toInt()
             versionName = versionsProperties["FIRE_REG_VERSION_NAME"] as String
         }        
-        
     }
-
 }
 
 flutter {
