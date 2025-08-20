@@ -10,7 +10,9 @@ class ExamController extends Controller {
 
   bool _isLoading = true;
   String? _error;
+  List<ExamQuestion> _allQuestions = [];
   List<ExamQuestion> _examQuestions = [];
+  List<String> _availableGroups = [];
   int _currentQuestionIndex = 0;
   final Set<String> _selectedAnswers = {};
   bool _isConfirmed = false;
@@ -20,12 +22,15 @@ class ExamController extends Controller {
   // Getters
   bool get isLoading => _isLoading;
   String? get error => _error;
+  List<String> get availableGroups => _availableGroups;
+  String? _selectedGroup;
   List<ExamQuestion> get examQuestions => _examQuestions;
   int get currentQuestionIndex => _currentQuestionIndex;
   ExamQuestion? get currentQuestion =>
       _examQuestions.isNotEmpty ? _examQuestions[_currentQuestionIndex] : null;
   Set<String> get selectedAnswers => _selectedAnswers;
   bool get isConfirmed => _isConfirmed;
+  String? get selectedGroup => _selectedGroup;
   Map<int, Set<String>> get userAnswers => _userAnswers;
   bool get showResults => _showResults;
 
@@ -38,8 +43,9 @@ class ExamController extends Controller {
   @override
   void initListeners() {
     _presenter.onQuestionsLoaded = (List<ExamQuestion> questions) {
-      questions.shuffle();
-      _examQuestions = questions.take(10).toList();
+      _allQuestions = questions;
+      _availableGroups =
+          questions.map((q) => q.name).toSet().toList()..sort();
       _isLoading = false;
       refreshUI();
     };
@@ -49,6 +55,16 @@ class ExamController extends Controller {
       _isLoading = false;
       refreshUI();
     };
+  }
+
+  void selectGroup(String group) {
+    _selectedGroup = group;
+    _examQuestions = _allQuestions.where((q) => q.name == group).toList()
+      ..shuffle();
+    if (_examQuestions.length > 10) {
+      _examQuestions = _examQuestions.take(10).toList();
+    }
+    refreshUI();
   }
 
   void toggleAnswerSelection(String answer) {
@@ -96,7 +112,10 @@ class ExamController extends Controller {
   void restartExam() {
     _isLoading = true;
     _error = null;
+    _allQuestions = [];
     _examQuestions = [];
+    _availableGroups = [];
+    _selectedGroup = null;
     _currentQuestionIndex = 0;
     _selectedAnswers.clear();
     _isConfirmed = false;

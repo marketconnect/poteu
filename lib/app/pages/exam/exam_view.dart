@@ -77,15 +77,20 @@ class ExamViewState extends ViewState<ExamView, ExamController> {
               ),
             );
           }
-          if (controller.examQuestions.isEmpty) {
-            return const Center(
-                child: Text('Вопросы для этого документа не найдены.'));
-          }
 
-          if (controller.showResults) {
-            return _buildResultsView(controller);
+          if (controller.selectedGroup == null) {
+            return _buildGroupSelectionView(controller);
           } else {
-            return _buildQuestionView(controller);
+            if (controller.examQuestions.isEmpty) {
+              return Center(
+                  child: Text(
+                      'Вопросы для группы "${controller.selectedGroup}" не найдены.'));
+            }
+            if (controller.showResults) {
+              return _buildResultsView(controller);
+            } else {
+              return _buildQuestionView(controller);
+            }
           }
         },
       ),
@@ -293,6 +298,46 @@ class ExamViewState extends ViewState<ExamView, ExamController> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildGroupSelectionView(ExamController controller) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Text(
+            'Выберите группу допуска',
+            style: Theme.of(context).textTheme.headlineSmall,
+            textAlign: TextAlign.center,
+          ),
+        ),
+        Expanded(
+          child: ListView.builder(
+            itemCount: controller.availableGroups.length,
+            itemBuilder: (context, index) {
+              final group = controller.availableGroups[index];
+              return Card(
+                elevation: 0,
+                color: Theme.of(context).scaffoldBackgroundColor,
+                margin: EdgeInsets.zero,
+                shape: Border(
+                  bottom: BorderSide(
+                    width: 1.0,
+                    color: Theme.of(context).shadowColor,
+                  ),
+                ),
+                child: ListTile(
+                  title: Text('Группа $group'),
+                  onTap: () => controller.selectGroup(group),
+                  trailing: const Icon(Icons.arrow_forward_ios),
+                ),
+              );
+            },
+          ),
+        ),
+      ],
     );
   }
 }

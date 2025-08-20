@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:poteu/app/pages/exam/exam_view.dart';
+import 'package:poteu/domain/usecases/check_subscription_usecase.dart';
 import 'package:poteu/app/services/active_regulation_service.dart';
 import 'package:rolling_switch/rolling_switch.dart';
 import '../../../domain/repositories/subscription_repository.dart';
@@ -224,18 +225,40 @@ class AppDrawer extends StatelessWidget {
                             ListTile(
                               leading: const Icon(Icons.quiz_outlined),
                               title: const Text('Экзамен'),
-                              onTap: () {
-                                final regulationId = ActiveRegulationService()
-                                    .currentRegulationId;
+                              onTap: () async {
+                                final checkSubscriptionUseCase =
+                                    CheckSubscriptionUseCase(
+                                        subscriptionRepository);
                                 Navigator.of(context).pop(); // Close drawer
-                                Navigator.of(context).push(
-                                  MaterialPageRoute(
-                                    builder: (context) => ExamView(
-                                      arguments: ExamArguments(
-                                          regulationId: regulationId),
-                                    ),
-                                  ),
-                                );
+
+                                try {
+                                  final subscriptionStream =
+                                      await checkSubscriptionUseCase
+                                          .buildUseCaseStream(null);
+                                  final subscription =
+                                      await subscriptionStream.first;
+
+                                  if (!context.mounted) return;
+
+                                  if (subscription.isActive) {
+                                    final regulationId =
+                                        ActiveRegulationService()
+                                            .currentRegulationId;
+                                    Navigator.of(context).push(
+                                      MaterialPageRoute(
+                                        builder: (context) => ExamView(
+                                          arguments: ExamArguments(
+                                              regulationId: regulationId),
+                                        ),
+                                      ),
+                                    );
+                                  } else {
+                                    Navigator.of(context)
+                                        .pushNamed('/subscription');
+                                  }
+                                } finally {
+                                  checkSubscriptionUseCase.dispose();
+                                }
                               },
                               iconColor: Theme.of(context)
                                   .navigationRailTheme
