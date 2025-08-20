@@ -126,12 +126,24 @@ class ExamViewState extends ViewState<ExamView, ExamController> {
               .map((answer) => _buildAnswerTile(controller, answer, question)),
           const SizedBox(height: 24),
           ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Theme.of(context)
+                  .navigationRailTheme
+                  .selectedIconTheme
+                  ?.color,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 16),
+            ),
             onPressed: controller.isAnswered ? controller.nextQuestion : null,
             child: Text(
               controller.currentQuestionIndex <
                       controller.examQuestions.length - 1
                   ? 'Следующий вопрос'
                   : 'Показать результаты',
+              style: Theme.of(context)
+                  .textTheme
+                  .bodyLarge
+                  ?.copyWith(color: Colors.white),
             ),
           ),
         ],
@@ -141,31 +153,48 @@ class ExamViewState extends ViewState<ExamView, ExamController> {
 
   Widget _buildAnswerTile(
       ExamController controller, String answer, ExamQuestion question) {
-    bool isSelected = controller.selectedAnswer == answer;
-    bool isCorrect = controller.isCorrect(answer, question);
+    final bool isSelected = controller.selectedAnswer == answer;
+    final bool isThisAnswerCorrect = controller.isCorrect(answer, question);
+    final bool wasUserSelectionCorrect =
+        controller.isCorrect(controller.selectedAnswer ?? '', question);
+
     Color? tileColor;
+    Icon? trailingIcon;
 
     if (controller.isAnswered) {
-      if (isCorrect) {
-        tileColor = Colors.green.withOpacity(0.3);
-      } else if (isSelected && !isCorrect) {
-        tileColor = Colors.red.withOpacity(0.3);
+      if (isSelected) {
+        if (isThisAnswerCorrect) {
+          // User picked this correct answer
+          tileColor = Colors.green.withOpacity(0.2);
+          trailingIcon = const Icon(Icons.check_circle, color: Colors.green);
+        } else {
+          // User picked this wrong answer
+          tileColor = Theme.of(context).colorScheme.error.withOpacity(0.2);
+          trailingIcon =
+              Icon(Icons.cancel, color: Theme.of(context).colorScheme.error);
+        }
+      } else if (isThisAnswerCorrect && !wasUserSelectionCorrect) {
+        // This is a correct answer, and the user picked a wrong one. Show the correct answer.
+        tileColor = Colors.green.withOpacity(0.2);
+        trailingIcon =
+            const Icon(Icons.check_circle_outline, color: Colors.green);
       }
     }
 
     return Card(
-      color: tileColor,
-      margin: const EdgeInsets.symmetric(vertical: 4.0),
+      elevation: 0,
+      color: tileColor ?? Theme.of(context).scaffoldBackgroundColor,
+      margin: EdgeInsets.zero,
+      shape: Border(
+        bottom: BorderSide(
+          width: 1.0,
+          color: Theme.of(context).shadowColor,
+        ),
+      ),
       child: ListTile(
         title: Text(answer),
         onTap: () => controller.selectAnswer(answer),
-        trailing: controller.isAnswered
-            ? isCorrect
-                ? const Icon(Icons.check_circle, color: Colors.green)
-                : (isSelected
-                    ? const Icon(Icons.cancel, color: Colors.red)
-                    : null)
-            : null,
+        trailing: trailingIcon,
       ),
     );
   }
@@ -198,9 +227,18 @@ class ExamViewState extends ViewState<ExamView, ExamController> {
               final isCorrect =
                   controller.isCorrect(userAnswer ?? '', question);
               return Card(
-                margin: const EdgeInsets.symmetric(vertical: 8.0),
+                elevation: 0,
+                color: Theme.of(context).scaffoldBackgroundColor,
+                margin: EdgeInsets.zero,
+                shape: Border(
+                  bottom: BorderSide(
+                    width: 1.0,
+                    color: Theme.of(context).shadowColor,
+                  ),
+                ),
                 child: Padding(
-                  padding: const EdgeInsets.all(12.0),
+                  padding: const EdgeInsets.symmetric(
+                      vertical: 12.0, horizontal: 8.0),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -209,7 +247,9 @@ class ExamViewState extends ViewState<ExamView, ExamController> {
                       const SizedBox(height: 8),
                       Text('Ваш ответ: $userAnswer',
                           style: TextStyle(
-                              color: isCorrect ? Colors.green : Colors.red)),
+                              color: isCorrect
+                                  ? Colors.green
+                                  : Theme.of(context).colorScheme.error)),
                       if (!isCorrect)
                         Text(
                             'Правильный ответ: ${question.correctAnswers.join(", ")}',
@@ -222,8 +262,20 @@ class ExamViewState extends ViewState<ExamView, ExamController> {
           ),
           const SizedBox(height: 24),
           ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Theme.of(context)
+                  .navigationRailTheme
+                  .selectedIconTheme
+                  ?.color,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 16),
+            ),
             onPressed: controller.restartExam,
-            child: const Text('Пройти еще раз'),
+            child: Text('Пройти еще раз',
+                style: Theme.of(context)
+                    .textTheme
+                    .bodyLarge
+                    ?.copyWith(color: Colors.white)),
           ),
         ],
       ),

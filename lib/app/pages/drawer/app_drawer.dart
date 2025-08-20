@@ -241,6 +241,10 @@ class AppDrawer extends StatelessWidget {
                                   .navigationRailTheme
                                   .unselectedIconTheme!
                                   .color,
+                              textColor: Theme.of(context)
+                                  .navigationRailTheme
+                                  .unselectedLabelTextStyle!
+                                  .color,
                             ),
                           ],
                         ),
