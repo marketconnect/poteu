@@ -46,3 +46,5 @@ app.*.map.json
 
 /old_code
 /lib/.env.dart
+# Android bundles
+releases/*.aab
