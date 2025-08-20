@@ -1,6 +1,7 @@
 import 'package:flutter_clean_architecture/flutter_clean_architecture.dart';
 import 'package:poteu/data/repositories/cloud_exam_repository.dart';
 import 'package:poteu/domain/entities/exam_question.dart';
+import 'package:flutter/foundation.dart';
 import 'exam_presenter.dart';
 
 class ExamController extends Controller {
@@ -11,9 +12,9 @@ class ExamController extends Controller {
   String? _error;
   List<ExamQuestion> _examQuestions = [];
   int _currentQuestionIndex = 0;
-  String? _selectedAnswer;
-  bool _isAnswered = false;
-  final Map<int, String> _userAnswers = {};
+  final Set<String> _selectedAnswers = {};
+  bool _isConfirmed = false;
+  final Map<int, Set<String>> _userAnswers = {};
   bool _showResults = false;
 
   // Getters
@@ -23,9 +24,9 @@ class ExamController extends Controller {
   int get currentQuestionIndex => _currentQuestionIndex;
   ExamQuestion? get currentQuestion =>
       _examQuestions.isNotEmpty ? _examQuestions[_currentQuestionIndex] : null;
-  String? get selectedAnswer => _selectedAnswer;
-  bool get isAnswered => _isAnswered;
-  Map<int, String> get userAnswers => _userAnswers;
+  Set<String> get selectedAnswers => _selectedAnswers;
+  bool get isConfirmed => _isConfirmed;
+  Map<int, Set<String>> get userAnswers => _userAnswers;
   bool get showResults => _showResults;
 
   ExamController(this.regulationId)
@@ -50,21 +51,41 @@ class ExamController extends Controller {
     };
   }
 
-  void selectAnswer(String answer) {
-    if (_isAnswered) return;
-    _selectedAnswer = answer;
-    _isAnswered = true;
-    _userAnswers[_currentQuestionIndex] = answer;
+  void toggleAnswerSelection(String answer) {
+    if (isConfirmed) return;
+
+    final question = currentQuestion;
+    if (question == null) return;
+
+    // Radio button logic for single-answer questions
+    if (question.correctAnswers.length == 1) {
+      _selectedAnswers.clear();
+      _selectedAnswers.add(answer);
+    } else {
+      // Checkbox logic for multiple-answer questions
+      if (_selectedAnswers.contains(answer)) {
+        _selectedAnswers.remove(answer);
+      } else {
+        _selectedAnswers.add(answer);
+      }
+    }
+    refreshUI();
+  }
+
+  void confirmAnswer() {
+    if (_selectedAnswers.isEmpty) return;
+    _isConfirmed = true;
+    _userAnswers[_currentQuestionIndex] = Set.from(_selectedAnswers);
     refreshUI();
   }
 
   void nextQuestion() {
-    if (!_isAnswered) return;
+    if (!_isConfirmed) return;
 
     if (_currentQuestionIndex < _examQuestions.length - 1) {
       _currentQuestionIndex++;
-      _isAnswered = false;
-      _selectedAnswer = null;
+      _isConfirmed = false;
+      _selectedAnswers.clear();
       refreshUI();
     } else {
       _showResults = true;
@@ -77,22 +98,24 @@ class ExamController extends Controller {
     _error = null;
     _examQuestions = [];
     _currentQuestionIndex = 0;
-    _selectedAnswer = null;
-    _isAnswered = false;
+    _selectedAnswers.clear();
+    _isConfirmed = false;
     _userAnswers.clear();
     _showResults = false;
     refreshUI();
     _presenter.getQuestions(regulationId);
   }
 
-  bool isCorrect(String answer, ExamQuestion question) {
-    return question.correctAnswers.contains(answer);
+  bool isAnswerCorrect(int questionIndex) {
+    final userAnswers = _userAnswers[questionIndex] ?? <String>{};
+    final correctAnswers = _examQuestions[questionIndex].correctAnswers.toSet();
+    return setEquals(userAnswers, correctAnswers);
   }
 
   int get score {
     int correct = 0;
     for (int i = 0; i < _examQuestions.length; i++) {
-      if (isCorrect(_userAnswers[i] ?? '', _examQuestions[i])) {
+      if (isAnswerCorrect(i)) {
         correct++;
       }
     }

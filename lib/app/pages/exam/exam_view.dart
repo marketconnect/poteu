@@ -134,12 +134,18 @@ class ExamViewState extends ViewState<ExamView, ExamController> {
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(vertical: 16),
             ),
-            onPressed: controller.isAnswered ? controller.nextQuestion : null,
+            onPressed: controller.isConfirmed
+                ? controller.nextQuestion
+                : (controller.selectedAnswers.isNotEmpty
+                    ? controller.confirmAnswer
+                    : null),
             child: Text(
-              controller.currentQuestionIndex <
-                      controller.examQuestions.length - 1
-                  ? 'Следующий вопрос'
-                  : 'Показать результаты',
+              controller.isConfirmed
+                  ? (controller.currentQuestionIndex <
+                          controller.examQuestions.length - 1
+                      ? 'Следующий вопрос'
+                      : 'Показать результаты')
+                  : 'Подтвердить ответ',
               style: Theme.of(context)
                   .textTheme
                   .bodyLarge
@@ -153,31 +159,39 @@ class ExamViewState extends ViewState<ExamView, ExamController> {
 
   Widget _buildAnswerTile(
       ExamController controller, String answer, ExamQuestion question) {
-    final bool isSelected = controller.selectedAnswer == answer;
-    final bool isThisAnswerCorrect = controller.isCorrect(answer, question);
-    final bool wasUserSelectionCorrect =
-        controller.isCorrect(controller.selectedAnswer ?? '', question);
+    final bool isSelected = controller.selectedAnswers.contains(answer);
+    final bool isThisAnswerCorrect = question.correctAnswers.contains(answer);
 
     Color? tileColor;
-    Icon? trailingIcon;
+    Widget? leadingIcon;
 
-    if (controller.isAnswered) {
-      if (isSelected) {
-        if (isThisAnswerCorrect) {
-          // User picked this correct answer
-          tileColor = Colors.green.withOpacity(0.2);
-          trailingIcon = const Icon(Icons.check_circle, color: Colors.green);
-        } else {
-          // User picked this wrong answer
-          tileColor = Theme.of(context).colorScheme.error.withOpacity(0.2);
-          trailingIcon =
-              Icon(Icons.cancel, color: Theme.of(context).colorScheme.error);
-        }
-      } else if (isThisAnswerCorrect && !wasUserSelectionCorrect) {
-        // This is a correct answer, and the user picked a wrong one. Show the correct answer.
+    if (controller.isConfirmed) {
+      // After user confirms their answer
+      if (isSelected && isThisAnswerCorrect) {
         tileColor = Colors.green.withOpacity(0.2);
-        trailingIcon =
-            const Icon(Icons.check_circle_outline, color: Colors.green);
+        leadingIcon = const Icon(Icons.check_box, color: Colors.green);
+      } else if (isSelected && !isThisAnswerCorrect) {
+        tileColor = Theme.of(context).colorScheme.error.withOpacity(0.2);
+        leadingIcon =
+            Icon(Icons.cancel, color: Theme.of(context).colorScheme.error);
+      } else if (!isSelected && isThisAnswerCorrect) {
+        tileColor = Colors.green.withOpacity(0.1);
+        leadingIcon =
+            const Icon(Icons.check_box_outline_blank, color: Colors.green);
+      }
+    } else {
+      // Before user confirms their answer
+      final isSingleChoice = question.correctAnswers.length == 1;
+      if (isSingleChoice) {
+        leadingIcon = Icon(
+            isSelected
+                ? Icons.radio_button_checked
+                : Icons.radio_button_unchecked,
+            color: isSelected ? Theme.of(context).primaryColor : null);
+      } else {
+        leadingIcon = Icon(
+            isSelected ? Icons.check_box : Icons.check_box_outline_blank,
+            color: isSelected ? Theme.of(context).primaryColor : null);
       }
     }
 
@@ -192,9 +206,9 @@ class ExamViewState extends ViewState<ExamView, ExamController> {
         ),
       ),
       child: ListTile(
+        leading: leadingIcon,
         title: Text(answer),
-        onTap: () => controller.selectAnswer(answer),
-        trailing: trailingIcon,
+        onTap: () => controller.toggleAnswerSelection(answer),
       ),
     );
   }
@@ -224,8 +238,7 @@ class ExamViewState extends ViewState<ExamView, ExamController> {
             itemBuilder: (context, index) {
               final question = controller.examQuestions[index];
               final userAnswer = controller.userAnswers[index];
-              final isCorrect =
-                  controller.isCorrect(userAnswer ?? '', question);
+              final isCorrect = controller.isAnswerCorrect(index);
               return Card(
                 elevation: 0,
                 color: Theme.of(context).scaffoldBackgroundColor,
@@ -245,7 +258,8 @@ class ExamViewState extends ViewState<ExamView, ExamController> {
                       Text('Вопрос ${index + 1}: ${question.question.text}',
                           style: Theme.of(context).textTheme.bodyLarge),
                       const SizedBox(height: 8),
-                      Text('Ваш ответ: $userAnswer',
+                      Text(
+                          'Ваш ответ: ${userAnswer?.join(", ") ?? "Нет ответа"}',
                           style: TextStyle(
                               color: isCorrect
                                   ? Colors.green
