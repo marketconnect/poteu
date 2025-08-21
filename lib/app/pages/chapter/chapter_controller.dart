@@ -376,22 +376,39 @@ class ChapterController extends Controller {
 
     // Добавляем задачу загрузки предыдущей главы если есть
     if (chapterOrderNum > 1) {
-      final prevChapterInfo = chapterList.firstWhere(
-        (ch) => ch.orderNum == chapterOrderNum - 1,
-        orElse: () => throw Exception('Previous chapter not found'),
-      );
-      loadTasks
-          .add(_loadChapterDataById(prevChapterInfo.id, chapterOrderNum - 1));
+      // final prevChapterInfo = chapterList.firstWhere(
+      //   (ch) => ch.orderNum == chapterOrderNum - 1,
+      //   orElse: () => throw Exception('Previous chapter not found'),
+      // );
+      // loadTasks
+      //     .add(_loadChapterDataById(prevChapterInfo.id, chapterOrderNum - 1));
+      try {
+        final prevChapterInfo =
+            chapterList.firstWhere((ch) => ch.orderNum == chapterOrderNum - 1);
+        loadTasks
+            .add(_loadChapterDataById(prevChapterInfo.id, chapterOrderNum - 1));
+      } catch (e) {
+        // ignore
+      }
     }
 
     // Добавляем задачу загрузки следующей главы если есть
+    // if (chapterOrderNum < chapterList.length) {
+    //   final nextChapterInfo = chapterList.firstWhere(
+    //     (ch) => ch.orderNum == chapterOrderNum + 1,
+    //     orElse: () => throw Exception('Next chapter not found'),
+    //   );
+    //   loadTasks
+    //       .add(_loadChapterDataById(nextChapterInfo.id, chapterOrderNum + 1));
     if (chapterOrderNum < chapterList.length) {
-      final nextChapterInfo = chapterList.firstWhere(
-        (ch) => ch.orderNum == chapterOrderNum + 1,
-        orElse: () => throw Exception('Next chapter not found'),
-      );
-      loadTasks
-          .add(_loadChapterDataById(nextChapterInfo.id, chapterOrderNum + 1));
+      try {
+        final nextChapterInfo =
+            chapterList.firstWhere((ch) => ch.orderNum == chapterOrderNum + 1);
+        loadTasks
+            .add(_loadChapterDataById(nextChapterInfo.id, chapterOrderNum + 1));
+      } catch (e) {
+        // ignore
+      }
     }
 
     // Выполняем все задачи параллельно
@@ -484,22 +501,39 @@ class ChapterController extends Controller {
 
         // Добавляем задачу загрузки предыдущей главы если есть
         if (chapterOrderNum > 1) {
-          final prevChapterInfo = chapterList.firstWhere(
-            (ch) => ch.orderNum == chapterOrderNum - 1,
-            orElse: () => throw Exception('Previous chapter not found'),
-          );
-          loadTasks.add(
-              _loadChapterDataById(prevChapterInfo.id, chapterOrderNum - 1));
+          // final prevChapterInfo = chapterList.firstWhere(
+          //   (ch) => ch.orderNum == chapterOrderNum - 1,
+          //   orElse: () => throw Exception('Previous chapter not found'),
+          // );
+          // loadTasks.add(
+          //     _loadChapterDataById(prevChapterInfo.id, chapterOrderNum - 1));
+          try {
+            final prevChapterInfo = chapterList
+                .firstWhere((ch) => ch.orderNum == chapterOrderNum - 1);
+            loadTasks.add(
+                _loadChapterDataById(prevChapterInfo.id, chapterOrderNum - 1));
+          } catch (e) {
+            // ignore
+          }
         }
 
         // Добавляем задачу загрузки следующей главы если есть
-        if (chapterOrderNum < chapterList.length) {
-          final nextChapterInfo = chapterList.firstWhere(
-            (ch) => ch.orderNum == chapterOrderNum + 1,
-            orElse: () => throw Exception('Next chapter not found'),
-          );
-          loadTasks.add(
-              _loadChapterDataById(nextChapterInfo.id, chapterOrderNum + 1));
+        // if (chapterOrderNum < chapterList.length) {
+        //   final nextChapterInfo = chapterList.firstWhere(
+        //     (ch) => ch.orderNum == chapterOrderNum + 1,
+        //     orElse: () => throw Exception('Next chapter not found'),
+        //   );
+        //   loadTasks.add(
+        //       _loadChapterDataById(nextChapterInfo.id, chapterOrderNum + 1));
+        if (chapterOrderNum < _totalChapters) {
+          try {
+            final nextChapterInfo = chapterList
+                .firstWhere((ch) => ch.orderNum == chapterOrderNum + 1);
+            loadTasks.add(
+                _loadChapterDataById(nextChapterInfo.id, chapterOrderNum + 1));
+          } catch (e) {
+            // ignore
+          }
         }
 
         // Выполняем все задачи параллельно
