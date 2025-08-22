@@ -6,6 +6,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'exam_presenter.dart';
 import 'dart:async';
 
+enum ExamMode { exam, errorReview }
+
 class ExamController extends Controller {
   final int regulationId;
   final ExamPresenter _presenter;
@@ -25,6 +27,7 @@ class ExamController extends Controller {
   int _timeRemainingInSeconds = 0;
   int _numberOfQuestions = 20;
   int _examDurationInMinutes = 20;
+  ExamMode _examMode = ExamMode.exam;
 
   static const String _numberOfQuestionsKey = 'exam_number_of_questions';
   static const String _examDurationKey = 'exam_duration_minutes';
@@ -46,6 +49,7 @@ class ExamController extends Controller {
   int get timeRemainingInSeconds => _timeRemainingInSeconds;
   int get numberOfQuestions => _numberOfQuestions;
   int get examDurationInMinutes => _examDurationInMinutes;
+  ExamMode get examMode => _examMode;
 
   ExamController(this.regulationId)
       : _presenter = ExamPresenter(CloudExamRepository()) {
@@ -91,6 +95,11 @@ class ExamController extends Controller {
     _examDurationInMinutes = minutes;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt(_examDurationKey, minutes);
+    refreshUI();
+  }
+
+  void setExamMode(ExamMode mode) {
+    _examMode = mode;
     refreshUI();
   }
 
