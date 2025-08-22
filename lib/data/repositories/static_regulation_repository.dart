@@ -519,8 +519,8 @@ class StaticRegulationRepository implements RegulationRepository {
   @override
   Future<List<Regulation>> getLocalRulesWithMetadata() async {
     final conn = await _dbProvider.connection;
-    final result =
-        await conn.query('SELECT id, name, abbreviation, change_date FROM rules');
+    final result = await conn
+        .query('SELECT id, name, abbreviation, change_date FROM rules');
     final rows = result.fetchAll();
     return rows
         .map((row) => Regulation(
@@ -541,5 +541,26 @@ class StaticRegulationRepository implements RegulationRepository {
   @override
   Future<void> deleteRegulationData(int regulationId) {
     throw UnimplementedError('StaticRegulationRepository is read-only.');
+  }
+
+  @override
+  Future<List<String>> getDifficultQuestionIds({required int regulationId}) {
+    throw UnimplementedError(
+        'Exam statistics are not available in StaticRegulationRepository.');
+  }
+
+  @override
+  Future<List<String>> getErrorReviewQuestionIds({required int regulationId}) {
+    throw UnimplementedError(
+        'Exam statistics are not available in StaticRegulationRepository.');
+  }
+
+  @override
+  Future<void> updateExamQuestionStats(
+      {required int regulationId,
+      required String questionId,
+      required bool isCorrect}) {
+    throw UnimplementedError(
+        'Exam statistics are not available in StaticRegulationRepository.');
   }
 }

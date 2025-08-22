@@ -43,8 +43,7 @@ abstract class RegulationRepository {
     required String query,
   });
 
-  Future<List<SearchResult>> searchInAllRegulations(
-      {required String query});
+  Future<List<SearchResult>> searchInAllRegulations({required String query});
 
   /// Saves edited paragraph content
   Future<void> saveEditedParagraph(
@@ -64,4 +63,12 @@ abstract class RegulationRepository {
 
   // Deletes a single regulation and all its associated data (chapters, paragraphs)
   Future<void> deleteRegulationData(int regulationId);
+
+  Future<void> updateExamQuestionStats({
+    required int regulationId,
+    required String questionId,
+    required bool isCorrect,
+  });
+  Future<List<String>> getErrorReviewQuestionIds({required int regulationId});
+  Future<List<String>> getDifficultQuestionIds({required int regulationId});
 }

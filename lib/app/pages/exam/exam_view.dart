@@ -77,11 +77,12 @@ class ExamViewState extends ViewState<ExamView, ExamController> {
                     )
                   else if (controller.selectedGroup != null &&
                       !controller.showResults)
-                    _buildTimer(context, controller)
-                  else
-                    const SizedBox(
-                      width: 48,
-                    )
+                    if (!controller.isTrainingMode)
+                      _buildTimer(context, controller)
+                    else
+                      const SizedBox(
+                        width: 48,
+                      )
                 ],
               ),
             ),
@@ -125,6 +126,141 @@ class ExamViewState extends ViewState<ExamView, ExamController> {
         return _buildQuestionView(controller);
       }
     }
+  }
+
+  Widget _buildTrainingSection(
+      BuildContext context, ExamController controller) {
+    final textTheme = Theme.of(context).textTheme;
+    const chipColor1 = Color(0xFFFEF8E3); // Повтор ошибок
+    const chipColor2 = Color(0xFFF3F3FD); // Сложные
+    const chipColor3 = Color(0xFFEBF2FF); // Быстрый сет
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 8.0),
+      child: Container(
+        padding: const EdgeInsets.all(16.0),
+        decoration: BoxDecoration(
+          color: Theme.of(context).scaffoldBackgroundColor,
+          borderRadius: BorderRadius.circular(16.0),
+          border:
+              Border.all(color: Theme.of(context).shadowColor.withOpacity(0.5)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Тренировка',
+              style: textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.w600,
+                color: textTheme.bodyLarge?.color,
+              ),
+            ),
+            const SizedBox(height: 16),
+            if (controller.isTrainingStatsLoading)
+              const Center(
+                  child: Padding(
+                padding: EdgeInsets.all(8.0),
+                child: CircularProgressIndicator(),
+              ))
+            else ...[
+              _buildTrainingChip(
+                context,
+                label: 'Повтор ошибок',
+                count: controller.errorReviewCount,
+                color: chipColor1,
+                onTap: () {
+                  if (controller.errorReviewCount > 0) {
+                    controller.startErrorReview();
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                          content: Text('Нет вопросов для повторения ошибок.')),
+                    );
+                  }
+                },
+                isFullWidth: true,
+              ),
+              const SizedBox(height: 8),
+              _buildTrainingChip(
+                context,
+                label: 'Сложные',
+                count: controller.difficultCount,
+                color: chipColor2,
+                onTap: () {
+                  if (controller.difficultCount > 0) {
+                    controller.startDifficult();
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Нет сложных вопросов.')),
+                    );
+                  }
+                },
+                isFullWidth: true,
+              ),
+              const SizedBox(height: 8),
+              _buildTrainingChip(
+                context,
+                label: 'Быстрый сет',
+                color: chipColor3,
+                onTap: controller.startQuickSet,
+                isFullWidth: true,
+              ),
+            ]
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTrainingChip(BuildContext context,
+      {required String label,
+      int? count,
+      required Color color,
+      required VoidCallback onTap,
+      bool isFullWidth = false}) {
+    final textTheme = Theme.of(context).textTheme;
+    Widget content = InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8.0),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: color,
+          borderRadius: BorderRadius.circular(8.0),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              label,
+              style: textTheme.bodyMedium?.copyWith(
+                  fontWeight: FontWeight.w500, color: Colors.black87),
+            ),
+            if (count != null) ...[
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text(
+                  count.toString(),
+                  style: textTheme.bodySmall?.copyWith(
+                      fontWeight: FontWeight.bold, color: Colors.black87),
+                ),
+              ),
+            ]
+          ],
+        ),
+      ),
+    );
+    if (isFullWidth) {
+      return SizedBox(
+        width: double.infinity,
+        child: content,
+      );
+    }
+    return content;
   }
 
   Widget _buildTimer(BuildContext context, ExamController controller) {
@@ -510,103 +646,6 @@ class ExamViewState extends ViewState<ExamView, ExamController> {
             },
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildTrainingSection(
-      BuildContext context, ExamController controller) {
-    final textTheme = Theme.of(context).textTheme;
-    const chipColor1 = Color(0xFFFEF8E3); // Повтор ошибок
-    const chipColor2 = Color(0xFFF3F3FD); // Сложные
-    const chipColor3 = Color(0xFFEBF2FF); // Быстрый сет
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 8.0),
-      child: Container(
-        padding: const EdgeInsets.all(16.0),
-        decoration: BoxDecoration(
-          color: Theme.of(context).scaffoldBackgroundColor,
-          borderRadius: BorderRadius.circular(16.0),
-          border:
-              Border.all(color: Theme.of(context).shadowColor.withOpacity(0.5)),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Тренировка',
-              style: textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.w600,
-                color: textTheme.bodyLarge?.color,
-              ),
-            ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                _buildTrainingChip(
-                  context,
-                  label: 'Повтор ошибок',
-                  color: chipColor1,
-                  onTap: () {},
-                ),
-                const SizedBox(width: 8),
-                _buildTrainingChip(
-                  context,
-                  label: 'Сложные',
-                  count: 8,
-                  color: chipColor2,
-                  onTap: () {},
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            _buildTrainingChip(
-              context,
-              label: 'Быстрый сет',
-              count: 10,
-              color: chipColor3,
-              onTap: () {},
-            ),
-            // const SizedBox(height: 12),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTrainingChip(BuildContext context,
-      {required String label,
-      int? count,
-      required Color color,
-      required VoidCallback onTap}) {
-    final textTheme = Theme.of(context).textTheme;
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(8.0),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        decoration: BoxDecoration(
-          color: color,
-          borderRadius: BorderRadius.circular(8.0),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              label,
-              style: textTheme.bodyMedium?.copyWith(
-                  fontWeight: FontWeight.w500, color: Colors.black87),
-            ),
-            if (count != null) ...[
-              const SizedBox(width: 8),
-              Text(
-                count.toString(),
-                style: textTheme.bodyMedium?.copyWith(
-                    fontWeight: FontWeight.w500, color: Colors.black87),
-              ),
-            ],
-          ],
-        ),
       ),
     );
   }

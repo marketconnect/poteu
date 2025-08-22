@@ -5,8 +5,10 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'exam_presenter.dart';
 import 'dart:async';
+import 'package:poteu/data/repositories/data_regulation_repository.dart';
+import 'dart:math';
 
-enum ExamMode { exam, errorReview }
+enum ExamType { standard, errorReview, difficult, quickSet }
 
 class ExamController extends Controller {
   final int regulationId;
@@ -27,8 +29,11 @@ class ExamController extends Controller {
   int _timeRemainingInSeconds = 0;
   int _numberOfQuestions = 20;
   int _examDurationInMinutes = 20;
-  ExamMode _examMode = ExamMode.exam;
+  ExamType _examType = ExamType.standard;
   bool _isTrainingMode = false;
+  int _errorReviewCount = 0;
+  int _difficultCount = 0;
+  bool _isTrainingStatsLoading = false;
 
   static const String _numberOfQuestionsKey = 'exam_number_of_questions';
   static const String _examDurationKey = 'exam_duration_minutes';
@@ -50,11 +55,16 @@ class ExamController extends Controller {
   int get timeRemainingInSeconds => _timeRemainingInSeconds;
   int get numberOfQuestions => _numberOfQuestions;
   int get examDurationInMinutes => _examDurationInMinutes;
-  ExamMode get examMode => _examMode;
+  ExamType get examType => _examType;
   bool get isTrainingMode => _isTrainingMode;
+  int get errorReviewCount => _errorReviewCount;
+  int get difficultCount => _difficultCount;
+  bool get isTrainingStatsLoading => _isTrainingStatsLoading;
 
-  ExamController(this.regulationId)
-      : _presenter = ExamPresenter(CloudExamRepository()) {
+  final DataRegulationRepository _dataRepository = DataRegulationRepository();
+  ExamController(
+    this.regulationId,
+  ) : _presenter = ExamPresenter(CloudExamRepository()) {
     initListeners();
     _loadSettingsAndGetQuestions();
   }
@@ -100,13 +110,28 @@ class ExamController extends Controller {
     refreshUI();
   }
 
-  void setExamMode(ExamMode mode) {
-    _examMode = mode;
+  void toggleTrainingMode() {
+    _isTrainingMode = !_isTrainingMode;
+    if (_isTrainingMode) {
+      loadTrainingStats();
+    }
     refreshUI();
   }
 
-  void toggleTrainingMode() {
-    _isTrainingMode = !_isTrainingMode;
+  Future<void> loadTrainingStats() async {
+    _isTrainingStatsLoading = true;
+    refreshUI();
+    try {
+      final errorIds = await _dataRepository.getErrorReviewQuestionIds(
+          regulationId: regulationId);
+      final difficultIds = await _dataRepository.getDifficultQuestionIds(
+          regulationId: regulationId);
+      _errorReviewCount = errorIds.length;
+      _difficultCount = difficultIds.length;
+    } catch (e) {
+      _error = e.toString();
+    }
+    _isTrainingStatsLoading = false;
     refreshUI();
   }
 
@@ -117,11 +142,15 @@ class ExamController extends Controller {
     if (_examQuestions.length > _numberOfQuestions) {
       _examQuestions = _examQuestions.take(_numberOfQuestions).toList();
     }
-    _startTimer();
+    _examType = ExamType.standard;
+    if (!_isTrainingMode) {
+      _startTimer();
+    }
     refreshUI();
   }
 
   void _startTimer() {
+    if (_isTrainingMode) return;
     _timer?.cancel();
     _timeRemainingInSeconds = _examDurationInMinutes * 60;
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
@@ -165,6 +194,17 @@ class ExamController extends Controller {
     if (_selectedAnswers.isEmpty) return;
     _isConfirmed = true;
     _userAnswers[_currentQuestionIndex] = Set.from(_selectedAnswers);
+    if (_examType == ExamType.standard) {
+      final question = currentQuestion;
+      if (question != null) {
+        final isCorrect = isAnswerCorrect(_currentQuestionIndex);
+        _dataRepository.updateExamQuestionStats(
+          regulationId: regulationId,
+          questionId: question.question.text,
+          isCorrect: isCorrect,
+        );
+      }
+    }
     refreshUI();
   }
 
@@ -196,6 +236,7 @@ class ExamController extends Controller {
     _isConfirmed = false;
     _userAnswers.clear();
     _showResults = false;
+    _isTrainingMode = false;
     refreshUI();
     _presenter.getQuestions(regulationId);
   }
@@ -214,6 +255,85 @@ class ExamController extends Controller {
       }
     }
     return correct;
+  }
+
+  void _resetExamStateForTraining(String groupName, ExamType type) {
+    _selectedGroup = groupName;
+    _examType = type;
+    _currentQuestionIndex = 0;
+    _selectedAnswers.clear();
+    _isConfirmed = false;
+    _userAnswers.clear();
+    _showResults = false;
+    _timeRemainingInSeconds = 0;
+    _timer?.cancel();
+  }
+
+  Future<void> startErrorReview() async {
+    _isLoading = true;
+    refreshUI();
+    try {
+      final questionIds = await _dataRepository.getErrorReviewQuestionIds(
+          regulationId: regulationId);
+      _examQuestions = _allQuestions
+          .where((q) => questionIds.contains(q.question.text))
+          .toList()
+        ..shuffle();
+      _resetExamStateForTraining('Повтор ошибок', ExamType.errorReview);
+    } catch (e) {
+      _error = e.toString();
+    }
+    _isLoading = false;
+    refreshUI();
+  }
+
+  Future<void> startDifficult() async {
+    _isLoading = true;
+    refreshUI();
+    try {
+      final questionIds = await _dataRepository.getDifficultQuestionIds(
+          regulationId: regulationId);
+      _examQuestions = _allQuestions
+          .where((q) => questionIds.contains(q.question.text))
+          .toList()
+        ..shuffle();
+      _resetExamStateForTraining('Сложные', ExamType.difficult);
+    } catch (e) {
+      _error = e.toString();
+    }
+    _isLoading = false;
+    refreshUI();
+  }
+
+  Future<void> startQuickSet() async {
+    _isLoading = true;
+    refreshUI();
+    try {
+      final errorIds = await _dataRepository.getErrorReviewQuestionIds(
+          regulationId: regulationId);
+      final difficultIds = await _dataRepository.getDifficultQuestionIds(
+          regulationId: regulationId);
+      final poolIds = {...errorIds, ...difficultIds};
+      final poolQuestions = _allQuestions
+          .where((q) => poolIds.contains(q.question.text))
+          .toList()
+        ..shuffle();
+      final randomQuestions = _allQuestions
+          .where((q) => !poolIds.contains(q.question.text))
+          .toList()
+        ..shuffle();
+      final int totalQuestions = min(15, _allQuestions.length);
+      final int poolCount = (totalQuestions * 0.7).round();
+      final int randomCount = totalQuestions - poolCount;
+      _examQuestions = (poolQuestions.take(poolCount).toList() +
+          randomQuestions.take(randomCount).toList())
+        ..shuffle();
+      _resetExamStateForTraining('Быстрый сет', ExamType.quickSet);
+    } catch (e) {
+      _error = e.toString();
+    }
+    _isLoading = false;
+    refreshUI();
   }
 
   @override

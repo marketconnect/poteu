@@ -411,8 +411,9 @@ class DataRegulationRepository implements RegulationRepository {
     // based on what the server provides. Let's assume `is_premium` column exists. We will assume a premium document is any document that is not the default one.
     // A better approach would be a flag from the backend.
     final allRulesResult = await conn.query("SELECT id FROM rules");
-    final allRuleIds = allRulesResult.fetchAll().map((row) => row[0] as int).toList();
-    
+    final allRuleIds =
+        allRulesResult.fetchAll().map((row) => row[0] as int).toList();
+
     // Assuming rule ID 1 is the default, non-premium one.
     final premiumRuleIds = allRuleIds.where((id) => id != 1).toList();
 
@@ -425,7 +426,8 @@ class DataRegulationRepository implements RegulationRepository {
     dev.log('Found premium document IDs to delete: $idsString');
 
     await conn.query('BEGIN TRANSACTION;');
-    await conn.query('DELETE FROM paragraphs WHERE chapterID IN (SELECT id FROM chapters WHERE rule_id IN ($idsString))');
+    await conn.query(
+        'DELETE FROM paragraphs WHERE chapterID IN (SELECT id FROM chapters WHERE rule_id IN ($idsString))');
     await conn.query('DELETE FROM chapters WHERE rule_id IN ($idsString)');
     await conn.query('DELETE FROM rules WHERE id IN ($idsString)');
     await conn.query('COMMIT;');
@@ -471,8 +473,8 @@ class DataRegulationRepository implements RegulationRepository {
   @override
   Future<List<Regulation>> getLocalRulesWithMetadata() async {
     final conn = await _dbProvider.connection;
-    final result =
-        await conn.query('SELECT id, name, abbreviation, change_date FROM rules');
+    final result = await conn
+        .query('SELECT id, name, abbreviation, change_date FROM rules');
     final rows = result.fetchAll();
     return rows
         .map((row) => Regulation(
@@ -502,13 +504,13 @@ class DataRegulationRepository implements RegulationRepository {
       dev.log('Deleted ${deletedParagraphs.fetchAll().length} paragraphs.');
 
       // Delete chapters of the rule
-      final deletedChapters = await conn
-          .query('DELETE FROM chapters WHERE rule_id = $regulationId RETURNING id;');
+      final deletedChapters = await conn.query(
+          'DELETE FROM chapters WHERE rule_id = $regulationId RETURNING id;');
       dev.log('Deleted ${deletedChapters.fetchAll().length} chapters.');
 
       // Delete the rule itself
-      final deletedRules =
-          await conn.query('DELETE FROM rules WHERE id = $regulationId RETURNING id;');
+      final deletedRules = await conn
+          .query('DELETE FROM rules WHERE id = $regulationId RETURNING id;');
       dev.log('Deleted ${deletedRules.fetchAll().length} rules.');
 
       await conn.query('COMMIT;');
@@ -518,5 +520,53 @@ class DataRegulationRepository implements RegulationRepository {
       dev.log('Error deleting regulation data for ID $regulationId: $e');
       rethrow;
     }
+  }
+
+  @override
+  Future<void> updateExamQuestionStats({
+    required int regulationId,
+    required String questionId,
+    required bool isCorrect,
+  }) async {
+    final conn = await _dbProvider.connection;
+    final escapedQuestionId = questionId.replaceAll("'", "''");
+    final correctIncrement = isCorrect ? 1 : 0;
+    final query = '''
+    INSERT INTO exam_statistics (regulation_id, question_id, attempts, correct_count, last_attempt_date)
+    VALUES ($regulationId, '$escapedQuestionId', 1, $correctIncrement, NOW())
+    ON CONFLICT (regulation_id, question_id) DO UPDATE SET
+      attempts = attempts + 1,
+      correct_count = correct_count + $correctIncrement,
+      last_attempt_date = NOW();
+  ''';
+    await conn.query(query);
+  }
+
+  @override
+  Future<List<String>> getErrorReviewQuestionIds(
+      {required int regulationId}) async {
+    final conn = await _dbProvider.connection;
+    final query = '''
+    SELECT question_id FROM exam_statistics
+    WHERE regulation_id = $regulationId
+    AND last_attempt_date >= (NOW() - INTERVAL '14 days')
+    AND correct_count < attempts;
+  ''';
+    final result = await conn.query(query);
+    return result.fetchAll().map((row) => row[0] as String).toList();
+  }
+
+  @override
+  Future<List<String>> getDifficultQuestionIds(
+      {required int regulationId}) async {
+    final conn = await _dbProvider.connection;
+    final query = '''
+    SELECT question_id FROM exam_statistics
+    WHERE regulation_id = $regulationId
+    AND attempts >= 2
+    AND (correct_count::DOUBLE / attempts) < 0.6;
+  ''';
+    final result = await conn.query(query);
+    return result.fetchAll().map((row) => row[0] as String).toList();
   }
 }
