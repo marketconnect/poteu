@@ -49,15 +49,36 @@ class ExamViewState extends ViewState<ExamView, ExamController> {
                   ),
                   Expanded(
                     child: Text(
-                      'Экзамен',
-                      style: Theme.of(context).appBarTheme.titleTextStyle,
+                      controller.isTrainingMode ? 'Тренировка' : 'Экзамен',
+                      style: controller.isTrainingMode
+                          ? Theme.of(context)
+                              .appBarTheme
+                              .titleTextStyle
+                              ?.copyWith(
+                                color: Theme.of(context)
+                                    .navigationRailTheme
+                                    .selectedIconTheme
+                                    ?.color,
+                              )
+                          : Theme.of(context).appBarTheme.titleTextStyle,
                       textAlign: TextAlign.center,
                     ),
                   ),
-                  if (controller.selectedGroup != null &&
+                  if (controller.selectedGroup == null)
+                    Switch(
+                      value: controller.isTrainingMode,
+                      onChanged: (value) {
+                        controller.toggleTrainingMode();
+                      },
+                      activeColor: Theme.of(context)
+                          .navigationRailTheme
+                          .selectedIconTheme
+                          ?.color,
+                    )
+                  else if (controller.selectedGroup != null &&
                       !controller.showResults)
                     _buildTimer(context, controller)
-                  else // Balance the back button
+                  else
                     const SizedBox(
                       width: 48,
                     )
@@ -334,10 +355,26 @@ class ExamViewState extends ViewState<ExamView, ExamController> {
   }
 
   Widget _buildGroupSelectionView(ExamController controller) {
+    if (controller.isTrainingMode) {
+      return Column(
+        children: [_buildTrainingSection(context, controller)],
+      );
+    }
     return SingleChildScrollView(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+            child: Text(
+              'Готовность: 74% • Серия: 3 дня',
+              textAlign: TextAlign.center,
+              style: Theme.of(context)
+                  .textTheme
+                  .bodyMedium
+                  ?.copyWith(color: Colors.grey[700]),
+            ),
+          ),
           SizedBox(
             height: MediaQuery.of(context).padding.top / 2,
           ),
@@ -351,33 +388,28 @@ class ExamViewState extends ViewState<ExamView, ExamController> {
                 });
               },
               child: Container(
-                padding: const EdgeInsets.all(12.0),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 decoration: BoxDecoration(
-                  color: Theme.of(context).primaryColor.withOpacity(0.05),
-                  borderRadius: BorderRadius.circular(8.0),
-                  border: Border.all(color: Theme.of(context).shadowColor),
+                  color: Theme.of(context).scaffoldBackgroundColor,
+                  borderRadius: BorderRadius.circular(12.0),
+                  border: Border.all(
+                      color: Theme.of(context).shadowColor.withOpacity(0.5)),
                 ),
                 child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Spacer(),
                     Text(
                       'Время: ${controller.examDurationInMinutes} мин.',
-                      style: Theme.of(context).textTheme.bodyLarge,
+                      style: Theme.of(context).textTheme.bodyMedium,
                     ),
-                    const SizedBox(width: 12),
                     Text(
-                      'Вопросов: ${controller.numberOfQuestions}',
-                      style: Theme.of(context).textTheme.bodyLarge,
+                      ' • Вопросов: ${controller.numberOfQuestions}',
+                      style: Theme.of(context).textTheme.bodyMedium,
                     ),
                     const Spacer(),
                     Icon(
                       Icons.settings_outlined,
                       color: Theme.of(context).textTheme.bodyLarge?.color,
-                      size: 18,
-                    ),
-                    const SizedBox(
-                      width: 8,
                     )
                   ],
                 ),
@@ -451,8 +483,6 @@ class ExamViewState extends ViewState<ExamView, ExamController> {
                 ],
               ),
             ),
-          if (_showSettings)
-            const Divider(height: 32, thickness: 1, indent: 16, endIndent: 16),
           ListView.builder(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
@@ -480,6 +510,103 @@ class ExamViewState extends ViewState<ExamView, ExamController> {
             },
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildTrainingSection(
+      BuildContext context, ExamController controller) {
+    final textTheme = Theme.of(context).textTheme;
+    const chipColor1 = Color(0xFFFEF8E3); // Повтор ошибок
+    const chipColor2 = Color(0xFFF3F3FD); // Сложные
+    const chipColor3 = Color(0xFFEBF2FF); // Быстрый сет
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 8.0),
+      child: Container(
+        padding: const EdgeInsets.all(16.0),
+        decoration: BoxDecoration(
+          color: Theme.of(context).scaffoldBackgroundColor,
+          borderRadius: BorderRadius.circular(16.0),
+          border:
+              Border.all(color: Theme.of(context).shadowColor.withOpacity(0.5)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Тренировка',
+              style: textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.w600,
+                color: textTheme.bodyLarge?.color,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                _buildTrainingChip(
+                  context,
+                  label: 'Повтор ошибок',
+                  color: chipColor1,
+                  onTap: () {},
+                ),
+                const SizedBox(width: 8),
+                _buildTrainingChip(
+                  context,
+                  label: 'Сложные',
+                  count: 8,
+                  color: chipColor2,
+                  onTap: () {},
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            _buildTrainingChip(
+              context,
+              label: 'Быстрый сет',
+              count: 10,
+              color: chipColor3,
+              onTap: () {},
+            ),
+            // const SizedBox(height: 12),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTrainingChip(BuildContext context,
+      {required String label,
+      int? count,
+      required Color color,
+      required VoidCallback onTap}) {
+    final textTheme = Theme.of(context).textTheme;
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8.0),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: color,
+          borderRadius: BorderRadius.circular(8.0),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              label,
+              style: textTheme.bodyMedium?.copyWith(
+                  fontWeight: FontWeight.w500, color: Colors.black87),
+            ),
+            if (count != null) ...[
+              const SizedBox(width: 8),
+              Text(
+                count.toString(),
+                style: textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w500, color: Colors.black87),
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }

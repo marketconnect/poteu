@@ -28,6 +28,7 @@ class ExamController extends Controller {
   int _numberOfQuestions = 20;
   int _examDurationInMinutes = 20;
   ExamMode _examMode = ExamMode.exam;
+  bool _isTrainingMode = false;
 
   static const String _numberOfQuestionsKey = 'exam_number_of_questions';
   static const String _examDurationKey = 'exam_duration_minutes';
@@ -50,6 +51,7 @@ class ExamController extends Controller {
   int get numberOfQuestions => _numberOfQuestions;
   int get examDurationInMinutes => _examDurationInMinutes;
   ExamMode get examMode => _examMode;
+  bool get isTrainingMode => _isTrainingMode;
 
   ExamController(this.regulationId)
       : _presenter = ExamPresenter(CloudExamRepository()) {
@@ -100,6 +102,11 @@ class ExamController extends Controller {
 
   void setExamMode(ExamMode mode) {
     _examMode = mode;
+    refreshUI();
+  }
+
+  void toggleTrainingMode() {
+    _isTrainingMode = !_isTrainingMode;
     refreshUI();
   }
 
