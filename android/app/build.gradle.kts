@@ -57,12 +57,13 @@ android {
 
     signingConfigs {
         create("release") {
-            keyAlias = keystoreProperties["keyAlias"] as String
-            keyPassword = keystoreProperties["keyPassword"] as String
-            storeFile = keystoreProperties["storeFile"]?.let { file(it) }
-            storePassword = keystoreProperties["storePassword"] as String
+            keyAlias = keystoreProperties["keyAlias"]?.toString() ?: ""
+            keyPassword = keystoreProperties["keyPassword"]?.toString() ?: ""
+            storeFile = keystoreProperties["storeFile"]?.toString()?.let { file(it) }
+            storePassword = keystoreProperties["storePassword"]?.toString() ?: ""
         }
     }
+
 
     buildTypes {
         release {
@@ -71,7 +72,7 @@ android {
             signingConfig = signingConfigs.getByName("release")
         }
         debug {
-           signingConfig = signingConfigs.getByName("release")
+           signingConfig = signingConfigs.getByName("debug")
         }
     }
 
@@ -80,7 +81,7 @@ android {
     productFlavors {
         create("poteu") {
             dimension = "default"
-            applicationId = "com.i_rm.poteu"
+            applicationIdSuffix = ".poteu"
             resValue("string", "app_name", "ПОТЭЭ-903н-2022")
             versionCode = versionsProperties["POTEU_VERSION_CODE"].toString().toInt()
             versionName = versionsProperties["POTEU_VERSION_NAME"] as String
@@ -94,7 +95,7 @@ android {
         }
         create("pteep") {
             dimension = "default"
-            applicationId = "com.i_rm.poteu.pteep"
+            applicationIdSuffix = ".pteep"
             resValue("string", "app_name", "ПТЭЭП")
             versionCode = versionsProperties["PTEEP_VERSION_CODE"].toString().toInt()
             versionName = versionsProperties["PTEEP_VERSION_NAME"] as String
@@ -113,7 +114,9 @@ android {
             versionCode = versionsProperties["FIRE_REG_VERSION_CODE"].toString().toInt()
             versionName = versionsProperties["FIRE_REG_VERSION_NAME"] as String
         }        
+        
     }
+
 }
 
 flutter {

@@ -26,73 +26,98 @@ class ExamViewState extends ViewState<ExamView, ExamController> {
 
   @override
   Widget get view {
-    return Scaffold(
-      key: globalKey,
-      appBar: PreferredSize(
-        preferredSize: Size.fromHeight(
-            Theme.of(context).appBarTheme.toolbarHeight ?? 74.0),
-        child: Padding(
-          padding: EdgeInsets.only(top: MediaQuery.of(context).padding.top),
-          child: RegulationAppBar(
-            child: Row(
-              children: [
-                IconButton(
-                  onPressed: () => Navigator.pop(context),
-                  icon: Icon(
-                    Icons.arrow_back,
-                    size: Theme.of(context).appBarTheme.iconTheme?.size ?? 27,
-                    color: Theme.of(context).appBarTheme.iconTheme?.color,
+    return ControlledWidgetBuilder<ExamController>(
+        builder: (context, controller) {
+      return Scaffold(
+        key: globalKey,
+        appBar: PreferredSize(
+          preferredSize: Size.fromHeight(
+              Theme.of(context).appBarTheme.toolbarHeight ?? 74.0),
+          child: Padding(
+            padding: EdgeInsets.only(top: MediaQuery.of(context).padding.top),
+            child: RegulationAppBar(
+              child: Row(
+                children: [
+                  IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: Icon(
+                      Icons.arrow_back,
+                      size: Theme.of(context).appBarTheme.iconTheme?.size ?? 27,
+                      color: Theme.of(context).appBarTheme.iconTheme?.color,
+                    ),
                   ),
-                ),
-                Expanded(
-                  child: Text(
-                    'Экзамен',
-                    style: Theme.of(context).appBarTheme.titleTextStyle,
-                    textAlign: TextAlign.center,
+                  Expanded(
+                    child: Text(
+                      'Экзамен',
+                      style: Theme.of(context).appBarTheme.titleTextStyle,
+                      textAlign: TextAlign.center,
+                    ),
                   ),
-                ),
-                const SizedBox(width: 48), // Balance the back button
-              ],
+                  if (controller.selectedGroup != null &&
+                      !controller.showResults)
+                    _buildTimer(context, controller)
+                  else
+                    const SizedBox(width: 48), // Balance the back button
+                ],
+              ),
             ),
           ),
         ),
-      ),
-      body: ControlledWidgetBuilder<ExamController>(
-        builder: (context, controller) {
-          if (controller.isLoading) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (controller.error != null) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text('Ошибка: ${controller.error}'),
-                  const SizedBox(height: 16),
-                  ElevatedButton(
-                    onPressed: controller.restartExam,
-                    child: const Text('Попробовать снова'),
-                  )
-                ],
-              ),
-            );
-          }
+        body: _buildBody(controller),
+      );
+    });
+  }
 
-          if (controller.selectedGroup == null) {
-            return _buildGroupSelectionView(controller);
-          } else {
-            if (controller.examQuestions.isEmpty) {
-              return Center(
-                  child: Text(
-                      'Вопросы для группы "${controller.selectedGroup}" не найдены.'));
-            }
-            if (controller.showResults) {
-              return _buildResultsView(controller);
-            } else {
-              return _buildQuestionView(controller);
-            }
-          }
-        },
+  Widget _buildBody(ExamController controller) {
+    if (controller.isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (controller.error != null) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text('Ошибка: ${controller.error}'),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: controller.restartExam,
+              child: const Text('Попробовать снова'),
+            )
+          ],
+        ),
+      );
+    }
+    if (controller.selectedGroup == null) {
+      return _buildGroupSelectionView(controller);
+    } else {
+      if (controller.examQuestions.isEmpty) {
+        return Center(
+            child: Text(
+                'Вопросы для группы "${controller.selectedGroup}" не найдены.'));
+      }
+      if (controller.showResults) {
+        return _buildResultsView(controller);
+      } else {
+        return _buildQuestionView(controller);
+      }
+    }
+  }
+
+  Widget _buildTimer(BuildContext context, ExamController controller) {
+    final duration = Duration(seconds: controller.timeRemainingInSeconds);
+    final minutes = duration.inMinutes.toString().padLeft(2, '0');
+    final seconds = (duration.inSeconds % 60).toString().padLeft(2, '0');
+    final isRunningLow = duration.inSeconds < 60;
+    return SizedBox(
+      width: 60,
+      child: Text(
+        '$minutes:$seconds',
+        style: Theme.of(context).appBarTheme.titleTextStyle?.copyWith(
+              color: isRunningLow
+                  ? Colors.red
+                  : Theme.of(context).appBarTheme.titleTextStyle?.color,
+            ),
+        textAlign: TextAlign.center,
       ),
     );
   }

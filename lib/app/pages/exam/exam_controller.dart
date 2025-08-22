@@ -3,6 +3,7 @@ import 'package:poteu/data/repositories/cloud_exam_repository.dart';
 import 'package:poteu/domain/entities/exam_question.dart';
 import 'package:flutter/foundation.dart';
 import 'exam_presenter.dart';
+import 'dart:async';
 
 class ExamController extends Controller {
   final int regulationId;
@@ -19,6 +20,8 @@ class ExamController extends Controller {
   final Map<int, Set<String>> _userAnswers = {};
   bool _showResults = false;
 
+  Timer? _timer;
+  int _timeRemainingInSeconds = 0;
   // Getters
   bool get isLoading => _isLoading;
   String? get error => _error;
@@ -33,6 +36,7 @@ class ExamController extends Controller {
   String? get selectedGroup => _selectedGroup;
   Map<int, Set<String>> get userAnswers => _userAnswers;
   bool get showResults => _showResults;
+  int get timeRemainingInSeconds => _timeRemainingInSeconds;
 
   ExamController(this.regulationId)
       : _presenter = ExamPresenter(CloudExamRepository()) {
@@ -44,8 +48,7 @@ class ExamController extends Controller {
   void initListeners() {
     _presenter.onQuestionsLoaded = (List<ExamQuestion> questions) {
       _allQuestions = questions;
-      _availableGroups =
-          questions.map((q) => q.name).toSet().toList()..sort();
+      _availableGroups = questions.map((q) => q.name).toSet().toList()..sort();
       _isLoading = false;
       refreshUI();
     };
@@ -64,6 +67,27 @@ class ExamController extends Controller {
     if (_examQuestions.length > 10) {
       _examQuestions = _examQuestions.take(10).toList();
     }
+    _startTimer();
+    refreshUI();
+  }
+
+  void _startTimer() {
+    _timer?.cancel();
+    _timeRemainingInSeconds =
+        _examQuestions.length * 60; // 1 minute per question
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (_timeRemainingInSeconds > 0) {
+        _timeRemainingInSeconds--;
+        refreshUI();
+      } else {
+        _onTimeExpired();
+      }
+    });
+  }
+
+  void _onTimeExpired() {
+    _timer?.cancel();
+    _showResults = true;
     refreshUI();
   }
 
@@ -104,12 +128,14 @@ class ExamController extends Controller {
       _selectedAnswers.clear();
       refreshUI();
     } else {
+      _timer?.cancel();
       _showResults = true;
       refreshUI();
     }
   }
 
   void restartExam() {
+    _timer?.cancel();
     _isLoading = true;
     _error = null;
     _allQuestions = [];
@@ -143,6 +169,7 @@ class ExamController extends Controller {
 
   @override
   void onDisposed() {
+    _timer?.cancel();
     _presenter.dispose();
     super.onDisposed();
   }
