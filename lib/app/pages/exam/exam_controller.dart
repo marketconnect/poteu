@@ -194,16 +194,14 @@ class ExamController extends Controller {
     if (_selectedAnswers.isEmpty) return;
     _isConfirmed = true;
     _userAnswers[_currentQuestionIndex] = Set.from(_selectedAnswers);
-    if (_examType == ExamType.standard) {
-      final question = currentQuestion;
-      if (question != null) {
-        final isCorrect = isAnswerCorrect(_currentQuestionIndex);
-        _dataRepository.updateExamQuestionStats(
-          regulationId: regulationId,
-          questionId: question.question.text,
-          isCorrect: isCorrect,
-        );
-      }
+    final question = currentQuestion;
+    if (question != null) {
+      final isCorrect = isAnswerCorrect(_currentQuestionIndex);
+      _dataRepository.updateExamQuestionStats(
+        regulationId: regulationId,
+        questionId: question.question.text,
+        isCorrect: isCorrect,
+      );
     }
     refreshUI();
   }
@@ -239,6 +237,18 @@ class ExamController extends Controller {
     _isTrainingMode = false;
     refreshUI();
     _presenter.getQuestions(regulationId);
+  }
+
+  void backToSelection() {
+    _timer?.cancel();
+    _selectedGroup = null;
+    _examQuestions = [];
+    _currentQuestionIndex = 0;
+    _selectedAnswers.clear();
+    _isConfirmed = false;
+    _userAnswers.clear();
+    _showResults = false;
+    refreshUI();
   }
 
   bool isAnswerCorrect(int questionIndex) {
@@ -279,6 +289,9 @@ class ExamController extends Controller {
           .where((q) => questionIds.contains(q.question.text))
           .toList()
         ..shuffle();
+      if (_examQuestions.length > _numberOfQuestions) {
+        _examQuestions = _examQuestions.take(_numberOfQuestions).toList();
+      }
       _resetExamStateForTraining('Повтор ошибок', ExamType.errorReview);
     } catch (e) {
       _error = e.toString();
@@ -297,6 +310,9 @@ class ExamController extends Controller {
           .where((q) => questionIds.contains(q.question.text))
           .toList()
         ..shuffle();
+      if (_examQuestions.length > _numberOfQuestions) {
+        _examQuestions = _examQuestions.take(_numberOfQuestions).toList();
+      }
       _resetExamStateForTraining('Сложные', ExamType.difficult);
     } catch (e) {
       _error = e.toString();
@@ -322,7 +338,7 @@ class ExamController extends Controller {
           .where((q) => !poolIds.contains(q.question.text))
           .toList()
         ..shuffle();
-      final int totalQuestions = min(15, _allQuestions.length);
+      final int totalQuestions = min(_numberOfQuestions, _allQuestions.length);
       final int poolCount = (totalQuestions * 0.7).round();
       final int randomCount = totalQuestions - poolCount;
       _examQuestions = (poolQuestions.take(poolCount).toList() +

@@ -29,66 +29,80 @@ class ExamViewState extends ViewState<ExamView, ExamController> {
   Widget get view {
     return ControlledWidgetBuilder<ExamController>(
         builder: (context, controller) {
-      return Scaffold(
-        key: globalKey,
-        appBar: PreferredSize(
-          preferredSize: Size.fromHeight(
-              Theme.of(context).appBarTheme.toolbarHeight ?? 74.0),
-          child: Padding(
-            padding: EdgeInsets.only(top: MediaQuery.of(context).padding.top),
-            child: RegulationAppBar(
-              child: Row(
-                children: [
-                  IconButton(
-                    onPressed: () => Navigator.pop(context),
-                    icon: Icon(
-                      Icons.arrow_back,
-                      size: Theme.of(context).appBarTheme.iconTheme?.size ?? 27,
-                      color: Theme.of(context).appBarTheme.iconTheme?.color,
-                    ),
-                  ),
-                  Expanded(
-                    child: Text(
-                      controller.isTrainingMode ? 'Тренировка' : 'Экзамен',
-                      style: controller.isTrainingMode
-                          ? Theme.of(context)
-                              .appBarTheme
-                              .titleTextStyle
-                              ?.copyWith(
-                                color: Theme.of(context)
-                                    .navigationRailTheme
-                                    .selectedIconTheme
-                                    ?.color,
-                              )
-                          : Theme.of(context).appBarTheme.titleTextStyle,
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                  if (controller.selectedGroup == null)
-                    Switch(
-                      value: controller.isTrainingMode,
-                      onChanged: (value) {
-                        controller.toggleTrainingMode();
+      return PopScope(
+        canPop: controller.selectedGroup == null,
+        onPopInvoked: (bool didPop) {
+          if (didPop) return;
+          controller.backToSelection();
+        },
+        child: Scaffold(
+          key: globalKey,
+          appBar: PreferredSize(
+            preferredSize: Size.fromHeight(
+                Theme.of(context).appBarTheme.toolbarHeight ?? 74.0),
+            child: Padding(
+              padding: EdgeInsets.only(top: MediaQuery.of(context).padding.top),
+              child: RegulationAppBar(
+                child: Row(
+                  children: [
+                    IconButton(
+                      onPressed: () {
+                        if (controller.selectedGroup != null) {
+                          controller.backToSelection();
+                        } else {
+                          Navigator.pop(context);
+                        }
                       },
-                      activeColor: Theme.of(context)
-                          .navigationRailTheme
-                          .selectedIconTheme
-                          ?.color,
-                    )
-                  else if (controller.selectedGroup != null &&
-                      !controller.showResults)
-                    if (!controller.isTrainingMode)
-                      _buildTimer(context, controller)
-                    else
-                      const SizedBox(
-                        width: 48,
+                      icon: Icon(
+                        Icons.arrow_back,
+                        size:
+                            Theme.of(context).appBarTheme.iconTheme?.size ?? 27,
+                        color: Theme.of(context).appBarTheme.iconTheme?.color,
+                      ),
+                    ),
+                    Expanded(
+                      child: Text(
+                        controller.isTrainingMode ? 'Тренировка' : 'Экзамен',
+                        style: controller.isTrainingMode
+                            ? Theme.of(context)
+                                .appBarTheme
+                                .titleTextStyle
+                                ?.copyWith(
+                                  color: Theme.of(context)
+                                      .navigationRailTheme
+                                      .selectedIconTheme
+                                      ?.color,
+                                )
+                            : Theme.of(context).appBarTheme.titleTextStyle,
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                    if (controller.selectedGroup == null)
+                      Switch(
+                        value: controller.isTrainingMode,
+                        onChanged: (value) {
+                          controller.toggleTrainingMode();
+                        },
+                        activeColor: Theme.of(context)
+                            .navigationRailTheme
+                            .selectedIconTheme
+                            ?.color,
                       )
-                ],
+                    else if (controller.selectedGroup != null &&
+                        !controller.showResults)
+                      if (!controller.isTrainingMode)
+                        _buildTimer(context, controller)
+                      else
+                        const SizedBox(
+                          width: 48,
+                        )
+                  ],
+                ),
               ),
             ),
           ),
+          body: _buildBody(controller),
         ),
-        body: _buildBody(controller),
       );
     });
   }

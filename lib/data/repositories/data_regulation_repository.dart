@@ -532,13 +532,18 @@ class DataRegulationRepository implements RegulationRepository {
     final escapedQuestionId = questionId.replaceAll("'", "''");
     final correctIncrement = isCorrect ? 1 : 0;
     final query = '''
-    INSERT INTO exam_statistics (regulation_id, question_id, attempts, correct_count, last_attempt_date)
-    VALUES ($regulationId, '$escapedQuestionId', 1, $correctIncrement, NOW())
+    INSERT INTO exam_statistics (regulation_id, question_id, attempts, correct_count, last_attempt_date, consecutive_correct_answers)
+    VALUES ($regulationId, '$escapedQuestionId', 1, $correctIncrement, NOW(), $correctIncrement)
     ON CONFLICT (regulation_id, question_id) DO UPDATE SET
       attempts = attempts + 1,
       correct_count = correct_count + $correctIncrement,
-      last_attempt_date = NOW();
-  ''';
+      last_attempt_date = NOW(),
+      consecutive_correct_answers = CASE
+        WHEN $isCorrect THEN consecutive_correct_answers + 1
+        ELSE 0
+      END;
+    ''';
+
     await conn.query(query);
   }
 
@@ -550,8 +555,8 @@ class DataRegulationRepository implements RegulationRepository {
     SELECT question_id FROM exam_statistics
     WHERE regulation_id = $regulationId
     AND last_attempt_date >= (NOW() - INTERVAL '14 days')
-    AND correct_count < attempts;
-  ''';
+    AND consecutive_correct_answers < 2; 
+    ''';
     final result = await conn.query(query);
     return result.fetchAll().map((row) => row[0] as String).toList();
   }

@@ -55,15 +55,16 @@ class DuckDBProvider {
       ''');
 
       await _connection!.query('''
-  CREATE TABLE IF NOT EXISTS exam_statistics (
-    regulation_id INTEGER NOT NULL,
-    question_id TEXT NOT NULL,
-    attempts INTEGER NOT NULL DEFAULT 0,
-    correct_count INTEGER NOT NULL DEFAULT 0,
-    last_attempt_date TIMESTAMP NOT NULL,
-    PRIMARY KEY (regulation_id, question_id)
-  );
-''');
+        CREATE TABLE IF NOT EXISTS exam_statistics (
+          regulation_id INTEGER NOT NULL,
+          question_id TEXT NOT NULL,
+          attempts INTEGER NOT NULL DEFAULT 0,
+          correct_count INTEGER NOT NULL DEFAULT 0,
+          last_attempt_date TIMESTAMP NOT NULL,
+          consecutive_correct_answers INTEGER NOT NULL DEFAULT 0, -- <<-- ДОБАВЛЕНО
+          PRIMARY KEY (regulation_id, question_id)
+        );
+      ''');
 
       // Add change_date column to rules table if it doesn't exist for version sync
       await _connection!.query(
