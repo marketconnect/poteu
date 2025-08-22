@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart' hide View;
+import 'package:flutter/services.dart';
 import 'package:flutter_clean_architecture/flutter_clean_architecture.dart';
 import 'package:poteu/app/widgets/regulation_app_bar.dart';
 import 'package:poteu/domain/entities/exam_question.dart';
@@ -23,7 +24,7 @@ class ExamView extends View {
 
 class ExamViewState extends ViewState<ExamView, ExamController> {
   ExamViewState(ExamController controller) : super(controller);
-
+  bool _showSettings = false;
   @override
   Widget get view {
     return ControlledWidgetBuilder<ExamController>(
@@ -56,8 +57,10 @@ class ExamViewState extends ViewState<ExamView, ExamController> {
                   if (controller.selectedGroup != null &&
                       !controller.showResults)
                     _buildTimer(context, controller)
-                  else
-                    const SizedBox(width: 48), // Balance the back button
+                  else // Balance the back button
+                    const SizedBox(
+                      width: 48,
+                    )
                 ],
               ),
             ),
@@ -327,19 +330,129 @@ class ExamViewState extends ViewState<ExamView, ExamController> {
   }
 
   Widget _buildGroupSelectionView(ExamController controller) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Text(
-            'Выберите группу допуска',
-            style: Theme.of(context).textTheme.headlineSmall,
-            textAlign: TextAlign.center,
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          SizedBox(
+            height: MediaQuery.of(context).padding.top / 2,
           ),
-        ),
-        Expanded(
-          child: ListView.builder(
+          Padding(
+            padding:
+                const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
+            child: GestureDetector(
+              onTap: () {
+                setState(() {
+                  _showSettings = !_showSettings;
+                });
+              },
+              child: Container(
+                padding: const EdgeInsets.all(12.0),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).primaryColor.withOpacity(0.05),
+                  borderRadius: BorderRadius.circular(8.0),
+                  border: Border.all(
+                      color: Theme.of(context).primaryColor.withOpacity(0.2)),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Spacer(),
+                    Text(
+                      'Время: ${controller.examDurationInMinutes} мин.',
+                      style: Theme.of(context).textTheme.bodyLarge,
+                    ),
+                    const SizedBox(width: 12),
+                    Text(
+                      'Вопросов: ${controller.numberOfQuestions}',
+                      style: Theme.of(context).textTheme.bodyLarge,
+                    ),
+                    const Spacer(),
+                    Icon(
+                      Icons.settings_outlined,
+                      color: Theme.of(context).textTheme.bodySmall?.color,
+                      size: 18,
+                    ),
+                    const SizedBox(
+                      width: 8,
+                    )
+                  ],
+                ),
+              ),
+            ),
+          ),
+          if (_showSettings)
+            Padding(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 32.0, vertical: 8.0),
+              child: Column(
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text('Количество вопросов:',
+                          style: Theme.of(context).textTheme.bodyLarge),
+                      SizedBox(
+                        width: 80,
+                        child: TextFormField(
+                          initialValue: controller.numberOfQuestions.toString(),
+                          keyboardType: TextInputType.number,
+                          textAlign: TextAlign.center,
+                          inputFormatters: [
+                            FilteringTextInputFormatter.digitsOnly
+                          ],
+                          onChanged: (value) {
+                            final count = int.tryParse(value);
+                            if (count != null && count > 0) {
+                              controller.setNumberOfQuestions(count);
+                            }
+                          },
+                          decoration: const InputDecoration(
+                            border: OutlineInputBorder(),
+                            contentPadding: EdgeInsets.symmetric(horizontal: 8),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text('Время (минут):',
+                          style: Theme.of(context).textTheme.bodyLarge),
+                      SizedBox(
+                        width: 80,
+                        child: TextFormField(
+                          initialValue:
+                              controller.examDurationInMinutes.toString(),
+                          keyboardType: TextInputType.number,
+                          textAlign: TextAlign.center,
+                          inputFormatters: [
+                            FilteringTextInputFormatter.digitsOnly
+                          ],
+                          onChanged: (value) {
+                            final minutes = int.tryParse(value);
+                            if (minutes != null && minutes > 0) {
+                              controller.setExamDuration(minutes);
+                            }
+                          },
+                          decoration: const InputDecoration(
+                            border: OutlineInputBorder(),
+                            contentPadding: EdgeInsets.symmetric(horizontal: 8),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          if (_showSettings)
+            const Divider(height: 32, thickness: 1, indent: 16, endIndent: 16),
+          ListView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
             itemCount: controller.availableGroups.length,
             itemBuilder: (context, index) {
               final group = controller.availableGroups[index];
@@ -361,8 +474,8 @@ class ExamViewState extends ViewState<ExamView, ExamController> {
               );
             },
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

@@ -22,6 +22,8 @@ class ExamController extends Controller {
 
   Timer? _timer;
   int _timeRemainingInSeconds = 0;
+  int _numberOfQuestions = 20;
+  int _examDurationInMinutes = 20;
   // Getters
   bool get isLoading => _isLoading;
   String? get error => _error;
@@ -37,6 +39,8 @@ class ExamController extends Controller {
   Map<int, Set<String>> get userAnswers => _userAnswers;
   bool get showResults => _showResults;
   int get timeRemainingInSeconds => _timeRemainingInSeconds;
+  int get numberOfQuestions => _numberOfQuestions;
+  int get examDurationInMinutes => _examDurationInMinutes;
 
   ExamController(this.regulationId)
       : _presenter = ExamPresenter(CloudExamRepository()) {
@@ -60,12 +64,22 @@ class ExamController extends Controller {
     };
   }
 
+  void setNumberOfQuestions(int count) {
+    _numberOfQuestions = count;
+    refreshUI();
+  }
+
+  void setExamDuration(int minutes) {
+    _examDurationInMinutes = minutes;
+    refreshUI();
+  }
+
   void selectGroup(String group) {
     _selectedGroup = group;
     _examQuestions = _allQuestions.where((q) => q.name == group).toList()
       ..shuffle();
-    if (_examQuestions.length > 10) {
-      _examQuestions = _examQuestions.take(10).toList();
+    if (_examQuestions.length > _numberOfQuestions) {
+      _examQuestions = _examQuestions.take(_numberOfQuestions).toList();
     }
     _startTimer();
     refreshUI();
@@ -73,8 +87,7 @@ class ExamController extends Controller {
 
   void _startTimer() {
     _timer?.cancel();
-    _timeRemainingInSeconds =
-        _examQuestions.length * 60; // 1 minute per question
+    _timeRemainingInSeconds = _examDurationInMinutes * 60;
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (_timeRemainingInSeconds > 0) {
         _timeRemainingInSeconds--;
