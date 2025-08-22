@@ -2,6 +2,7 @@ import 'package:flutter_clean_architecture/flutter_clean_architecture.dart';
 import 'package:poteu/data/repositories/cloud_exam_repository.dart';
 import 'package:poteu/domain/entities/exam_question.dart';
 import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'exam_presenter.dart';
 import 'dart:async';
 
@@ -24,6 +25,10 @@ class ExamController extends Controller {
   int _timeRemainingInSeconds = 0;
   int _numberOfQuestions = 20;
   int _examDurationInMinutes = 20;
+
+  static const String _numberOfQuestionsKey = 'exam_number_of_questions';
+  static const String _examDurationKey = 'exam_duration_minutes';
+
   // Getters
   bool get isLoading => _isLoading;
   String? get error => _error;
@@ -45,7 +50,18 @@ class ExamController extends Controller {
   ExamController(this.regulationId)
       : _presenter = ExamPresenter(CloudExamRepository()) {
     initListeners();
+    _loadSettingsAndGetQuestions();
+  }
+  void _loadSettingsAndGetQuestions() async {
+    await _loadSettings();
     _presenter.getQuestions(regulationId);
+  }
+
+  Future<void> _loadSettings() async {
+    final prefs = await SharedPreferences.getInstance();
+    _numberOfQuestions = prefs.getInt(_numberOfQuestionsKey) ?? 20;
+    _examDurationInMinutes = prefs.getInt(_examDurationKey) ?? 20;
+    refreshUI();
   }
 
   @override
@@ -64,13 +80,17 @@ class ExamController extends Controller {
     };
   }
 
-  void setNumberOfQuestions(int count) {
+  void setNumberOfQuestions(int count) async {
     _numberOfQuestions = count;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_numberOfQuestionsKey, count);
     refreshUI();
   }
 
-  void setExamDuration(int minutes) {
+  void setExamDuration(int minutes) async {
     _examDurationInMinutes = minutes;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_examDurationKey, minutes);
     refreshUI();
   }
 
