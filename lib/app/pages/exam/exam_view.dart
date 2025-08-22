@@ -240,7 +240,7 @@ class ExamViewState extends ViewState<ExamView, ExamController> {
       ),
       child: ListTile(
         leading: leadingIcon,
-        title: Text(answer),
+        title: Text(answer, style: Theme.of(context).textTheme.bodyLarge),
         onTap: () => controller.toggleAnswerSelection(answer),
       ),
     );
@@ -254,13 +254,17 @@ class ExamViewState extends ViewState<ExamView, ExamController> {
         children: [
           Text(
             'Результаты экзамена',
-            style: Theme.of(context).textTheme.headlineSmall,
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  color: Theme.of(context).textTheme.bodyLarge?.color,
+                ),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 16),
           Text(
             'Правильных ответов: ${controller.score} из ${controller.examQuestions.length}',
-            style: Theme.of(context).textTheme.titleLarge,
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  color: Theme.of(context).textTheme.bodyLarge?.color,
+                ),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 24),
@@ -351,8 +355,7 @@ class ExamViewState extends ViewState<ExamView, ExamController> {
                 decoration: BoxDecoration(
                   color: Theme.of(context).primaryColor.withOpacity(0.05),
                   borderRadius: BorderRadius.circular(8.0),
-                  border: Border.all(
-                      color: Theme.of(context).primaryColor.withOpacity(0.2)),
+                  border: Border.all(color: Theme.of(context).shadowColor),
                 ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -370,7 +373,7 @@ class ExamViewState extends ViewState<ExamView, ExamController> {
                     const Spacer(),
                     Icon(
                       Icons.settings_outlined,
-                      color: Theme.of(context).textTheme.bodySmall?.color,
+                      color: Theme.of(context).textTheme.bodyLarge?.color,
                       size: 18,
                     ),
                     const SizedBox(
@@ -467,9 +470,11 @@ class ExamViewState extends ViewState<ExamView, ExamController> {
                   ),
                 ),
                 child: ListTile(
-                  title: Text('Группа $group'),
+                  title: Text('Группа $group',
+                      style: Theme.of(context).textTheme.bodyLarge),
                   onTap: () => controller.selectGroup(group),
-                  trailing: const Icon(Icons.arrow_forward_ios),
+                  trailing: Icon(Icons.arrow_forward_ios,
+                      color: Theme.of(context).textTheme.bodyLarge?.color),
                 ),
               );
             },
