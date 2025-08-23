@@ -226,10 +226,11 @@ class AppDrawer extends StatelessWidget {
                               leading: const Icon(Icons.quiz_outlined),
                               title: const Text('Экзамен'),
                               onTap: () async {
+                                final navigator = Navigator.of(context);
                                 final checkSubscriptionUseCase =
                                     CheckSubscriptionUseCase(
                                         subscriptionRepository);
-                                Navigator.of(context).pop(); // Close drawer
+                                navigator.pop();
 
                                 try {
                                   final subscriptionStream =
@@ -238,11 +239,9 @@ class AppDrawer extends StatelessWidget {
                                   final subscription =
                                       await subscriptionStream.first;
 
-                                  if (!context.mounted) return;
-
                                   final regulationId = ActiveRegulationService()
                                       .currentRegulationId;
-                                  Navigator.of(context).push(
+                                  navigator.push(
                                     MaterialPageRoute(
                                       builder: (context) => ExamView(
                                         arguments: ExamArguments(

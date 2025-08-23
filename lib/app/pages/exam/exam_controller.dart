@@ -9,6 +9,7 @@ import 'exam_presenter.dart';
 import 'dart:async';
 import 'package:poteu/data/repositories/data_regulation_repository.dart';
 import 'dart:math';
+import 'package:flutter/material.dart';
 
 enum ExamType { standard, errorReview, difficult, quickSet }
 
@@ -41,6 +42,7 @@ class ExamController extends Controller {
 
   static const String _numberOfQuestionsKey = 'exam_number_of_questions';
   static const String _examDurationKey = 'exam_duration_minutes';
+  static const String _lastFreeExamDateKeyPrefix = 'last_free_exam_date_';
 
   // Getters
   bool get isLoading => _isLoading;
@@ -148,7 +150,20 @@ class ExamController extends Controller {
     refreshUI();
   }
 
-  void selectGroup(String group) {
+  void selectGroup(String group) async {
+    if (!isSubscribed) {
+      final prefs = await SharedPreferences.getInstance();
+      final lastAttemptDateString =
+          prefs.getString('$_lastFreeExamDateKeyPrefix$regulationId');
+      final todayString = DateTime.now().toIso8601String().substring(0, 10);
+      if (lastAttemptDateString == todayString) {
+        _showDailyLimitDialog();
+        return;
+      } else {
+        await prefs.setString(
+            '$_lastFreeExamDateKeyPrefix$regulationId', todayString);
+      }
+    }
     _selectedGroup = group;
     _examQuestions = _allQuestions.where((q) => q.name == group).toList()
       ..shuffle();
@@ -160,6 +175,48 @@ class ExamController extends Controller {
       _startTimer();
     }
     refreshUI();
+  }
+
+  void _showDailyLimitDialog() {
+    final context = getContext();
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+        ),
+        title: Text('Доступ ограничен',
+            style: Theme.of(context).textTheme.bodyLarge),
+        content: Text(
+            'Бесплатный экзамен можно проходить только один раз в день. Попробуйте снова завтра или оформите подписку для снятия ограничений.',
+            style: Theme.of(context).textTheme.bodyMedium),
+        actions: <Widget>[
+          TextButton(
+            child: Text('Понятно',
+                style: TextStyle(
+                  color: Theme.of(context).textTheme.bodyLarge?.color,
+                )),
+            onPressed: () {
+              Navigator.of(context).pop();
+            },
+          ),
+          TextButton(
+            child: Text('Подписка',
+                style: TextStyle(
+                  color: Theme.of(context)
+                      .navigationRailTheme
+                      .selectedIconTheme
+                      ?.color,
+                )),
+            onPressed: () {
+              Navigator.of(context).pop();
+              Navigator.of(getContext()).pushNamed('/subscription');
+            },
+          ),
+        ],
+      ),
+    );
   }
 
   void _startTimer() {
