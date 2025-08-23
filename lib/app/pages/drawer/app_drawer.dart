@@ -240,22 +240,18 @@ class AppDrawer extends StatelessWidget {
 
                                   if (!context.mounted) return;
 
-                                  if (subscription.isActive) {
-                                    final regulationId =
-                                        ActiveRegulationService()
-                                            .currentRegulationId;
-                                    Navigator.of(context).push(
-                                      MaterialPageRoute(
-                                        builder: (context) => ExamView(
-                                          arguments: ExamArguments(
-                                              regulationId: regulationId),
-                                        ),
+                                  final regulationId = ActiveRegulationService()
+                                      .currentRegulationId;
+                                  Navigator.of(context).push(
+                                    MaterialPageRoute(
+                                      builder: (context) => ExamView(
+                                        arguments: ExamArguments(
+                                            regulationId: regulationId,
+                                            isSubscribed:
+                                                subscription.isActive),
                                       ),
-                                    );
-                                  } else {
-                                    Navigator.of(context)
-                                        .pushNamed('/subscription');
-                                  }
+                                    ),
+                                  );
                                 } finally {
                                   checkSubscriptionUseCase.dispose();
                                 }

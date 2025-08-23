@@ -8,7 +8,8 @@ import 'exam_controller.dart';
 
 class ExamArguments {
   final int regulationId;
-  ExamArguments({required this.regulationId});
+  final bool isSubscribed;
+  ExamArguments({required this.regulationId, this.isSubscribed = true});
 }
 
 class ExamView extends View {
@@ -19,7 +20,8 @@ class ExamView extends View {
   @override
   ExamViewState createState() =>
       // ignore: no_logic_in_create_state
-      ExamViewState(ExamController(arguments.regulationId));
+      ExamViewState(
+          ExamController(arguments.regulationId, arguments.isSubscribed));
 }
 
 class ExamViewState extends ViewState<ExamView, ExamController> {
@@ -514,6 +516,46 @@ class ExamViewState extends ViewState<ExamView, ExamController> {
 
   Widget _buildGroupSelectionView(ExamController controller) {
     if (controller.isTrainingMode) {
+      if (!controller.isSubscribed) {
+        return Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  'Режим тренировки доступен только для подписчиков',
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                        color: Theme.of(context).textTheme.bodyLarge?.color,
+                      ),
+                ),
+                const SizedBox(height: 24),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Theme.of(context)
+                        .navigationRailTheme
+                        .selectedIconTheme
+                        ?.color,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    textStyle: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                          color: Colors.white,
+                        ),
+                  ),
+                  onPressed: () =>
+                      Navigator.of(context).pushNamed('/subscription'),
+                  child: const Text('Оформить подписку'),
+                ),
+              ],
+            ),
+          ),
+        );
+      }
       return Column(
         children: [_buildTrainingSection(context, controller)],
       );

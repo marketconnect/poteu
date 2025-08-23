@@ -14,6 +14,7 @@ enum ExamType { standard, errorReview, difficult, quickSet }
 
 class ExamController extends Controller {
   final int regulationId;
+  final bool isSubscribed;
   final ExamPresenter _presenter;
 
   bool _isLoading = true;
@@ -68,6 +69,7 @@ class ExamController extends Controller {
   final DataRegulationRepository _dataRepository = DataRegulationRepository();
   ExamController(
     this.regulationId,
+    this.isSubscribed,
   ) : _presenter = ExamPresenter(CloudExamRepository()) {
     initListeners();
     _loadSettingsAndGetQuestions();
