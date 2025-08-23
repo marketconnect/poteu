@@ -1,0 +1,43 @@
+diff --git a/lib/app/pages/library/library_controller.dart b/lib/app/pages/library/library_controller.dart
+index 069811c..115682b 100644
+--- a/lib/app/pages/library/library_controller.dart
++++ b/lib/app/pages/library/library_controller.dart
+@@ -198,11 +198,9 @@
+     _error = null;
+     _selectedRegulation = null;
+     refreshUI();
+-    // Сначала проверяем статус подписки
+     checkSubscriptionStatus();
+-    // Затем пытаемся загрузить документы, используя логику кэширования.
+-    // Это вызовет сетевой запрос только если кэш устарел.
+-    loadRegulationsWithCache();
++    // Force a network refresh, bypassing the daily cache.
++    _presenter.getAvailableRegulations();
+   }
+ 
+   @override
+diff --git a/lib/domain/usecases/get_available_regulations_usecase.dart b/lib/domain/usecases/get_available_regulations_usecase.dart
+index 475654c..522a45c 100644
+--- a/lib/domain/usecases/get_available_regulations_usecase.dart
++++ b/lib/domain/usecases/get_available_regulations_usecase.dart
+@@ -43,11 +43,18 @@
+         }
+       }
+ 
+-      // 4. After sync, get the final list of regulations from server again to get correct `isDownloaded` status
+-      final finalRegulations = await _cloudRepository.getAvailableRegulations();
+-      dev.log('Fetched final list of regulations after sync.');
++      // 4. Construct the final list with updated isDownloaded status without a second network call.
++      final finalRegulations = <Regulation>[];
++      for (final serverReg in serverRegulations) {
++        // Re-check if it's cached now, because the sync might have downloaded it.
++        final isNowDownloaded = await _localRepository.isRegulationCached(serverReg.id);
++        finalRegulations.add(serverReg.copyWith(isDownloaded: isNowDownloaded));
++      }
++      dev.log('Constructed final list of regulations after sync.');
+ 
+       controller.add(finalRegulations);
+       controller.close();
+     } catch (e, stackTrace) {
+       await Sentry.captureException(e, stackTrace: stackTrace);
+       dev.log('Error in GetAvailableRegulationsUseCase: $e');

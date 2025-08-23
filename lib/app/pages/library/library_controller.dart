@@ -171,7 +171,9 @@ class LibraryController extends Controller {
   void toggleSearch() {
     _isSearching = !_isSearching;
     if (!_isSearching) {
+      // When exiting search mode
       searchController.clear();
+      _regulations = _allRegulations;
     }
     refreshUI();
   }
@@ -261,9 +263,8 @@ class LibraryController extends Controller {
     refreshUI();
     // Сначала проверяем статус подписки
     checkSubscriptionStatus();
-    // Затем пытаемся загрузить документы, используя логику кэширования.
-    // Это вызовет сетевой запрос только если кэш устарел.
-    loadRegulationsWithCache();
+    // Force a network refresh, bypassing the daily cache.
+    _presenter.getAvailableRegulations();
   }
 
   @override

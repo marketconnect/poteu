@@ -50,9 +50,15 @@ class GetAvailableRegulationsUseCase extends UseCase<List<Regulation>, void> {
         }
       }
 
-      // 4. After sync, get the final list of regulations from server again to get correct `isDownloaded` status
-      final finalRegulations = await _cloudRepository.getAvailableRegulations();
-      dev.log('Fetched final list of regulations after sync.');
+// 4. Construct the final list with updated isDownloaded status without a second network call.
+      final finalRegulations = <Regulation>[];
+      for (final serverReg in serverRegulations) {
+        // Re-check if it's cached now, because the sync might have downloaded it.
+        final isNowDownloaded =
+            await _localRepository.isRegulationCached(serverReg.id);
+        finalRegulations.add(serverReg.copyWith(isDownloaded: isNowDownloaded));
+      }
+      dev.log('Constructed final list of regulations after sync.');
 
       controller.add(finalRegulations);
       controller.close();
