@@ -1,141 +1,124 @@
-diff --git a/lib/app/pages/exam/exam_view.dart b/lib/app/pages/exam/exam_view.dart
-index 2261fdb..9129523 100644
+--- a/lib/app/pages/exam/exam_controller.dart
++++ b/lib/app/pages/exam/exam_controller.dart
+@@ -1,9 +1,11 @@
+ import 'package:flutter_clean_architecture/flutter_clean_architecture.dart';
+ import 'package:poteu/data/repositories/cloud_exam_repository.dart';
+ import 'package:poteu/domain/entities/exam_question.dart';
++import 'package:poteu/domain/repositories/exam_repository.dart';
+ import 'package:flutter/foundation.dart';
+ import 'package:shared_preferences/shared_preferences.dart';
+ import 'exam_presenter.dart';
++import 'package:poteu/app/services/active_regulation_service.dart';
+ import 'dart:async';
+ import 'package:poteu/data/repositories/data_regulation_repository.dart';
+ import 'dart:math';
+@@ -15,6 +17,7 @@
+ 
+   bool _isLoading = true;
+   String? _error;
++  bool _isExamNotFoundError = false;
+   List<ExamQuestion> _allQuestions = [];
+   List<ExamQuestion> _examQuestions = [];
+   List<String> _availableGroups = [];
+@@ -36,6 +39,7 @@
+   // Getters
+   bool get isLoading => _isLoading;
+   String? get error => _error;
++  bool get isExamNotFoundError => _isExamNotFoundError;
+   List<String> get availableGroups => _availableGroups;
+   String? _selectedGroup;
+   List<ExamQuestion> get examQuestions => _examQuestions;
+@@ -68,8 +72,15 @@
+     };
+ 
+     _presenter.onError = (e) {
+-      _error = e.toString();
+       _isLoading = false;
++      if (e is ExamNotFoundException) {
++        final docName = ActiveRegulationService().currentAppName;
++        _error = 'Для документа "$docName" экзамен не добавлен.';
++        _isExamNotFoundError = true;
++      } else {
++        _error = 'Ошибка загрузки: ${e.toString()}';
++        _isExamNotFoundError = false;
++      }
+       refreshUI();
+     };
+   }
+@@ -148,6 +159,7 @@
+     _isConfirmed = false;
+     _userAnswers.clear();
+     _showResults = false;
++    _isExamNotFoundError = false;
+     _isTrainingMode = false;
+     refreshUI();
+     _presenter.getQuestions(regulationId);
 --- a/lib/app/pages/exam/exam_view.dart
 +++ b/lib/app/pages/exam/exam_view.dart
-@@ -23,54 +23,62 @@
-   @override
-   Widget get view {
-     return ControlledWidgetBuilder<ExamController>(
-         builder: (context, controller) {
--      return Scaffold(
--        key: globalKey,
--        appBar: PreferredSize(
--          preferredSize: Size.fromHeight(
--              Theme.of(context).appBarTheme.toolbarHeight ?? 74.0),
--          child: Padding(
--            padding: EdgeInsets.only(top: MediaQuery.of(context).padding.top),
--            child: RegulationAppBar(
--              child: Row(
--                children: [
--                  IconButton(
--                    onPressed: () => Navigator.pop(context),
--                    icon: Icon(
--                      Icons.arrow_back,
--                      size: Theme.of(context).appBarTheme.iconTheme?.size ?? 27,
--                      color: Theme.of(context).appBarTheme.iconTheme?.color,
-+      return PopScope(
-+        canPop: controller.selectedGroup == null,
-+        onPopInvoked: (bool didPop) {
-+          if (didPop) return;
-+          controller.backToSelection();
-+        },
-+        child: Scaffold(
-+          key: globalKey,
-+          appBar: PreferredSize(
-+            preferredSize: Size.fromHeight(
-+                Theme.of(context).appBarTheme.toolbarHeight ?? 74.0),
-+            child: Padding(
-+              padding: EdgeInsets.only(top: MediaQuery.of(context).padding.top),
-+              child: RegulationAppBar(
-+                child: Row(
-+                  children: [
-+                    IconButton(
-+                      onPressed: () {
-+                        if (controller.selectedGroup != null) {
-+                          controller.backToSelection();
-+                        } else {
-+                          Navigator.pop(context);
-+                        }
-+                      },
-+                      icon: Icon(
-+                        Icons.arrow_back,
-+                        size:
-+                            Theme.of(context).appBarTheme.iconTheme?.size ?? 27,
-+                        color: Theme.of(context).appBarTheme.iconTheme?.color,
-+                      ),
-                     ),
--                  ),
--                  Expanded(
--                    child: Text(
--                      controller.isTrainingMode ? 'Тренировка' : 'Экзамен',
--                      style: controller.isTrainingMode
--                          ? Theme.of(context)
--                              .appBarTheme
--                              .titleTextStyle
--                              ?.copyWith(
--                                color: Theme.of(context)
--                                    .navigationRailTheme
--                                    .selectedIconTheme
--                                    ?.color,
--                              )
--                          : Theme.of(context).appBarTheme.titleTextStyle,
--                      textAlign: TextAlign.center,
-+                    Expanded(
-+                      child: Text(
-+                        controller.isTrainingMode ? 'Тренировка' : 'Экзамен',
-+                        style: controller.isTrainingMode
-+                            ? Theme.of(context)
-+                                .appBarTheme
-+                                .titleTextStyle
-+                                ?.copyWith(
-+                                  color: Theme.of(context)
-+                                      .navigationRailTheme
-+                                      .selectedIconTheme
-+                                      ?.color,
-+                                )
-+                            : Theme.of(context).appBarTheme.titleTextStyle,
-+                        textAlign: TextAlign.center,
-+                      ),
-                     ),
--                  ),
--                  if (controller.selectedGroup == null)
--                    Switch(
--                      value: controller.isTrainingMode,
--                      onChanged: (value) {
--                        controller.toggleTrainingMode();
--                      },
--                      activeColor: Theme.of(context)
--                          .navigationRailTheme
--                          .selectedIconTheme
--                          ?.color,
--                    )
--                  else if (controller.selectedGroup != null &&
--                      !controller.showResults)
--                    if (!controller.isTrainingMode)
--                      _buildTimer(context, controller)
--                    else
--                      const SizedBox(
--                        width: 48,
--                      )
--                ],
-+                    if (controller.selectedGroup == null)
-+                      Switch(
-+                        value: controller.isTrainingMode,
-+                        onChanged: (value) {
-+                          controller.toggleTrainingMode();
-+                        },
-+                        activeColor: Theme.of(context)
-+                            .navigationRailTheme
-+                            .selectedIconTheme
-+                            ?.color,
-+                      )
-+                    else if (controller.selectedGroup != null &&
-+                        !controller.showResults)
-+                      if (!controller.isTrainingMode)
-+                        _buildTimer(context, controller)
-+                      else
-+                        const SizedBox(
-+                          width: 48,
-+                        )
-+                  ],
-+                ),
-               ),
-             ),
-           ),
--        ),
--        body: _buildBody(controller),
-+          body: _buildBody(controller),
-+        ),
+@@ -101,13 +101,20 @@
+     if (controller.error != null) {
+       return Center(
+         child: Column(
+-          mainAxisAlignment: MainAxisAlignment.center,
+-          children: [
+-            Text('Ошибка: ${controller.error}'),
+-            const SizedBox(height: 16),
+-            ElevatedButton(
+-              onPressed: controller.restartExam,
+-              child: const Text('Попробовать снова'),
+-            )
+-          ],
++          mainAxisAlignment: MainAxisAlignment.center,
++          children: [
++            Padding(
++              padding: const EdgeInsets.symmetric(horizontal: 16.0),
++              child: Text(
++                controller.error!,
++                textAlign: TextAlign.center,
++              ),
++            ),
++            if (!controller.isExamNotFoundError) ...[
++              const SizedBox(height: 16),
++              ElevatedButton(
++                onPressed: controller.restartExam,
++                child: const Text('Попробовать снова'),
++              )
++            ]
++          ],
+         ),
        );
-     });
-   }
+     }
+--- a/lib/data/repositories/cloud_exam_repository.dart
++++ b/lib/data/repositories/cloud_exam_repository.dart
+@@ -22,9 +22,12 @@
+ 
+       dev.log('Downloading exam parquet file...');
+       final response = await http.get(Uri.parse(url));
++      if (response.statusCode == 404) {
++        dev.log('Exam not found for regulation $regulationId (404). This is a valid case.');
++        throw ExamNotFoundException(regulationId);
++      }
+       if (response.statusCode != 200) {
+-        throw Exception(
+-            'Failed to download exam parquet file: ${response.statusCode}');
++        throw Exception('Failed to download exam parquet file: ${response.statusCode}');
+       }
+       dev.log('Download complete.');
+ 
+--- a/lib/domain/repositories/exam_repository.dart
++++ b/lib/domain/repositories/exam_repository.dart
+@@ -1,5 +1,14 @@
+ import '../entities/exam_question.dart';
+ 
++/// Custom exception thrown when no exam is available for a given regulation.
++class ExamNotFoundException implements Exception {
++  final int regulationId;
++  ExamNotFoundException(this.regulationId);
++
++  @override
++  String toString() => 'Exam not found for regulation ID: $regulationId';
++}
++
+ abstract class ExamRepository {
+   Future<List<ExamQuestion>> getQuestions(int regulationId);
+ }

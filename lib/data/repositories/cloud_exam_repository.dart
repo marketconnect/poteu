@@ -25,6 +25,11 @@ class CloudExamRepository implements ExamRepository {
 
       dev.log('Downloading exam parquet file...');
       final response = await http.get(Uri.parse(url));
+      if (response.statusCode == 404) {
+        dev.log(
+            'Exam not found for regulation $regulationId (404). This is a valid case.');
+        throw ExamNotFoundException(regulationId);
+      }
       if (response.statusCode != 200) {
         throw Exception(
             'Failed to download exam parquet file: ${response.statusCode}');

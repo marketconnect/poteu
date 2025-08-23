@@ -116,12 +116,20 @@ class ExamViewState extends ViewState<ExamView, ExamController> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text('Ошибка: ${controller.error}'),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: controller.restartExam,
-              child: const Text('Попробовать снова'),
-            )
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              child: Text(
+                controller.error!,
+                textAlign: TextAlign.center,
+              ),
+            ),
+            if (!controller.isExamNotFoundError) ...[
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: controller.restartExam,
+                child: const Text('Попробовать снова'),
+              )
+            ]
           ],
         ),
       );

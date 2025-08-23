@@ -1,7 +1,9 @@
 import 'package:flutter_clean_architecture/flutter_clean_architecture.dart';
 import 'package:poteu/data/repositories/cloud_exam_repository.dart';
 import 'package:poteu/domain/entities/exam_question.dart';
+import 'package:poteu/domain/repositories/exam_repository.dart';
 import 'package:flutter/foundation.dart';
+import 'package:poteu/app/services/active_regulation_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'exam_presenter.dart';
 import 'dart:async';
@@ -16,6 +18,7 @@ class ExamController extends Controller {
 
   bool _isLoading = true;
   String? _error;
+  bool _isExamNotFoundError = false;
   List<ExamQuestion> _allQuestions = [];
   List<ExamQuestion> _examQuestions = [];
   List<String> _availableGroups = [];
@@ -41,6 +44,7 @@ class ExamController extends Controller {
   // Getters
   bool get isLoading => _isLoading;
   String? get error => _error;
+  bool get isExamNotFoundError => _isExamNotFoundError;
   List<String> get availableGroups => _availableGroups;
   String? _selectedGroup;
   List<ExamQuestion> get examQuestions => _examQuestions;
@@ -90,8 +94,15 @@ class ExamController extends Controller {
     };
 
     _presenter.onError = (e) {
-      _error = e.toString();
       _isLoading = false;
+      if (e is ExamNotFoundException) {
+        final docName = ActiveRegulationService().currentAppName;
+        _error = 'Для документа "$docName" экзамен не добавлен.';
+        _isExamNotFoundError = true;
+      } else {
+        _error = 'Ошибка загрузки: ${e.toString()}';
+        _isExamNotFoundError = false;
+      }
       refreshUI();
     };
   }
@@ -234,6 +245,7 @@ class ExamController extends Controller {
     _isConfirmed = false;
     _userAnswers.clear();
     _showResults = false;
+    _isExamNotFoundError = false;
     _isTrainingMode = false;
     refreshUI();
     _presenter.getQuestions(regulationId);
