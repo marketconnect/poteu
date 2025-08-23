@@ -1,7 +1,6 @@
 import 'dart:developer' as dev;
 
 import 'package:flutter/material.dart' hide View;
-import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:flutter_clean_architecture/flutter_clean_architecture.dart';
 import 'package:flutter_widget_from_html/flutter_widget_from_html.dart';
 import 'package:share_plus/share_plus.dart';
@@ -56,6 +55,7 @@ class ChapterViewState extends ViewState<ChapterView, ChapterController> {
   ChapterViewState(ChapterController controller) : super(controller);
 
   String _removeInvalidLinks(String html) {
+    print(html);
     if (html.isEmpty) return '';
 
     final document = html_parser.parseFragment(html);
@@ -1523,8 +1523,7 @@ class ChapterViewState extends ViewState<ChapterView, ChapterController> {
       }
 
       return true; // Prevent default behavior for any other internal-looking links
-    } catch (e, stackTrace) {
-      await Sentry.captureException(e, stackTrace: stackTrace);
+    } catch (e) {
       dev.log('Error handling internal link: $e');
       return false;
     }

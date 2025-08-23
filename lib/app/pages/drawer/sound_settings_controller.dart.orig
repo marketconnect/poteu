@@ -1,5 +1,4 @@
 import 'package:flutter_clean_architecture/flutter_clean_architecture.dart';
-import 'package:sentry_flutter/sentry_flutter.dart';
 import '../../../domain/repositories/tts_repository.dart';
 import 'sound_settings_presenter.dart';
 
@@ -40,8 +39,7 @@ class SoundSettingsController extends Controller {
       _language = settings.language;
       _selectedVoice = settings.voiceId;
       refreshUI();
-    } catch (e, stackTrace) {
-      await Sentry.captureException(e, stackTrace: stackTrace);
+    } catch (e) {
       _error = e.toString();
       refreshUI();
     }
@@ -51,8 +49,7 @@ class SoundSettingsController extends Controller {
     try {
       _availableVoices = await _ttsRepository.getVoices();
       refreshUI();
-    } catch (e, stackTrace) {
-      await Sentry.captureException(e, stackTrace: stackTrace);
+    } catch (e) {
       _error = e.toString();
       refreshUI();
     }
@@ -101,7 +98,6 @@ class SoundSettingsController extends Controller {
     };
 
     _presenter.onError = (e) {
-      Sentry.captureException(e);
       _error = e.toString();
       refreshUI();
     };

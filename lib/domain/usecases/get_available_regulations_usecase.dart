@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter_clean_architecture/flutter_clean_architecture.dart';
 import 'dart:developer' as dev;
+import 'package:sentry_flutter/sentry_flutter.dart';
 import '../entities/regulation.dart';
 import '../repositories/cloud_regulation_repository.dart';
 import '../repositories/regulation_repository.dart';
@@ -55,7 +56,8 @@ class GetAvailableRegulationsUseCase extends UseCase<List<Regulation>, void> {
 
       controller.add(finalRegulations);
       controller.close();
-    } catch (e) {
+    } catch (e, stackTrace) {
+      await Sentry.captureException(e, stackTrace: stackTrace);
       dev.log('Error in GetAvailableRegulationsUseCase: $e');
       controller.addError(e);
     }

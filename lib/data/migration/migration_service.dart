@@ -1,5 +1,5 @@
 // lib/data/migration/migration_service.dart
-
+import 'dart:developer' as dev;
 import 'package:html/parser.dart';
 import 'package:path/path.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -74,19 +74,19 @@ class MigrationService {
     final prefs = await SharedPreferences.getInstance();
 
     if (prefs.getBool(migrationFlagKey) ?? false) {
-      print('[MIGRATION_LOG] Миграция v4 уже была выполнена. Пропускаем.');
+      dev.log('[MIGRATION_LOG] Миграция v4 уже была выполнена. Пропускаем.');
       return;
     }
 
-    print(
+    dev.log(
         '[MIGRATION_LOG] 🚀 Запуск миграции данных из SQLite (v4 с обфускацией ID)...');
 
     try {
       final oldDbPath = join(await old_db.getDatabasesPath(), 'paragraphs.db');
-      print('[MIGRATION_LOG] ℹ️ Путь к старой базе: $oldDbPath');
+      dev.log('[MIGRATION_LOG] ℹ️ Путь к старой базе: $oldDbPath');
 
       if (!await old_db.databaseExists(oldDbPath)) {
-        print(
+        dev.log(
             '[MIGRATION_LOG] 🟡 Старая база данных не найдена. Миграция не требуется.');
         await prefs.setBool(migrationFlagKey, true);
         return;
@@ -98,13 +98,13 @@ class MigrationService {
       await db.close();
 
       if (oldParagraphsJson.isEmpty) {
-        print(
+        dev.log(
             '[MIGRATION_LOG] 🟡 В старой базе данных нет данных для миграции.');
         await prefs.setBool(migrationFlagKey, true);
         return;
       }
 
-      print(
+      dev.log(
           '[MIGRATION_LOG] 🔍 Найдено ${oldParagraphsJson.length} записей для миграции.');
 
       for (final oldDataJson in oldParagraphsJson) {
@@ -116,10 +116,10 @@ class MigrationService {
         // === ВТОРОЕ ИСПРАВЛЕНИЕ: Очистка HTML ===
         final cleanedContent = cleanHtmlContent(oldParagraph.text);
 
-        print(
+        dev.log(
             '[MIGRATION_LOG] --- Мигрируем параграф: старый ID ${oldParagraph.paragraphId} -> новый ID $newParagraphId');
-        print('[MIGRATION_LOG] --- Старый контент: ${oldParagraph.text}');
-        print('[MIGRATION_LOG] --- Очищенный контент: $cleanedContent');
+        dev.log('[MIGRATION_LOG] --- Старый контент: ${oldParagraph.text}');
+        dev.log('[MIGRATION_LOG] --- Очищенный контент: $cleanedContent');
 
         // Создаем временный объект Paragraph, который нужен для метода сохранения.
         // Важно передать в него новый, обфусцированный ID.
@@ -139,7 +139,7 @@ class MigrationService {
           tempParagraph,
         );
 
-        print(
+        dev.log(
             '[MIGRATION_LOG] --- Запись для параграфа $newParagraphId успешно сохранена.');
       }
 
@@ -148,10 +148,10 @@ class MigrationService {
       // Это решает проблему, когда изменения терялись после перезапуска приложения.
 
       await prefs.setBool(migrationFlagKey, true);
-      print('[MIGRATION_LOG] ✅✅✅ Миграция (v4) успешно завершена!');
+      dev.log('[MIGRATION_LOG] ✅✅✅ Миграция (v4) успешно завершена!');
     } catch (e, stackTrace) {
-      print('[MIGRATION_LOG] ❌❌❌ КРИТИЧЕСКАЯ ОШИБКА МИГРАЦИИ: $e');
-      print(stackTrace.toString());
+      dev.log('[MIGRATION_LOG] ❌❌❌ КРИТИЧЕСКАЯ ОШИБКА МИГРАЦИИ: $e');
+      dev.log(stackTrace.toString());
     }
   }
 }

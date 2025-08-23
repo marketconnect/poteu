@@ -50,7 +50,8 @@ class LibraryViewState extends ViewState<LibraryView, LibraryController> {
     );
   }
 
-  Widget _buildSearchAppBar(BuildContext context, LibraryController controller) {
+  Widget _buildSearchAppBar(
+      BuildContext context, LibraryController controller) {
     return Row(
       children: [
         IconButton(
@@ -121,10 +122,9 @@ class LibraryViewState extends ViewState<LibraryView, LibraryController> {
         itemCount: controller.regulations.length,
         itemBuilder: (context, index) {
           final regulation = controller.regulations[index];
-          final isSelected =
-              controller.selectedRegulation?.id == regulation.id;
-          final isProcessing =
-              isSelected && (controller.isCheckingCache || controller.isDownloading);
+          final isSelected = controller.selectedRegulation?.id == regulation.id;
+          final isProcessing = isSelected &&
+              (controller.isCheckingCache || controller.isDownloading);
           final isPremium = regulation.isPremium;
           final canAccess = !isPremium || controller.isSubscribed;
 

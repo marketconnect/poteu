@@ -1720,8 +1720,7 @@ class ChapterController extends Controller {
         refreshUI();
         Navigator.of(getContext()).pushNamed('/subscription');
       }
-    } catch (e, stackTrace) {
-      await Sentry.captureException(e, stackTrace: stackTrace);
+    } catch (e) {
       _isLoading = false;
       _error = 'Ошибка: ${e.toString()}';
       refreshUI();

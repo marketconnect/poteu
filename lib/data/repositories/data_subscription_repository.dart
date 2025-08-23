@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:poteu/app/services/user_id_service.dart';
 import 'package:poteu/domain/entities/subscription_plan.dart';
 import 'package:poteu/domain/entities/subscription.dart';
@@ -83,7 +84,8 @@ class DataSubscriptionRepository implements SubscriptionRepository {
         // In case of server error, return cached status
         return await getCachedSubscriptionStatus();
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
+      await Sentry.captureException(e, stackTrace: stackTrace);
       dev.log('Network error checking subscription status: $e');
       // In case of network error, return cached status
       return await getCachedSubscriptionStatus();

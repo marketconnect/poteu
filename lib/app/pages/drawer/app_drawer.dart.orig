@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:poteu/app/pages/exam/exam_view.dart';
 import 'package:poteu/domain/usecases/check_subscription_usecase.dart';
 import 'package:poteu/app/services/active_regulation_service.dart';
@@ -252,9 +251,6 @@ class AppDrawer extends StatelessWidget {
                                       ),
                                     ),
                                   );
-                                } catch (e, stackTrace) {
-                                  await Sentry.captureException(e,
-                                      stackTrace: stackTrace);
                                 } finally {
                                   checkSubscriptionUseCase.dispose();
                                 }

@@ -1,5 +1,6 @@
 import 'dart:async';
 import "package:flutter_tts/flutter_tts.dart";
+import 'package:sentry_flutter/sentry_flutter.dart';
 import "../../domain/repositories/tts_repository.dart";
 import '../../domain/entities/tts_state.dart';
 import '../../domain/repositories/settings_repository.dart';
@@ -101,7 +102,8 @@ class DataTTSRepository implements TTSRepository {
       });
 
       _log('TTS initialization completed');
-    } catch (e) {
+    } catch (e, stackTrace) {
+      await Sentry.captureException(e, stackTrace: stackTrace);
       _log('Error during initialization: $e');
       _stateController.add(TtsState.error);
     }
@@ -165,7 +167,8 @@ class DataTTSRepository implements TTSRepository {
 
       await _flutterTts.speak(text);
       _log('speak() call completed');
-    } catch (e) {
+    } catch (e, stackTrace) {
+      await Sentry.captureException(e, stackTrace: stackTrace);
       _log('Error in speak(): $e');
       _stateController.add(TtsState.error);
     }
@@ -431,7 +434,8 @@ class DataTTSRepository implements TTSRepository {
       }
 
       return russianVoices;
-    } catch (e) {
+    } catch (e, stackTrace) {
+      await Sentry.captureException(e, stackTrace: stackTrace);
       _log('Error getting voices: $e');
       return [];
     }
@@ -493,7 +497,8 @@ class DataTTSRepository implements TTSRepository {
           _log('   - ${v['name']}');
         }
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
+      await Sentry.captureException(e, stackTrace: stackTrace);
       _log('Error setting voice: $e');
       _stateController.add(TtsState.error);
     }

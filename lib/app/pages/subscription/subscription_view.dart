@@ -12,6 +12,7 @@ class SubscriptionView extends View {
 
   @override
   SubscriptionViewState createState() =>
+      // ignore: no_logic_in_create_state
       SubscriptionViewState(subscriptionRepository);
 }
 
