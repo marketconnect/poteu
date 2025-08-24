@@ -1,5 +1,5 @@
 import 'dart:developer' as dev;
-
+import 'dart:async';
 import 'package:flutter/material.dart' hide View;
 import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:flutter_clean_architecture/flutter_clean_architecture.dart';
@@ -1554,17 +1554,25 @@ class _SearchScreen extends StatefulWidget {
 
 class _SearchScreenState extends State<_SearchScreen> {
   final TextEditingController _searchController = TextEditingController();
-
+  Timer? _debounce;
   @override
   void initState() {
     super.initState();
     _searchController.addListener(() {
-      widget.controller.search(_searchController.text);
+      if (_debounce?.isActive ?? false) {
+        _debounce!.cancel();
+      }
+      _debounce = Timer(const Duration(milliseconds: 500), () {
+        if (mounted) {
+          widget.controller.search(_searchController.text);
+        }
+      });
     });
   }
 
   @override
   void dispose() {
+    _debounce?.cancel();
     _searchController.dispose();
     super.dispose();
   }

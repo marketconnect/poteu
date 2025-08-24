@@ -1,110 +1,53 @@
-diff --git a/app/pages/chapter/chapter_controller.dart b/app/pages/chapter/chapter_controller.dart
-index 951307b..407511c 100644
---- a/app/pages/chapter/chapter_controller.dart
-+++ b/app/pages/chapter/chapter_controller.dart
-@@ -351,15 +351,14 @@
-       'Вы не выделили участок параграфа, который собираетесь подчеркнуть.'
-     ];
- 
--    if (!silentErrorMessages.contains(errorMessage)) {
-+    if (silentErrorMessages.contains(errorMessage)) {
-+      _error = errorMessage;
-+    } else {
-       Sentry.captureException(e, stackTrace: stackTrace);
-+      // For the user, always show a generic message for unexpected errors.
-+      _error = 'Что-то пошло не так';
-     }
--
--    // For the user, always show a generic message.
--    _error = 'Что-то пошло не так';
-     refreshUI();
-   }
- 
 diff --git a/app/pages/chapter/chapter_view.dart b/app/pages/chapter/chapter_view.dart
-index 8101485..0368593 100644
+index 2411929..592c730 100644
 --- a/app/pages/chapter/chapter_view.dart
 +++ b/app/pages/chapter/chapter_view.dart
-@@ -89,8 +89,8 @@
-       builder: (context, controller) {
-         // Listen to errors like SaveParagraphCubit listener in original
-         if (controller.error != null) {
--          WidgetsBinding.instance.addPostFrameCallback((_) {
--            _showErrorSnackBar(controller.error!, controller);
--            controller.clearError();
-+          WidgetsBinding.instance.addPostFrameCallback((_) {
-+            _showErrorSnackBar(controller.error!);
-+            // Clear error after showing
-           });
-         }
+@@ -1,4 +1,5 @@
+ import 'dart:developer' as dev;
++import 'dart:async';
  
-@@ -1124,9 +1124,7 @@
-                     iconSize,
-                     () async {
-                       await controller.underlineText();
--                      if (controller.error == null) {
-+                      if (controller.error != null) {
-+                        _showErrorSnackBar(controller.error!);
-+                      } else {
-                         _showSnackBar('Текст подчеркнут');
-                       }
-                     },
-@@ -1137,9 +1135,9 @@
-                     iconSize,
-                     () async {
-                       await controller.markText();
--                      if (controller.error == null) {
-+                      if (controller.error != null) {
-+                        _showErrorSnackBar(controller.error!);
-+                      } else {
-                         _showSnackBar('Текст выделен');
-                       }
-                     },
-@@ -1150,9 +1148,9 @@
-                     iconSize,
-                     () async {
-                       await controller.clearFormatting();
--                      if (controller.error == null) {
-+                      if (controller.error != null) {
-+                        _showErrorSnackBar(controller.error!);
-+                      } else {
-                         _showSnackBar('Форматирование очищено');
-                       }
-                     },
-@@ -1335,9 +1333,7 @@
-               if (editedText.isNotEmpty) {
-                 Navigator.pop(context);
-                 await controller.saveEditedParagraph(paragraph, editedText);
--                if (controller.error == null) {
-+                if (controller.error != null) {
-+                  _showErrorSnackBar(controller.error!);
-+                } else {
-                   _showSnackBar('Параграф сохранен');
-                 }
-               } else {
-@@ -1458,22 +1454,14 @@
-     );
+ import 'package:flutter/material.dart' hide View;
+ import 'package:sentry_flutter/sentry_flutter.dart';
+@@ -1510,19 +1511,28 @@
+ 
+ class _SearchScreenState extends State<_SearchScreen> {
+   final TextEditingController _searchController = TextEditingController();
++  Timer? _debounce;
+ 
+   @override
+   void initState() {
+     super.initState();
+     _searchController.addListener(() {
+-      widget.controller.search(_searchController.text);
++      if (_debounce?.isActive ?? false) {
++        _debounce!.cancel();
++      }
++      _debounce = Timer(const Duration(milliseconds: 500), () {
++        if (mounted) {
++          widget.controller.search(_searchController.text);
++        }
++      });
+     });
    }
  
--  void _showErrorSnackBar(String message, ChapterController controller) {
-+  void _showErrorSnackBar(String message) {
-+    if (!mounted) return;
-     ScaffoldMessenger.of(context).showSnackBar(
-       SnackBar(
-         content: Text(message),
-         backgroundColor: Theme.of(context).colorScheme.error,
-         behavior: SnackBarBehavior.floating,
-         shape: RoundedRectangleBorder(
-           borderRadius: BorderRadius.circular(10),
-         ),
-         margin: const EdgeInsets.all(16),
--        duration: const Duration(seconds: 10),
--        action: SnackBarAction(
--          label: 'ОБНОВИТЬ',
--          textColor: Colors.white,
--          onPressed: () {
--            controller.loadAllChapters();
--          },
--        ),
-       ),
-     );
+   @override
+   void dispose() {
++    _debounce?.cancel();
+     _searchController.dispose();
+     super.dispose();
    }
+ 
+   @override
+diff --git a/app/pages/search/search_controller.dart b/app/pages/search/search_controller.dart
+index 2873a4a..0317e0b 100644
+--- a/app/pages/search/search_controller.dart
++++ b/app/pages/search/search_controller.dart
+@@ -62,7 +62,7 @@
+   void search() {
+     if (_debounceTimer?.isActive ?? false) _debounceTimer?.cancel();
+ 
+-    _debounceTimer = Timer(const Duration(milliseconds: 300), () async {
++    _debounceTimer = Timer(const Duration(milliseconds: 500), () async {
+       if (_searchController.text.isEmpty) {
+         _searchResults = [];
+         refreshUI();

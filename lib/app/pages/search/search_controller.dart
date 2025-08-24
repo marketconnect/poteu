@@ -42,7 +42,8 @@ class SearchPageController extends Controller {
         // _settingsRepository = settingsRepository,
         // _ttsRepository = ttsRepository,
         _searchController = TextEditingController() {
-    _checkSubscriptionUseCase = CheckSubscriptionUseCase(_subscriptionRepository);
+    _checkSubscriptionUseCase =
+        CheckSubscriptionUseCase(_subscriptionRepository);
     checkSubscriptionStatus();
   }
 
@@ -83,7 +84,7 @@ class SearchPageController extends Controller {
   void search() {
     if (_debounceTimer?.isActive ?? false) _debounceTimer?.cancel();
 
-    _debounceTimer = Timer(const Duration(milliseconds: 300), () async {
+    _debounceTimer = Timer(const Duration(milliseconds: 500), () async {
       if (_searchController.text.isEmpty) {
         _searchResults = [];
         refreshUI();
@@ -142,6 +143,7 @@ class _CheckSubscriptionObserver extends Observer<Subscription> {
 
   @override
   void onNext(Subscription? response) {
-    _controller._onSubscriptionStatusChecked(response ?? Subscription.inactive());
+    _controller
+        ._onSubscriptionStatusChecked(response ?? Subscription.inactive());
   }
 }
