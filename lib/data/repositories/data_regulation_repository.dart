@@ -319,15 +319,19 @@ class DataRegulationRepository implements RegulationRepository {
     required String query,
   }) async {
     if (query.isEmpty) return [];
-    throw UnimplementedError("Search should be handled by Static repository");
+// Delegate to StaticRegulationRepository
+    final staticRepo = StaticRegulationRepository();
+    return await staticRepo.searchInRegulation(
+        regulationId: regulationId, query: query);
   }
 
   @override
   Future<List<SearchResult>> searchInAllRegulations(
       {required String query}) async {
     if (query.isEmpty) return [];
-    throw UnimplementedError(
-        "Search in all regulations should be handled by Static repository");
+// Delegate to StaticRegulationRepository
+    final staticRepo = StaticRegulationRepository();
+    return await staticRepo.searchInAllRegulations(query: query);
   }
 
   @override
