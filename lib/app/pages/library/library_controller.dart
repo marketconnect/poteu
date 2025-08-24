@@ -33,6 +33,9 @@ class LibraryController extends Controller {
   bool _isSearching = false;
   final TextEditingController searchController = TextEditingController();
 
+  // --- ШАГ 1: Добавляем флаг-блокировку ---
+  bool _isRefreshing = false;
+
   List<Regulation> get regulations => _regulations;
   bool get isLoading => _isLoading;
   String? get error => _error;
@@ -88,6 +91,10 @@ class LibraryController extends Controller {
       _regulations = processedRegulations;
       _isLoading = false;
       _error = null;
+
+      // --- ШАГ 3: Сбрасываем флаг после успешного завершения ---
+      _isRefreshing = false;
+
       refreshUI();
       _cacheRegulations(regulations);
       _presenter.saveRegulations(regulations);
@@ -97,6 +104,10 @@ class LibraryController extends Controller {
       _error = e.toString();
       _isLoading = false;
       _selectedRegulation = null;
+
+      // --- ШАГ 3: Сбрасываем флаг после завершения с ошибкой ---
+      _isRefreshing = false;
+
       refreshUI();
     };
 
@@ -257,6 +268,13 @@ class LibraryController extends Controller {
   }
 
   void refreshRegulations() {
+    // --- ШАГ 2: Проверяем и устанавливаем флаг перед началом обновления ---
+    if (_isRefreshing) {
+      dev.log("Обновление уже в процессе, новый запрос проигнорирован.");
+      return;
+    }
+    _isRefreshing = true;
+
     _isLoading = true;
     _error = null;
     _selectedRegulation = null;
