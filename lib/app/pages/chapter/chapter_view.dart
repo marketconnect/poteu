@@ -1213,6 +1213,8 @@ class ChapterViewState extends ViewState<ChapterView, ChapterController> {
   }
 
   void _showErrorSnackBar(String message) {
+    if (!mounted) return;
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
