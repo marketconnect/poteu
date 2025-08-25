@@ -349,11 +349,11 @@ class ChapterViewState extends ViewState<ChapterView, ChapterController> {
               style: Theme.of(context).textTheme.headlineSmall,
             ),
             const SizedBox(height: 8),
-            Text(
-              controller.loadingError!,
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodyMedium,
-            ),
+            // Text(
+            //   controller.loadingError!,
+            //   textAlign: TextAlign.center,
+            //   style: Theme.of(context).textTheme.bodyMedium,
+            // ),
             const SizedBox(height: 24),
             ElevatedButton.icon(
               onPressed: controller.loadAllChapters,

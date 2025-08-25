@@ -65,8 +65,10 @@ class SubscriptionViewState
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Text(
-                      'Ошибка загрузки тарифов: ${controller.error}',
+                    const Text(
+                      // 'Ошибка загрузки тарифов: ${controller.error}',
+                      'Ошибка загрузки тарифов',
+
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 16),

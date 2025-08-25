@@ -93,8 +93,7 @@ class LibraryViewState extends ViewState<LibraryView, LibraryController> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text('Ошибка загрузки: ${controller.error}',
-                  textAlign: TextAlign.center),
+              const Text('Ошибка загрузки', textAlign: TextAlign.center),
               const SizedBox(height: 16),
               ElevatedButton(
                 onPressed: controller.refreshRegulations,

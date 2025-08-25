@@ -118,13 +118,13 @@ class ExamViewState extends ViewState<ExamView, ExamController> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0),
-              child: Text(
-                controller.error!,
-                textAlign: TextAlign.center,
-              ),
-            ),
+            // Padding(
+            //   padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            //   child: Text(
+            //     controller.error!,
+            //     textAlign: TextAlign.center,
+            //   ),
+            // ),
             if (!controller.isExamNotFoundError) ...[
               const SizedBox(height: 16),
               ElevatedButton(

@@ -81,7 +81,7 @@ android {
     productFlavors {
         create("poteu") {
             dimension = "default"
-            applicationIdSuffix = ".poteu"
+            applicationId = "com.i_rm.poteu"
             resValue("string", "app_name", "ПОТЭЭ-903н-2022")
             versionCode = versionsProperties["POTEU_VERSION_CODE"].toString().toInt()
             versionName = versionsProperties["POTEU_VERSION_NAME"] as String
@@ -95,7 +95,7 @@ android {
         }
         create("pteep") {
             dimension = "default"
-            applicationIdSuffix = ".pteep"
+            applicationId = "com.i_rm.poteu.pteep"
             resValue("string", "app_name", "ПТЭЭП")
             versionCode = versionsProperties["PTEEP_VERSION_CODE"].toString().toInt()
             versionName = versionsProperties["PTEEP_VERSION_NAME"] as String
