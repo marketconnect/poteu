@@ -4,6 +4,7 @@ import 'package:poteu/domain/entities/exam_question.dart';
 import 'package:poteu/domain/repositories/exam_repository.dart';
 import 'package:flutter/foundation.dart';
 import 'package:poteu/app/services/active_regulation_service.dart';
+import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'exam_presenter.dart';
 import 'dart:async';
@@ -98,6 +99,7 @@ class ExamController extends Controller {
     };
 
     _presenter.onError = (e) {
+      Sentry.captureException(e, stackTrace: e.stackTrace);
       _isLoading = false;
       if (e is ExamNotFoundException) {
         final docName = ActiveRegulationService().currentAppName;

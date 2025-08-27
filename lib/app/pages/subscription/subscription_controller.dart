@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_clean_architecture/flutter_clean_architecture.dart';
 import 'package:poteu/domain/entities/subscription_plan.dart';
 import 'package:poteu/domain/repositories/subscription_repository.dart';
+import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'subscription_presenter.dart';
 import 'dart:developer' as dev;
@@ -58,6 +59,8 @@ class SubscriptionController extends Controller {
     };
 
     _presenter.onError = (e) {
+      Sentry.captureException(e, stackTrace: e.stackTrace);
+
       _error = 'Произошла ошибка. Пожалуйста, попробуйте еще раз.';
       _isLoading = false;
       refreshUI();

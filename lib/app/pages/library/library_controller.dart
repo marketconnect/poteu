@@ -5,6 +5,7 @@ import 'package:poteu/domain/entities/subscription.dart';
 import 'package:poteu/domain/repositories/subscription_repository.dart';
 import 'package:poteu/domain/usecases/check_subscription_usecase.dart';
 import 'package:poteu/domain/usecases/handle_expired_subscription_usecase.dart';
+import 'package:sentry_flutter/sentry_flutter.dart';
 import '../../../domain/entities/regulation.dart';
 import 'package:poteu/config.dart';
 import 'library_presenter.dart';
@@ -101,6 +102,7 @@ class LibraryController extends Controller {
     };
 
     _presenter.onError = (e) {
+      Sentry.captureException(e, stackTrace: e.stackTrace);
       _error = 'Произошла ошибка';
       _isLoading = false;
       _selectedRegulation = null;

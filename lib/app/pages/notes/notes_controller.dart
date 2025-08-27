@@ -5,6 +5,7 @@ import 'package:poteu/config.dart';
 import 'package:poteu/domain/entities/subscription.dart';
 import 'package:poteu/domain/repositories/subscription_repository.dart';
 import 'package:poteu/domain/usecases/check_subscription_usecase.dart';
+import 'package:sentry_flutter/sentry_flutter.dart';
 import '../../../domain/entities/note.dart';
 import '../../../domain/usecases/get_notes_usecase.dart';
 import '../../../domain/usecases/delete_note_usecase.dart';
@@ -63,6 +64,7 @@ class NotesController extends Controller {
       );
       dev.log('GetNotesUseCase execution started');
     } catch (e, stack) {
+      Sentry.captureException(e, stackTrace: stack);
       dev.log('❌ Error loading notes:');
       dev.log('Error: $e');
       dev.log('Stack trace: $stack');

@@ -2,6 +2,7 @@
 import 'dart:developer' as dev;
 import 'package:html/parser.dart';
 import 'package:path/path.dart';
+import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite/sqflite.dart' as old_db;
 import 'package:poteu/data/repositories/data_regulation_repository.dart';
@@ -150,6 +151,8 @@ class MigrationService {
       await prefs.setBool(migrationFlagKey, true);
       dev.log('[MIGRATION_LOG] ✅✅✅ Миграция (v4) успешно завершена!');
     } catch (e, stackTrace) {
+      Sentry.captureException(e, stackTrace: stackTrace);
+
       dev.log('[MIGRATION_LOG] ❌❌❌ КРИТИЧЕСКАЯ ОШИБКА МИГРАЦИИ: $e');
       dev.log(stackTrace.toString());
     }

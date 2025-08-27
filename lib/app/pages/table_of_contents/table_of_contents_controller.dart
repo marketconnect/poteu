@@ -1,4 +1,5 @@
 import 'package:flutter_clean_architecture/flutter_clean_architecture.dart';
+import 'package:sentry_flutter/sentry_flutter.dart';
 import '../../../domain/repositories/regulation_repository.dart';
 import '../../../domain/repositories/settings_repository.dart';
 import '../../../domain/repositories/tts_repository.dart';
@@ -45,6 +46,8 @@ class TableOfContentsController extends Controller {
     };
 
     presenter.onError = (error) {
+      Sentry.captureException(error, stackTrace: error.stackTrace);
+
       _error = 'Произошла ошибка';
       _isLoading = false;
       refreshUI();
