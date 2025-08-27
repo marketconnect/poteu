@@ -74,7 +74,7 @@ class DynamicTheme {
         size: 20,
         color: Color(0XFF447FEB),
       ),
-      bottomAppBarTheme: const BottomAppBarTheme(
+      bottomAppBarTheme: const BottomAppBarThemeData(
         color: Color(0XFFf7f6fb),
       ),
       tabBarTheme: const TabBarThemeData(
