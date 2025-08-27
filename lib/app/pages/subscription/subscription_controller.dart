@@ -58,7 +58,7 @@ class SubscriptionController extends Controller {
     };
 
     _presenter.onError = (e) {
-      _error = e.toString().replaceFirst('Exception: ', '');
+      _error = 'Произошла ошибка. Пожалуйста, попробуйте еще раз.';
       _isLoading = false;
       refreshUI();
       dev.log('Error creating payment link: $e');
@@ -85,7 +85,7 @@ class SubscriptionController extends Controller {
 
     _presenter.onPlansError = (e) {
       dev.log('Error loading subscription plans: $e');
-      _error = e.toString();
+      _error = 'Не удалось загрузить тарифы.';
       _isLoadingPlans = false;
       refreshUI();
     };
@@ -113,7 +113,8 @@ class SubscriptionController extends Controller {
           dev.log('Successfully loaded plans from cache.');
           return;
         } catch (e) {
-          dev.log('Failed to load plans from cache: $e. Fetching from network.');
+          dev.log(
+              'Failed to load plans from cache: $e. Fetching from network.');
         }
       }
     }

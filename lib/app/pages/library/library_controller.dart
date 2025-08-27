@@ -101,7 +101,7 @@ class LibraryController extends Controller {
     };
 
     _presenter.onError = (e) {
-      _error = e.toString();
+      _error = 'Произошла ошибка';
       _isLoading = false;
       _selectedRegulation = null;
 
@@ -149,7 +149,7 @@ class LibraryController extends Controller {
       dev.log('Error downloading regulation: $e');
       _isCheckingCache = false;
       _isDownloading = false;
-      _error = "Ошибка загрузки документа: $e";
+      _error = "Ошибка загрузки документа";
       _selectedRegulation = null; // Deselect on error
       refreshUI();
     };

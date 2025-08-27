@@ -42,7 +42,7 @@ class SoundSettingsController extends Controller {
       refreshUI();
     } catch (e, stackTrace) {
       await Sentry.captureException(e, stackTrace: stackTrace);
-      _error = e.toString();
+      _error = 'Произошла ошибка';
       refreshUI();
     }
   }
@@ -53,7 +53,7 @@ class SoundSettingsController extends Controller {
       refreshUI();
     } catch (e, stackTrace) {
       await Sentry.captureException(e, stackTrace: stackTrace);
-      _error = e.toString();
+      _error = 'Произошла ошибка';
       refreshUI();
     }
   }
@@ -102,7 +102,7 @@ class SoundSettingsController extends Controller {
 
     _presenter.onError = (e) {
       Sentry.captureException(e);
-      _error = e.toString();
+      _error = 'Произошла ошибка';
       refreshUI();
     };
   }

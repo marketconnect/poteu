@@ -1,53 +1,515 @@
-diff --git a/app/pages/chapter/chapter_view.dart b/app/pages/chapter/chapter_view.dart
-index 2411929..592c730 100644
---- a/app/pages/chapter/chapter_view.dart
-+++ b/app/pages/chapter/chapter_view.dart
-@@ -1,4 +1,5 @@
- import 'dart:developer' as dev;
-+import 'dart:async';
- 
- import 'package:flutter/material.dart' hide View;
- import 'package:sentry_flutter/sentry_flutter.dart';
-@@ -1510,19 +1511,28 @@
- 
- class _SearchScreenState extends State<_SearchScreen> {
-   final TextEditingController _searchController = TextEditingController();
-+  Timer? _debounce;
- 
-   @override
-   void initState() {
-     super.initState();
-     _searchController.addListener(() {
--      widget.controller.search(_searchController.text);
-+      if (_debounce?.isActive ?? false) {
-+        _debounce!.cancel();
-+      }
-+      _debounce = Timer(const Duration(milliseconds: 500), () {
-+        if (mounted) {
-+          widget.controller.search(_searchController.text);
-+        }
-+      });
-     });
-   }
- 
-   @override
-   void dispose() {
-+    _debounce?.cancel();
-     _searchController.dispose();
-     super.dispose();
-   }
- 
-   @override
-diff --git a/app/pages/search/search_controller.dart b/app/pages/search/search_controller.dart
-index 2873a4a..0317e0b 100644
---- a/app/pages/search/search_controller.dart
-+++ b/app/pages/search/search_controller.dart
-@@ -62,7 +62,7 @@
-   void search() {
-     if (_debounceTimer?.isActive ?? false) _debounceTimer?.cancel();
- 
--    _debounceTimer = Timer(const Duration(milliseconds: 300), () async {
-+    _debounceTimer = Timer(const Duration(milliseconds: 500), () async {
-       if (_searchController.text.isEmpty) {
-         _searchResults = [];
+--- a/lib/app/pages/chapter/chapter_controller.dart
++++ b/lib/app/pages/chapter/chapter_controller.dart
+@@ -251,20 +251,40 @@
          refreshUI();
+       },
+       onError: (error) {
+-        _loadingError =
+-            'TTS Error:  ${error.toString()}'; // <--- set loading error for TTS
++        _handleError('TTS Error:  ${error.toString()}');
+         _ttsState = TtsState.error;
+         _stopRequested = false; // Сбрасываем флаг при ошибке
+         _isPlayingChapter = false; // Сбрасываем флаг воспроизведения главы
+         _currentTTSParagraph = null; // Очищаем при ошибке
+         dev.log('🎵 TTS error in stream - clearing current paragraph');
+-        refreshUI();
+       },
+     );
+   }
++  void _handleError(dynamic e, {StackTrace? stackTrace}) {
++    final errorMessage = e.toString();
++    const silentErrorMessages = [
++      'Вы не выделили участок параграфа, который собираетесь выделить.',
++      'Вы не выделили участок параграфа, который собираетесь подчеркнуть.'
++    ];
++    if (silentErrorMessages.contains(errorMessage)) {
++      _error = errorMessage;
++    } else {
++      Sentry.captureException(e, stackTrace: stackTrace);
++      // For the user, always show a generic message for unexpected errors.
++      _error = 'Что-то пошло не так';
++    }
++
++    refreshUI();
++  }
++
++  void clearError() {
++    _error = null;
++  }
+ 
+   @override
+   void initListeners() {
+     // Initialize search presenter with the same repository used for loading chapters
+     _searchPresenter = SearchPresenter(_repository);
+ 
+     _searchPresenter.onSearchComplete = (List<SearchResult> results) {
+@@ -274,7 +294,7 @@
+     };
+ 
+     _searchPresenter.onSearchError = (e) {
+-      _loadingError = e.toString(); // <--- set loading error for search
++      _loadingError = 'Произошла ошибка поиска.'; // <--- set loading error for search
+       _isSearching = false;
+       refreshUI();
+     };
+@@ -309,8 +329,7 @@
+       stopwatch.stop();
+       dev.log('❌ Ошибка загрузки за ${stopwatch.elapsedMilliseconds}ms: $e');
+       _isLoading = false;
+-      _loadingError =
+-          'Ошибка загрузки: ${e.toString()}'; // <--- set loading error
++      _loadingError = 'Ошибка загрузки'; // <--- set loading error
+       refreshUI();
+     }
+   }
+@@ -1045,20 +1064,14 @@
+             start < plainText.length &&
+             end > start &&
+             end <= plainText.length) {
+           try {
+             _lastSelectedText = plainText.substring(start, end);
+           } catch (e, stackTrace) {
+-            await Sentry.captureException(e, stackTrace: stackTrace);
+-            _lastSelectedText = '';
+-            _error = 'Ошибка выделения текста';
++            _handleError('Ошибка выделения текста', stackTrace: stackTrace);
+           }
+         } else {
+           _lastSelectedText = '';
+         }
+       } else {
+         _lastSelectedText = '';
+       }
+ 
+       _error = null; // Clear any previous errors
+       refreshUI();
+     } catch (e, stackTrace) {
+-      await Sentry.captureException(e, stackTrace: stackTrace);
+-      _lastSelectedText = '';
+-      _error = 'Ошибка при обработке выделения';
+-      refreshUI();
++      _handleError(e, stackTrace: stackTrace);
+     }
+   }
+ 
+@@ -1081,13 +1094,10 @@
+   Future<void> applyFormatting(Tag tag) async {
+     try {
+       if (_selectedParagraph == null) {
+-        _error = 'Параграф не выбран';
+-        refreshUI();
++        _handleError('Параграф не выбран');
+         return;
+       }
+ 
+       if (_selectionStart == _selectionEnd && tag != Tag.c) {
+-        _error = tag == Tag.m
+-            ? 'Вы не выделили участок параграфа, который собираетесь выделить.'
+-            : 'Вы не выделили участок параграфа, который собираетесь подчеркнуть.';
+-        refreshUI();
++        final errorMsg = tag == Tag.m
++            ? 'Вы не выделили участок параграфа, который собираетесь выделить.'
++            : 'Вы не выделили участок параграфа, который собираетесь подчеркнуть.';
++        _handleError(errorMsg);
+         return;
+       }
+ 
+@@ -1100,9 +1110,7 @@
+         String plainText = TextUtils.parseHtmlString(content);
+ 
+         if (plainText.isEmpty) {
+-          _error = 'Пустой текст параграфа';
+-          refreshUI();
++          _handleError('Пустой текст параграфа');
+           return;
+         }
+ 
+@@ -1136,26 +1144,20 @@
+               String after = plainText.substring(end);
+               content = before + openTag + selectedText + closeTag + after;
+             }
+-          } catch (substringError) {
+-            _error = 'Ошибка при форматировании: ${substringError.toString()}';
+-            refreshUI();
++          } catch (substringError, stackTrace) {
++            _handleError(substringError, stackTrace: stackTrace);
+             return;
+           }
+         } else {
+-          _error = 'Неверные границы выделения';
+-          refreshUI();
++          _handleError('Неверные границы выделения');
+           return;
+         }
+       }
+ 
+       // Save to database using originalId
+       try {
+         await _dataRepository.saveParagraphEditByOriginalId(
+             _selectedParagraph!.originalId, content, _selectedParagraph!);
+-      } catch (saveError) {
+-        _error = 'Ошибка сохранения: ${saveError.toString()}';
+-        refreshUI();
++      } catch (saveError, stackTrace) {
++        _handleError(saveError, stackTrace: stackTrace);
+         return;
+       }
+ 
+@@ -1176,9 +1178,7 @@
+       _error = null;
+       refreshUI();
+     } catch (e, stackTrace) {
+-      await Sentry.captureException(e, stackTrace: stackTrace);
+-      _error = 'Ошибка форматирования: ${e.toString()}';
+-      refreshUI();
++      _handleError(e, stackTrace: stackTrace);
+     }
+   }
+ 
+@@ -1230,9 +1230,7 @@
+       // You can implement actual persistence here later
+       // For example: await _dataRepository.saveColorsList(_colorsList);
+     } catch (e, stackTrace) {
+-      await Sentry.captureException(e, stackTrace: stackTrace);
+-      _error = 'Ошибка сохранения цветов: ${e.toString()}';
+-      refreshUI();
++      _handleError(e, stackTrace: stackTrace);
+     }
+   }
+ 
+@@ -1288,11 +1286,9 @@
+         _ttsUseCase.execute(_TTSUseCaseObserver(this),
+             TTSUseCaseParams.speak(textToSpeak.trim()));
+       }
+     } catch (e, stackTrace) {
+-      await Sentry.captureException(e, stackTrace: stackTrace);
+-      _error = e.toString();
++      _handleError(e, stackTrace: stackTrace);
+       _currentTTSParagraph = null; // Очищаем при ошибке
+       dev.log('🎵 TTS: Error occurred, clearing current paragraph');
+-      refreshUI();
+     }
+   }
+ 
+@@ -1340,10 +1336,8 @@
+         await _playChapterInChunks(chunksInfo);
+       }
+     } catch (e, stackTrace) {
+-      await Sentry.captureException(e, stackTrace: stackTrace);
++      _handleError(e, stackTrace: stackTrace);
+       dev.log('❌ Error in playChapterTTS: $e');
+-      _error = e.toString();
+-      refreshUI();
+     }
+   }
+ 
+@@ -1462,10 +1456,8 @@
+         }
+ 
+         if (_ttsState == TtsState.error) {
+           dev.log('❌ TTS chunk ${i + 1} failed with error');
+-          _error = 'Ошибка воспроизведения TTS';
++          _handleError('Ошибка воспроизведения TTS');
+           _isPlayingChapter = false;
+-          refreshUI();
+           return;
+         }
+ 
+@@ -1478,11 +1470,10 @@
+       // Очищаем выделение после завершения всей главы
+       _currentTTSParagraph = null;
+       refreshUI();
+     } catch (e, stackTrace) {
+-      await Sentry.captureException(e, stackTrace: stackTrace);
++      _handleError('Ошибка воспроизведения главы: ${e.toString()}',
++          stackTrace: stackTrace);
+       dev.log('❌ Error in _playChapterInChunks: $e');
+-      _error = 'Ошибка воспроизведения главы: ${e.toString()}';
+       _isPlayingChapter = false;
+-      refreshUI();
+     }
+   }
+ 
+@@ -1569,12 +1560,10 @@
+             const Duration(milliseconds: 200)); // Небольшая задержка
+         _ttsUseCase.execute(_TTSUseCaseObserver(this), TTSUseCaseParams.stop());
+       }
+     } catch (e, stackTrace) {
+-      await Sentry.captureException(e, stackTrace: stackTrace);
++      _handleError(e, stackTrace: stackTrace);
+       dev.log('🎵 Error in stopTTS(): $e');
+-      _error = e.toString();
+       _currentTTSParagraph = null; // Очищаем при ошибке
+       dev.log('🎵 TTS: Clearing current paragraph due to error in stopTTS');
+-      refreshUI();
+     }
+   }
+ 
+@@ -1583,20 +1572,16 @@
+       dev.log('🎵 PAUSE TTS CALLED');
+       _ttsUseCase.execute(_TTSUseCaseObserver(this), TTSUseCaseParams.pause());
+     } catch (e, stackTrace) {
+-      await Sentry.captureException(e, stackTrace: stackTrace);
+-      _error = e.toString();
+-      refreshUI();
++      _handleError(e, stackTrace: stackTrace);
+     }
+   }
+ 
+   Future<void> resumeTTS() async {
+     try {
+       dev.log('🎵 RESUME TTS CALLED');
+       _ttsUseCase.execute(_TTSUseCaseObserver(this), TTSUseCaseParams.resume());
+     } catch (e, stackTrace) {
+-      await Sentry.captureException(e, stackTrace: stackTrace);
+-      _error = e.toString();
+-      refreshUI();
++      _handleError(e, stackTrace: stackTrace);
+     }
+   }
+ 
+@@ -1661,9 +1646,8 @@
+       _error = null;
+       refreshUI();
+     } catch (e, stackTrace) {
+-      await Sentry.captureException(e, stackTrace: stackTrace);
+-      _error = 'Ошибка сохранения: ${e.toString()}';
+-      refreshUI();
++      _handleError('Ошибка сохранения: ${e.toString()}',
++          stackTrace: stackTrace);
+     }
+   }
+ 
+@@ -1728,10 +1712,8 @@
+         refreshUI();
+         Navigator.of(getContext()).pushNamed('/subscription');
+       }
+-    } catch (e) {
++    } catch (e, stackTrace) {
++      _handleError('Ошибка: ${e.toString()}', stackTrace: stackTrace);
+       _isLoading = false;
+-      _error = 'Ошибка: ${e.toString()}';
+-      refreshUI();
+     }
+   }
+ 
+@@ -1787,11 +1769,10 @@
+   @override
+   void onError(e) {
+     dev.log('❌ TTS Observer: onError called with: $e');
+-    _controller._error = e.toString();
++    _controller._handleError(e);
+     // Очищаем текущий читаемый параграф только при ошибке TTS
+     _controller._currentTTSParagraph = null;
+     dev.log('🎵 TTS Observer: Clearing current paragraph in onError');
+-    _controller.refreshUI();
+   }
+ 
+   @override
+--- a/lib/app/pages/drawer/sound_settings_controller.dart
++++ b/lib/app/pages/drawer/sound_settings_controller.dart
+@@ -28,7 +28,7 @@
+       refreshUI();
+     } catch (e, stackTrace) {
+       await Sentry.captureException(e, stackTrace: stackTrace);
+-      _error = e.toString();
++      _error = 'Произошла ошибка';
+       refreshUI();
+     }
+   }
+@@ -39,7 +39,7 @@
+       refreshUI();
+     } catch (e, stackTrace) {
+       await Sentry.captureException(e, stackTrace: stackTrace);
+-      _error = e.toString();
++      _error = 'Произошла ошибка';
+       refreshUI();
+     }
+   }
+@@ -81,7 +81,7 @@
+ 
+     _presenter.onError = (e) {
+       Sentry.captureException(e);
+-      _error = e.toString();
++      _error = 'Произошла ошибка';
+       refreshUI();
+     };
+   }
+--- a/lib/app/pages/exam/exam_controller.dart
++++ b/lib/app/pages/exam/exam_controller.dart
+@@ -73,7 +73,7 @@
+         _error = 'Для документа "$docName" экзамен не добавлен.';
+         _isExamNotFoundError = true;
+       } else {
+-        _error = 'Ошибка загрузки: ${e.toString()}';
++        _error = 'Ошибка загрузки';
+         _isExamNotFoundError = false;
+       }
+       refreshUI();
+--- a/lib/app/pages/library/library_controller.dart
++++ b/lib/app/pages/library/library_controller.dart
+@@ -93,7 +93,7 @@
+     };
+ 
+     _presenter.onError = (e) {
+-      _error = e.toString();
++      _error = 'Произошла ошибка';
+       _isLoading = false;
+       _selectedRegulation = null;
+ 
+@@ -128,7 +128,7 @@
+       dev.log('Error downloading regulation: $e');
+       _isCheckingCache = false;
+       _isDownloading = false;
+-      _error = "Ошибка загрузки документа: $e";
++      _error = "Ошибка загрузки документа";
+       _selectedRegulation = null; // Deselect on error
+       refreshUI();
+     };
+--- a/lib/app/pages/main/main_controller.dart
++++ b/lib/app/pages/main/main_controller.dart
+@@ -40,7 +40,7 @@
+     };
+ 
+     _presenter.onError = (error) {
+-      _error = error.toString();
++      _error = 'Произошла ошибка';
+       _isLoading = false;
+       refreshUI();
+     };
+@@ -102,7 +102,7 @@
+       await _regulationRepository.toggleFavorite(regulationId);
+       _loadRegulations();
+     } catch (e) {
+-      _error = e.toString();
++      _error = 'Произошла ошибка';
+       refreshUI();
+     }
+   }
+@@ -112,7 +112,7 @@
+       await _regulationRepository.downloadRegulation(regulationId);
+       _loadRegulations();
+     } catch (e) {
+-      _error = e.toString();
++      _error = 'Произошла ошибка';
+       refreshUI();
+     }
+   }
+@@ -122,7 +122,7 @@
+       await _regulationRepository.deleteRegulation(regulationId);
+       _loadRegulations();
+     } catch (e) {
+-      _error = e.toString();
++      _error = 'Произошла ошибка';
+       refreshUI();
+     }
+   }
+--- a/lib/app/pages/notes/notes_controller.dart
++++ b/lib/app/pages/notes/notes_controller.dart
+@@ -52,7 +52,7 @@
+       dev.log('❌ Error loading notes:');
+       dev.log('Error: $e');
+       dev.log('Stack trace: $stack');
+-      _error = e.toString();
++      _error = 'Произошла ошибка';
+       _isLoading = false;
+       refreshUI();
+     }
+@@ -86,7 +86,7 @@
+       );
+     } catch (e) {
+       dev.log('Error deleting note: $e');
+-      _error = 'Ошибка удаления заметки: ${e.toString()}';
++      _error = 'Ошибка удаления заметки';
+       refreshUI();
+     }
+   }
+@@ -111,7 +111,7 @@
+         null,
+       );
+     } catch (e) {
+-      _error = 'Ошибка проверки подписки: ${e.toString()}';
++      _error = 'Ошибка проверки подписки';
+     } finally {
+       _isLoading = false;
+       refreshUI();
+@@ -147,7 +147,7 @@
+   void _onNotesError(dynamic error) {
+     dev.log('=== NOTES ERROR ===');
+     dev.log('Error: $error');
+-    _error = error.toString();
++    _error = 'Произошла ошибка';
+     _isLoading = false;
+     refreshUI();
+   }
+@@ -161,7 +161,7 @@
+   void _onDeleteError(dynamic error) {
+     dev.log('=== DELETE ERROR ===');
+     dev.log('Error: $error');
+-    _error = 'Ошибка удаления: ${error.toString()}';
++    _error = 'Ошибка удаления';
+     refreshUI();
+   }
+ 
+@@ -185,7 +185,7 @@
+ 
+   @override
+   void onError(e) {
+-    _controller._error = 'Ошибка проверки подписки: ${e.toString()}';
++    _controller._error = 'Ошибка проверки подписки';
+     // ignore: invalid_use_of_protected_member
+     _controller.refreshUI();
+   }
+--- a/lib/app/pages/subscription/subscription_controller.dart
++++ b/lib/app/pages/subscription/subscription_controller.dart
+@@ -50,7 +50,7 @@
+     };
+ 
+     _presenter.onError = (e) {
+-      _error = e.toString().replaceFirst('Exception: ', '');
++      _error = 'Произошла ошибка. Пожалуйста, попробуйте еще раз.';
+       _isLoading = false;
+       refreshUI();
+       dev.log('Error creating payment link: $e');
+@@ -74,7 +74,7 @@
+ 
+     _presenter.onPlansError = (e) {
+       dev.log('Error loading subscription plans: $e');
+-      _error = e.toString();
++      _error = 'Не удалось загрузить тарифы.';
+       _isLoadingPlans = false;
+       refreshUI();
+     };
+--- a/lib/app/pages/subscription/subscription_view.dart
++++ b/lib/app/pages/subscription/subscription_view.dart
+@@ -83,9 +83,7 @@
+                 child: Column(
+                   mainAxisAlignment: MainAxisAlignment.center,
+                   children: [
+-                    const Text(
+-                      // 'Ошибка загрузки тарифов: ${controller.error}',
++                    Text(
+                       'Ошибка загрузки тарифов',
+ 
+                       textAlign: TextAlign.center,
+@@ -116,7 +114,7 @@
+                     if (controller.error != null &&
+                         controller.plans.isNotEmpty) ...[
+                       const SizedBox(height: 24),
+                       Text(
+-                        '${controller.error}',
++                        controller.error!,
+                         textAlign: TextAlign.center,
+                         style: const TextStyle(color: Colors.red),
+                       ),
+--- a/lib/app/pages/table_of_contents/table_of_contents_controller.dart
++++ b/lib/app/pages/table_of_contents/table_of_contents_controller.dart
+@@ -40,7 +40,7 @@
+     };
+ 
+     presenter.onError = (error) {
+-      _error = error.toString();
++      _error = 'Произошла ошибка';
+       _isLoading = false;
+       refreshUI();
+     };

@@ -66,7 +66,7 @@ class NotesController extends Controller {
       dev.log('❌ Error loading notes:');
       dev.log('Error: $e');
       dev.log('Stack trace: $stack');
-      _error = e.toString();
+      _error = 'Произошла ошибка';
       _isLoading = false;
       refreshUI();
     }
@@ -103,7 +103,7 @@ class NotesController extends Controller {
       );
     } catch (e) {
       dev.log('Error deleting note: $e');
-      _error = 'Ошибка удаления заметки: ${e.toString()}';
+      _error = 'Ошибка удаления заметки';
       refreshUI();
     }
   }
@@ -130,7 +130,7 @@ class NotesController extends Controller {
         null,
       );
     } catch (e) {
-      _error = 'Ошибка проверки подписки: ${e.toString()}';
+      _error = 'Ошибка проверки подписки';
     } finally {
       _isLoading = false;
       refreshUI();
@@ -169,7 +169,7 @@ class NotesController extends Controller {
   void _onNotesError(dynamic error) {
     dev.log('=== NOTES ERROR ===');
     dev.log('Error: $error');
-    _error = error.toString();
+    _error = 'Произошла ошибка';
     _isLoading = false;
     refreshUI();
   }
@@ -183,7 +183,7 @@ class NotesController extends Controller {
   void _onDeleteError(dynamic error) {
     dev.log('=== DELETE ERROR ===');
     dev.log('Error: $error');
-    _error = 'Ошибка удаления: ${error.toString()}';
+    _error = 'Ошибка удаления';
     refreshUI();
   }
 
@@ -211,7 +211,7 @@ class _CheckSubscriptionObserver extends Observer<Subscription> {
 
   @override
   void onError(e) {
-    _controller._error = 'Ошибка проверки подписки: ${e.toString()}';
+    _controller._error = 'Ошибка проверки подписки';
     // ignore: invalid_use_of_protected_member
     _controller.refreshUI();
   }

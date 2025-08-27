@@ -66,9 +66,7 @@ class SubscriptionViewState
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     const Text(
-                      // 'Ошибка загрузки тарифов: ${controller.error}',
                       'Ошибка загрузки тарифов',
-
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 16),
@@ -108,7 +106,7 @@ class SubscriptionViewState
                         controller.plans.isNotEmpty) ...[
                       const SizedBox(height: 24),
                       Text(
-                        '${controller.error}',
+                        controller.error!,
                         textAlign: TextAlign.center,
                         style: const TextStyle(color: Colors.red),
                       ),

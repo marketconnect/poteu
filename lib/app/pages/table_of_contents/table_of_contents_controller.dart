@@ -45,7 +45,7 @@ class TableOfContentsController extends Controller {
     };
 
     presenter.onError = (error) {
-      _error = error.toString();
+      _error = 'Произошла ошибка';
       _isLoading = false;
       refreshUI();
     };

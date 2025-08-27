@@ -104,7 +104,7 @@ class ExamController extends Controller {
         _error = 'Для документа "$docName" экзамен не добавлен.';
         _isExamNotFoundError = true;
       } else {
-        _error = 'Ошибка загрузки: ${e.toString()}';
+        _error = 'Ошибка загрузки';
         _isExamNotFoundError = false;
       }
       refreshUI();

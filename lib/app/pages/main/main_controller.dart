@@ -56,7 +56,7 @@ class MainController extends Controller {
     };
 
     _presenter.onError = (error) {
-      _error = error.toString();
+      _error = 'Произошла ошибка';
       _isLoading = false;
       refreshUI();
     };
@@ -133,7 +133,7 @@ class MainController extends Controller {
       await _regulationRepository.toggleFavorite(regulationId);
       _loadRegulations();
     } catch (e) {
-      _error = e.toString();
+      _error = 'Произошла ошибка';
       refreshUI();
     }
   }
@@ -143,7 +143,7 @@ class MainController extends Controller {
       await _regulationRepository.downloadRegulation(regulationId);
       _loadRegulations();
     } catch (e) {
-      _error = e.toString();
+      _error = 'Произошла ошибка';
       refreshUI();
     }
   }
@@ -153,7 +153,7 @@ class MainController extends Controller {
       await _regulationRepository.deleteRegulation(regulationId);
       _loadRegulations();
     } catch (e) {
-      _error = e.toString();
+      _error = 'Произошла ошибка';
       refreshUI();
     }
   }
