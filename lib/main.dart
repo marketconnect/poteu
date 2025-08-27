@@ -11,6 +11,7 @@ import 'package:sentry_flutter/sentry_flutter.dart';
 import 'data/repositories/data_settings_repository.dart';
 import 'data/repositories/data_tts_repository.dart';
 import 'data/repositories/data_notes_repository.dart';
+import 'package:feature_notifier/feature_notifier.dart';
 
 import 'app/theme/dynamic_theme.dart';
 import 'app/router/app_router.dart';
@@ -232,6 +233,8 @@ void main() async {
       }
 
       AppConfig.initialize(flavor);
+
+      await FeatureNotifier.init();
 
       await ActiveRegulationService().init();
 
