@@ -99,13 +99,13 @@ class ExamController extends Controller {
     };
 
     _presenter.onError = (e) {
-      Sentry.captureException(e);
       _isLoading = false;
       if (e is ExamNotFoundException) {
         final docName = ActiveRegulationService().currentAppName;
         _error = 'Для документа "$docName" экзамен не добавлен.';
         _isExamNotFoundError = true;
       } else {
+        Sentry.captureException(e);
         _error = 'Ошибка загрузки';
         _isExamNotFoundError = false;
       }
