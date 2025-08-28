@@ -590,7 +590,7 @@ class ChapterController extends Controller {
   }
 
   void goToPreviousChapter() {
-    if (_currentChapterOrderNum > 1) {
+    if (pageController.hasClients && _currentChapterOrderNum > 1) {
       pageController.previousPage(
         duration: const Duration(seconds: 1),
         curve: Curves.ease,
@@ -599,7 +599,7 @@ class ChapterController extends Controller {
   }
 
   void goToNextChapter() {
-    if (_currentChapterOrderNum < _totalChapters) {
+    if (pageController.hasClients && _currentChapterOrderNum < _totalChapters) {
       pageController.nextPage(
         duration: const Duration(seconds: 1),
         curve: Curves.ease,
