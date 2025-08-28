@@ -94,7 +94,7 @@ class ChapterViewState extends ViewState<ChapterView, ChapterController> {
         if (controller.error != null) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
             _showErrorSnackBar(controller.error!);
-            // Clear error after showing
+            controller.clearError();
           });
         }
 
@@ -1215,17 +1215,19 @@ class ChapterViewState extends ViewState<ChapterView, ChapterController> {
   void _showErrorSnackBar(String message) {
     if (!mounted) return;
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: Theme.of(context).colorScheme.error,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10),
+    ScaffoldMessenger.of(context)
+      ..removeCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(message),
+          backgroundColor: Theme.of(context).colorScheme.error,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+          margin: const EdgeInsets.all(16),
         ),
-        margin: const EdgeInsets.all(16),
-      ),
-    );
+      );
   }
 
   Widget _buildParagraphWithContextMenu(

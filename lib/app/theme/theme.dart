@@ -73,7 +73,7 @@ class FlutterRegulationTheme {
         size: 20,
         color: Color(0XFF447FEB),
       ),
-      bottomAppBarTheme: const BottomAppBarThemeData(
+      bottomAppBarTheme: const BottomAppBarTheme(
         color: Color(0XFFf7f6fb),
       ),
       tabBarTheme: const TabBarThemeData(

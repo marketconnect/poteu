@@ -295,7 +295,8 @@ class ChapterController extends Controller {
     final errorMessage = e.toString();
     const silentErrorMessages = [
       'Вы не выделили участок параграфа, который собираетесь выделить.',
-      'Вы не выделили участок параграфа, который собираетесь подчеркнуть.'
+      'Вы не выделили участок параграфа, который собираетесь подчеркнуть.',
+      'В параграфе нет заметок, которые можно было бы очистить.'
     ];
     if (silentErrorMessages.contains(errorMessage)) {
       _error = errorMessage;
@@ -310,6 +311,7 @@ class ChapterController extends Controller {
 
   void clearError() {
     _error = null;
+    refreshUI();
   }
 
   @override
@@ -1016,6 +1018,11 @@ class ChapterController extends Controller {
       String content = _selectedParagraph!.content;
 
       if (tag == Tag.c) {
+        if (!TextUtils.hasFormatting(content)) {
+          _handleError(
+              'В параграфе нет заметок, которые можно было бы очистить.');
+          return;
+        }
         // Clear all formatting - this is safe
         content = TextUtils.removeAllFormatting(content);
       } else {

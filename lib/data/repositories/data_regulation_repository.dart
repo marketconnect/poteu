@@ -120,8 +120,10 @@ class DataRegulationRepository implements RegulationRepository {
       // This is risky without knowing what's in `data`.
       // A better approach is specific methods like saveParagraphNote.
       // For now, we assume it contains 'content' or 'note'.
-      final content = data['content'];
-      final note = data['note'];
+      final content = data['content'] as String? ?? '';
+      final note = data['note'] as String? ?? '';
+      final escapedContent = content.replaceAll("'", "''");
+      final escapedNote = note.replaceAll("'", "''");
 
       dev.log('Content: $content');
       dev.log('Note: $note');
@@ -129,7 +131,7 @@ class DataRegulationRepository implements RegulationRepository {
       await conn.query(
         '''
         INSERT INTO user_paragraph_edits (original_id, content, note, updated_at)
-        VALUES ($paragraphId, '$content', '$note', NOW())
+        VALUES ($paragraphId, '$escapedContent', '$escapedNote', NOW())
         ON CONFLICT (original_id) DO UPDATE SET
           content = EXCLUDED.content,
           note = EXCLUDED.note,
@@ -178,12 +180,12 @@ class DataRegulationRepository implements RegulationRepository {
       dev.log('Paragraph ID: $paragraphId');
       dev.log('Note: "$note"');
       dev.log('Note length: ${note.length}');
-
+      final escapedNote = note.replaceAll("'", "''");
       final conn = await _dbProvider.connection;
       await conn.query(
         '''
         INSERT INTO user_paragraph_edits (original_id, note, updated_at)
-        VALUES ($paragraphId, '$note', NOW())
+        VALUES ($paragraphId, '$escapedNote', NOW())
         ON CONFLICT (original_id) DO UPDATE SET
           note = EXCLUDED.note,
           updated_at = NOW();
@@ -214,10 +216,11 @@ class DataRegulationRepository implements RegulationRepository {
       // This method seems to be from an older implementation.
       // We will assume it saves the highlight data as a string.
       final conn = await _dbProvider.connection;
+      final escapedHighlightData = highlightData.replaceAll("'", "''");
       await conn.query(
         '''
         INSERT INTO user_paragraph_edits (original_id, highlight_data, updated_at)
-        VALUES ($paragraphId, '$highlightData', NOW())
+        VALUES ($paragraphId, '$escapedHighlightData', NOW())
         ON CONFLICT (original_id) DO UPDATE SET
           highlight_data = EXCLUDED.highlight_data,
           updated_at = NOW();
@@ -356,10 +359,10 @@ class DataRegulationRepository implements RegulationRepository {
 
       final conn = await _dbProvider.connection;
       dev.log('✅ Database connection established');
-
+      final escapedContent = content.replaceAll("'", "''");
       final query = '''
         INSERT INTO user_paragraph_edits (original_id, content, updated_at)
-        VALUES ($originalId, '$content', NOW())
+         VALUES ($originalId, '$escapedContent', NOW())
         ON CONFLICT (original_id) DO UPDATE SET
           content = EXCLUDED.content,
           updated_at = NOW();
