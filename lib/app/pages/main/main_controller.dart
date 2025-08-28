@@ -57,7 +57,7 @@ class MainController extends Controller {
     };
 
     _presenter.onError = (error) {
-      Sentry.captureException(error, stackTrace: error.stackTrace);
+      Sentry.captureException(error);
 
       _error = 'Произошла ошибка';
       _isLoading = false;

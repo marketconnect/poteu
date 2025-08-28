@@ -59,7 +59,7 @@ class SubscriptionController extends Controller {
     };
 
     _presenter.onError = (e) {
-      Sentry.captureException(e, stackTrace: e.stackTrace);
+      Sentry.captureException(e);
 
       _error = 'Произошла ошибка. Пожалуйста, попробуйте еще раз.';
       _isLoading = false;

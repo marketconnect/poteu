@@ -102,7 +102,7 @@ class LibraryController extends Controller {
     };
 
     _presenter.onError = (e) {
-      Sentry.captureException(e, stackTrace: e.stackTrace);
+      Sentry.captureException(e);
       _error = 'Произошла ошибка';
       _isLoading = false;
       _selectedRegulation = null;

@@ -99,7 +99,7 @@ class ExamController extends Controller {
     };
 
     _presenter.onError = (e) {
-      Sentry.captureException(e, stackTrace: e.stackTrace);
+      Sentry.captureException(e);
       _isLoading = false;
       if (e is ExamNotFoundException) {
         final docName = ActiveRegulationService().currentAppName;
