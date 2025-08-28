@@ -1,5 +1,12 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_clean_architecture/flutter_clean_architecture.dart';
+import 'package:flutter/services.dart' show rootBundle;
+import 'package:path_provider/path_provider.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:poteu/app/utils/text_utils.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:poteu/app/pages/chapter/model/chapter_arguments.dart';
 import 'package:poteu/config.dart';
 import 'package:poteu/domain/entities/subscription.dart';
@@ -24,6 +31,8 @@ class NotesController extends Controller {
   bool _isLoading = false;
   String? _error;
   bool _sortByColor = false;
+  bool _isSelectionMode = false;
+  final Set<Note> _selectedNotes = {};
 
   // Getters
   List<Note> get notes => _notes;
@@ -31,6 +40,8 @@ class NotesController extends Controller {
   String? get error => _error;
   bool get sortByColor => _sortByColor;
   bool get hasNotes => _notes.isNotEmpty;
+  bool get isSelectionMode => _isSelectionMode;
+  Set<Note> get selectedNotes => _selectedNotes;
 
   NotesController(this._notesRepository, this._subscriptionRepository) {
     dev.log('=== NOTES CONTROLLER INITIALIZATION ===');
@@ -187,6 +198,90 @@ class NotesController extends Controller {
     dev.log('Error: $error');
     _error = 'Ошибка удаления';
     refreshUI();
+  }
+
+  void toggleSelectionMode() {
+    _isSelectionMode = !_isSelectionMode;
+    if (!_isSelectionMode) {
+      _selectedNotes.clear();
+    }
+    refreshUI();
+  }
+
+  void toggleNoteSelection(Note note) {
+    if (_selectedNotes.contains(note)) {
+      _selectedNotes.remove(note);
+    } else {
+      _selectedNotes.add(note);
+    }
+    // If no notes are selected, exit selection mode
+    if (_selectedNotes.isEmpty) {
+      _isSelectionMode = false;
+    }
+    refreshUI();
+  }
+
+  Future<void> exportAndShareSelectedNotes() async {
+    if (_selectedNotes.isEmpty) {
+      return;
+    }
+    _isLoading = true;
+    refreshUI();
+    try {
+      final pdf = pw.Document();
+      final fontData =
+          await rootBundle.load('assets/fonts/YandexSansText-Regular.ttf');
+      final ttfFont = pw.Font.ttf(fontData);
+      pdf.addPage(
+        pw.MultiPage(
+          pageFormat: PdfPageFormat.a4,
+          build: (pw.Context context) {
+            return _selectedNotes.map((note) {
+              return pw.Container(
+                padding: const pw.EdgeInsets.symmetric(vertical: 10),
+                child: pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                  children: [
+                    pw.Text(
+                      TextUtils.parseHtmlString(note.content),
+                      style: pw.TextStyle(font: ttfFont, fontSize: 14),
+                    ),
+                    pw.SizedBox(height: 10),
+                    pw.Divider(color: PdfColors.grey400, height: 15),
+                    pw.Text(
+                      'Документ: ${note.regulationTitle}',
+                      style: pw.TextStyle(
+                          font: ttfFont,
+                          fontSize: 10,
+                          fontWeight: pw.FontWeight.bold),
+                    ),
+                    pw.Text(
+                      'Глава: ${note.chapterName}',
+                      style: pw.TextStyle(
+                          font: ttfFont,
+                          fontSize: 10,
+                          fontWeight: pw.FontWeight.bold),
+                    ),
+                  ],
+                ),
+              );
+            }).toList();
+          },
+        ),
+      );
+      final output = await getTemporaryDirectory();
+      final file = File("${output.path}/notes_export.pdf");
+      await file.writeAsBytes(await pdf.save());
+      await Share.shareXFiles([XFile(file.path)], text: "Мои заметки");
+      toggleSelectionMode();
+    } catch (e, stack) {
+      Sentry.captureException(e, stackTrace: stack);
+      _error =
+          "Ошибка при создании PDF файла. Убедитесь, что шрифт 'assets/fonts/YandexSansText-Regular.ttf' существует.";
+    } finally {
+      _isLoading = false;
+      refreshUI();
+    }
   }
 
   @override

@@ -32,48 +32,49 @@ class NotesViewState extends ViewState<NotesView, NotesController> {
     return ControlledWidgetBuilder<NotesController>(
       builder: (context, controller) {
         return Scaffold(
-          key: globalKey,
-          appBar: PreferredSize(
-            preferredSize: Size.fromHeight(
-              Theme.of(context).appBarTheme.toolbarHeight ?? 74.0,
-            ),
-            child: Padding(
-              padding: EdgeInsets.only(
-                top: MediaQuery.of(context).padding.top,
-              ),
-              child: RegulationAppBar(
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    IconButton(
-                      onPressed: () => Navigator.pop(context),
-                      icon: Icon(
-                        Icons.arrow_back,
-                        size:
-                            Theme.of(context).appBarTheme.iconTheme?.size ?? 27,
-                        color: Theme.of(context).appBarTheme.iconTheme?.color,
-                      ),
-                    ),
-                    Text(
-                      'Заметки',
-                      style: Theme.of(context).appBarTheme.titleTextStyle,
-                    ),
-                    IconButton(
-                      onPressed: () {
-                        _showSortBottomSheet(controller);
-                      },
-                      icon: Icon(
-                        Icons.sort,
-                        size:
-                            Theme.of(context).appBarTheme.iconTheme?.size ?? 27,
-                        color: Theme.of(context).appBarTheme.iconTheme?.color,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
+          // key: globalKey,
+          // appBar: PreferredSize(
+          //   preferredSize: Size.fromHeight(
+          //     Theme.of(context).appBarTheme.toolbarHeight ?? 74.0,
+          //   ),
+          //   child: Padding(
+          //     padding: EdgeInsets.only(
+          //       top: MediaQuery.of(context).padding.top,
+          //     ),
+          //     child: RegulationAppBar(
+          //       child: Row(
+          //         mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          //         children: [
+          //           IconButton(
+          //             onPressed: () => Navigator.pop(context),
+          //             icon: Icon(
+          //               Icons.arrow_back,
+          //               size:
+          //                   Theme.of(context).appBarTheme.iconTheme?.size ?? 27,
+          //               color: Theme.of(context).appBarTheme.iconTheme?.color,
+          //             ),
+          //           ),
+          //           Text(
+          //             'Заметки',
+          //             style: Theme.of(context).appBarTheme.titleTextStyle,
+          //           ),
+          //           IconButton(
+          //             onPressed: () {
+          //               _showSortBottomSheet(controller);
+          //             },
+          //             icon: Icon(
+          //               Icons.sort,
+          //               size:
+          //                   Theme.of(context).appBarTheme.iconTheme?.size ?? 27,
+          //               color: Theme.of(context).appBarTheme.iconTheme?.color,
+          //             ),
+          //           ),
+          //         ],
+          //       ),
+          //     ),
+          //   ),
+          // ),
+          key: globalKey, appBar: _buildAppBar(context, controller),
           body: RefreshIndicator(
             onRefresh: () async {
               controller.refreshNotes();
@@ -103,14 +104,145 @@ class NotesViewState extends ViewState<NotesView, NotesController> {
     );
   }
 
+  PreferredSizeWidget _buildAppBar(
+      BuildContext context, NotesController controller) {
+    return PreferredSize(
+      preferredSize: Size.fromHeight(
+        Theme.of(context).appBarTheme.toolbarHeight ?? 74.0,
+      ),
+      child: Padding(
+        padding: EdgeInsets.only(
+          top: MediaQuery.of(context).padding.top,
+        ),
+        child: RegulationAppBar(
+          child: controller.isSelectionMode
+              ? _buildSelectionAppBar(context, controller)
+              : _buildDefaultAppBar(context, controller),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDefaultAppBar(BuildContext context, NotesController controller) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        IconButton(
+          onPressed: () => Navigator.pop(context),
+          icon: Icon(
+            Icons.arrow_back,
+            size: Theme.of(context).appBarTheme.iconTheme?.size ?? 27,
+            color: Theme.of(context).appBarTheme.iconTheme?.color,
+          ),
+        ),
+        Text(
+          'Заметки',
+          style: Theme.of(context).appBarTheme.titleTextStyle,
+        ),
+        Theme(
+          data: Theme.of(context).copyWith(
+            popupMenuTheme: PopupMenuThemeData(
+              color: Theme.of(context).navigationRailTheme.backgroundColor,
+              textStyle: Theme.of(context).textTheme.bodyLarge,
+            ),
+          ),
+          child: PopupMenuButton<String>(
+            onSelected: (value) {
+              if (value == 'export') {
+                controller.toggleSelectionMode();
+              } else if (value == 'sort') {
+                _showSortBottomSheet(controller);
+              }
+            },
+            itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+              if (controller.hasNotes)
+                PopupMenuItem<String>(
+                  value: 'export',
+                  child: ListTile(
+                    leading: Icon(Icons.picture_as_pdf_outlined,
+                        color: Theme.of(context).textTheme.bodyLarge?.color),
+                    title: Text('Экспорт в PDF',
+                        style: Theme.of(context).textTheme.bodyLarge),
+                    contentPadding: EdgeInsets.zero,
+                  ),
+                ),
+              PopupMenuItem<String>(
+                value: 'sort',
+                child: ListTile(
+                  leading: Icon(Icons.sort,
+                      color: Theme.of(context).textTheme.bodyLarge?.color),
+                  title: Text('Сортировать',
+                      style: Theme.of(context).textTheme.bodyLarge),
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ),
+            ],
+            icon: Icon(
+              Icons.more_vert,
+              color: Theme.of(context).appBarTheme.iconTheme?.color,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSelectionAppBar(
+      BuildContext context, NotesController controller) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        IconButton(
+          onPressed: controller.toggleSelectionMode,
+          icon: Icon(
+            Icons.close,
+            size: Theme.of(context).appBarTheme.iconTheme?.size ?? 27,
+            color: Theme.of(context).appBarTheme.iconTheme?.color,
+          ),
+        ),
+        Text(
+          'Выбрано: ${controller.selectedNotes.length}',
+          style: Theme.of(context).appBarTheme.titleTextStyle,
+        ),
+        IconButton(
+          onPressed: controller.selectedNotes.isNotEmpty
+              ? controller.exportAndShareSelectedNotes
+              : null,
+          icon: Icon(
+            Icons.share,
+            size: Theme.of(context).appBarTheme.iconTheme?.size ?? 27,
+            color: controller.selectedNotes.isNotEmpty
+                ? Theme.of(context).appBarTheme.iconTheme?.color
+                : Colors.grey,
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildNoteItem(Note note, NotesController controller) {
     final width = MediaQuery.of(context).size.width;
+    final isSelected = controller.selectedNotes.contains(note);
 
     return GestureDetector(
-      onTap: () => controller.handleNoteTap(note),
+      onTap: () {
+        if (controller.isSelectionMode) {
+          controller.toggleNoteSelection(note);
+        } else {
+          controller.handleNoteTap(note);
+        }
+      },
+      onLongPress: () {
+        if (!controller.isSelectionMode) {
+          controller.toggleSelectionMode();
+          controller.toggleNoteSelection(note);
+        }
+      },
       child: Card(
         elevation: 0,
-        color: Theme.of(context).scaffoldBackgroundColor,
+        color: isSelected
+            ? Theme.of(context).highlightColor
+            : Theme.of(context).scaffoldBackgroundColor,
         margin: EdgeInsets.zero,
         shape: Border(
           bottom: BorderSide(
@@ -203,13 +335,14 @@ class NotesViewState extends ViewState<NotesView, NotesController> {
                 ),
               ),
               // Delete button
-              GestureDetector(
-                onTap: () => _showDeleteConfirmation(note, controller),
-                child: Icon(
-                  Icons.close,
-                  color: Theme.of(context).textTheme.bodyLarge!.color,
+              if (!controller.isSelectionMode)
+                GestureDetector(
+                  onTap: () => _showDeleteConfirmation(note, controller),
+                  child: Icon(
+                    Icons.close,
+                    color: Theme.of(context).textTheme.bodyLarge!.color,
+                  ),
                 ),
-              ),
             ],
           ),
         ),
