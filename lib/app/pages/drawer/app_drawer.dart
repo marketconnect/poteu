@@ -184,44 +184,7 @@ class AppDrawer extends StatelessWidget {
                                 ),
                               ],
                             ),
-                            // О программе
-                            ExpansionTile(
-                              onExpansionChanged: (bool val) {
-                                if (val) {
-                                  Navigator.of(context).pop(); // Close drawer
-                                  _showAboutDialog(context);
-                                }
-                              },
-                              trailing: const SizedBox(),
-                              backgroundColor: Theme.of(context)
-                                  .navigationRailTheme
-                                  .indicatorColor,
-                              collapsedBackgroundColor: Theme.of(context)
-                                  .navigationRailTheme
-                                  .backgroundColor,
-                              iconColor: Theme.of(context)
-                                  .navigationRailTheme
-                                  .selectedIconTheme!
-                                  .color,
-                              collapsedIconColor: Theme.of(context)
-                                  .navigationRailTheme
-                                  .unselectedIconTheme!
-                                  .color,
-                              textColor: Theme.of(context)
-                                  .navigationRailTheme
-                                  .selectedLabelTextStyle!
-                                  .color,
-                              collapsedTextColor: Theme.of(context)
-                                  .navigationRailTheme
-                                  .unselectedLabelTextStyle!
-                                  .color,
-                              title: const Padding(
-                                padding: EdgeInsets.only(bottom: 3.0),
-                                child: Text('О программе'),
-                              ),
-                              leading: const Icon(Icons.info_outline),
-                              children: [Container()],
-                            ),
+
                             // Экзамен
                             ListTile(
                               leading: const Icon(Icons.quiz_outlined),
@@ -267,6 +230,44 @@ class AppDrawer extends StatelessWidget {
                                   .navigationRailTheme
                                   .unselectedLabelTextStyle!
                                   .color,
+                            ),
+                            // О программе
+                            ExpansionTile(
+                              onExpansionChanged: (bool val) {
+                                if (val) {
+                                  Navigator.of(context).pop(); // Close drawer
+                                  _showAboutDialog(context);
+                                }
+                              },
+                              trailing: const SizedBox(),
+                              backgroundColor: Theme.of(context)
+                                  .navigationRailTheme
+                                  .indicatorColor,
+                              collapsedBackgroundColor: Theme.of(context)
+                                  .navigationRailTheme
+                                  .backgroundColor,
+                              iconColor: Theme.of(context)
+                                  .navigationRailTheme
+                                  .selectedIconTheme!
+                                  .color,
+                              collapsedIconColor: Theme.of(context)
+                                  .navigationRailTheme
+                                  .unselectedIconTheme!
+                                  .color,
+                              textColor: Theme.of(context)
+                                  .navigationRailTheme
+                                  .selectedLabelTextStyle!
+                                  .color,
+                              collapsedTextColor: Theme.of(context)
+                                  .navigationRailTheme
+                                  .unselectedLabelTextStyle!
+                                  .color,
+                              title: const Padding(
+                                padding: EdgeInsets.only(bottom: 3.0),
+                                child: Text('О программе'),
+                              ),
+                              leading: const Icon(Icons.info_outline),
+                              children: [Container()],
                             ),
                           ],
                         ),
