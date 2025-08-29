@@ -564,17 +564,6 @@ class ExamViewState extends ViewState<ExamView, ExamController> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-            child: Text(
-              'Готовность: 74% • Серия: 3 дня',
-              textAlign: TextAlign.center,
-              style: Theme.of(context)
-                  .textTheme
-                  .bodyMedium
-                  ?.copyWith(color: Colors.grey[700]),
-            ),
-          ),
           SizedBox(
             height: MediaQuery.of(context).padding.top / 2,
           ),
