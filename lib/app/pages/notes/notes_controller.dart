@@ -34,6 +34,9 @@ class NotesController extends Controller {
   bool _isSelectionMode = false;
   final Set<Note> _selectedNotes = {};
 
+  Note? _lastDeletedNote;
+  int? _lastDeletedNoteIndex;
+
   // Getters
   List<Note> get notes => _notes;
   bool get isLoading => _isLoading;
@@ -105,15 +108,36 @@ class NotesController extends Controller {
     await _loadNotes();
   }
 
-  Future<void> deleteNote(Note note) async {
+  void deleteNote(Note note) {
+    _lastDeletedNoteIndex = _notes.indexOf(note);
+    if (_lastDeletedNoteIndex == -1) return;
+
+    _lastDeletedNote = _notes.removeAt(_lastDeletedNoteIndex!);
+    refreshUI();
+  }
+
+  void undoDelete() {
+    if (_lastDeletedNote != null && _lastDeletedNoteIndex != null) {
+      _notes.insert(_lastDeletedNoteIndex!, _lastDeletedNote!);
+      _lastDeletedNote = null;
+      _lastDeletedNoteIndex = null;
+      refreshUI();
+    }
+  }
+
+  void confirmDelete() {
+    if (_lastDeletedNote == null) return;
+
     dev.log('=== DELETE NOTE ===');
-    dev.log('Deleting note: ${note.link.text}');
+    dev.log('Deleting note: ${_lastDeletedNote!.link.text}');
 
     try {
       _deleteNoteUseCase.execute(
         _DeleteNoteObserver(this),
-        DeleteNoteParams(note: note),
+        DeleteNoteParams(note: _lastDeletedNote!),
       );
+      _lastDeletedNote = null;
+      _lastDeletedNoteIndex = null;
     } catch (e) {
       dev.log('Error deleting note: $e');
       _error = 'Ошибка удаления заметки';
@@ -189,8 +213,7 @@ class NotesController extends Controller {
 
   void _onNoteDeleted() {
     dev.log('=== NOTE DELETED ===');
-    // Reload notes after successful deletion
-    _loadNotes();
+    // The note is already removed from the UI. No need to reload.
   }
 
   void _onDeleteError(dynamic error) {

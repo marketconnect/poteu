@@ -337,7 +337,28 @@ class NotesViewState extends ViewState<NotesView, NotesController> {
               // Delete button
               if (!controller.isSelectionMode)
                 GestureDetector(
-                  onTap: () => _showDeleteConfirmation(note, controller),
+                  onTap: () {
+                    final noteToDelete = note;
+                    controller.deleteNote(noteToDelete);
+                    ScaffoldMessenger.of(context)
+                        .showSnackBar(
+                          SnackBar(
+                            content: const Text('Заметка удалена'),
+                            action: SnackBarAction(
+                              label: 'ОТМЕНИТЬ',
+                              onPressed: () {
+                                controller.undoDelete();
+                              },
+                            ),
+                          ),
+                        )
+                        .closed
+                        .then((reason) {
+                      if (reason != SnackBarClosedReason.action) {
+                        controller.confirmDelete();
+                      }
+                    });
+                  },
                   child: Icon(
                     Icons.close,
                     color: Theme.of(context).textTheme.bodyLarge!.color,
@@ -455,63 +476,6 @@ class NotesViewState extends ViewState<NotesView, NotesController> {
                     fontSize: 16,
                   ),
                 ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showDeleteConfirmation(Note note, NotesController controller) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-        title: Text(
-          'Удалить заметку?',
-          style: TextStyle(
-            color: Theme.of(context).textTheme.bodyLarge!.color,
-            fontSize: 18,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        content: Text(
-          'Вы уверены, что хотите удалить заметку "${note.link.text}"?',
-          style: TextStyle(
-            color: Theme.of(context).textTheme.bodyLarge!.color,
-            fontSize: 16,
-          ),
-        ),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(
-              'Отмена',
-              style: TextStyle(
-                color: Theme.of(context).textTheme.bodyLarge!.color,
-                fontSize: 16,
-              ),
-            ),
-          ),
-          TextButton(
-            onPressed: () async {
-              Navigator.pop(context);
-              await controller.deleteNote(note);
-              if (controller.error != null) {
-                _showErrorSnackBar(controller.error!);
-              } else {
-                _showSnackBar('Заметка удалена');
-              }
-            },
-            child: Text(
-              'Удалить',
-              style: TextStyle(
-                color: Theme.of(context).colorScheme.primary,
-                fontSize: 16,
               ),
             ),
           ),
