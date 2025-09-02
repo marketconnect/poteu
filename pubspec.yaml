@@ -89,6 +89,7 @@ flutter:
     - assets/pteep/data/
     - assets/fz116/data/
     - assets/fire_reg/data/
+    - assets/certs/isrgrootx1.pem
   fonts:
     - family: Yandex
       fonts:
