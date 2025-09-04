@@ -497,6 +497,10 @@ class ChapterController extends Controller {
   }
 
   void onPageChanged(int newChapterOrderNum) async {
+    if (_isBottomBarExpanded) {
+      collapseBottomBar();
+    }
+
     _currentChapterOrderNum = newChapterOrderNum;
     pageTextController.text = newChapterOrderNum.toString();
 
