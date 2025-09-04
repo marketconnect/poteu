@@ -69,10 +69,6 @@ class SearchPageController extends Controller {
   }
 
   void setSearchScope(SearchScope scope) {
-    if (scope == SearchScope.allDocuments && !_isSubscribed) {
-      // Let the view handle navigation to subscription page
-      return;
-    }
     _searchScope = scope;
     search();
     refreshUI();

@@ -1692,39 +1692,28 @@ class ChapterController extends Controller {
     refreshUI();
 
     try {
-      final subscriptionStream =
-          await _checkSubscriptionUseCase.buildUseCaseStream(null);
-      final subscription = await subscriptionStream.first;
-      if (subscription.isActive) {
-        final downloadStream =
-            await _downloadRegulationDataUseCase.buildUseCaseStream(documentId);
-        await downloadStream.drain();
-
-        // Invalidate library cache so it re-fetches the download status
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.remove(LibraryController.lastFetchDateKey);
-        await prefs.remove(LibraryController.regulationsCacheKey);
-        dev.log('Library cache invalidated after download from ChapterView.');
-
-        _isLoading = false;
-        refreshUI();
-        Navigator.of(getContext()).push(
-          MaterialPageRoute(
-            builder: (context) => ChapterView(
-              regulationId: documentId,
-              initialChapterOrderNum: chapterNum,
-              scrollToParagraphId: paragraphNum,
-              settingsRepository: _settingsRepository,
-              ttsRepository: _ttsRepository,
-              regulationRepository: _repository,
-            ),
+      final downloadStream =
+          await _downloadRegulationDataUseCase.buildUseCaseStream(documentId);
+      await downloadStream.drain();
+// Invalidate library cache so it re-fetches the download status
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(LibraryController.lastFetchDateKey);
+      await prefs.remove(LibraryController.regulationsCacheKey);
+      dev.log('Library cache invalidated after download from ChapterView.');
+      _isLoading = false;
+      refreshUI();
+      Navigator.of(getContext()).push(
+        MaterialPageRoute(
+          builder: (context) => ChapterView(
+            regulationId: documentId,
+            initialChapterOrderNum: chapterNum,
+            scrollToParagraphId: paragraphNum,
+            settingsRepository: _settingsRepository,
+            ttsRepository: _ttsRepository,
+            regulationRepository: _repository,
           ),
-        );
-      } else {
-        _isLoading = false;
-        refreshUI();
-        Navigator.of(getContext()).pushNamed('/subscription');
-      }
+        ),
+      );
     } catch (e, stackTrace) {
       _handleError('Ошибка: ${e.toString()}', stackTrace: stackTrace);
       _isLoading = false;

@@ -151,27 +151,7 @@ class NotesController extends Controller {
   }
 
   Future<void> handleNoteTap(Note note) async {
-    // If the note is for the main document, navigate directly.
-    if (note.regulationId == AppConfig.instance.regulationId) {
-      _navigateToChapter(note);
-      return;
-    }
-
-    // For other documents, check subscription.
-    _isLoading = true;
-    refreshUI();
-
-    try {
-      _checkSubscriptionUseCase.execute(
-        _CheckSubscriptionObserver(this, note),
-        null,
-      );
-    } catch (e) {
-      _error = 'Ошибка проверки подписки';
-    } finally {
-      _isLoading = false;
-      refreshUI();
-    }
+    _navigateToChapter(note);
   }
 
   void _navigateToChapter(Note note) {
@@ -318,32 +298,6 @@ class NotesController extends Controller {
     _deleteNoteUseCase.dispose();
     _checkSubscriptionUseCase.dispose();
     super.onDisposed();
-  }
-}
-
-class _CheckSubscriptionObserver extends Observer<Subscription> {
-  final NotesController _controller;
-  final Note _note;
-  _CheckSubscriptionObserver(this._controller, this._note);
-
-  @override
-  void onComplete() {}
-
-  @override
-  void onError(e) {
-    _controller._error = 'Ошибка проверки подписки';
-    // ignore: invalid_use_of_protected_member
-    _controller.refreshUI();
-  }
-
-  @override
-  void onNext(Subscription? response) {
-    if (response != null && response.isActive) {
-      _controller._navigateToChapter(_note);
-    } else {
-      // ignore: invalid_use_of_protected_member
-      Navigator.pushNamed(_controller.getContext(), '/subscription');
-    }
   }
 }
 

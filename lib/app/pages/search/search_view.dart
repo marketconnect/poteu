@@ -137,16 +137,16 @@ class SearchViewState extends ViewState<SearchView, SearchPageController> {
                               MaterialStateProperty.resolveWith<Color?>(
                             (Set<MaterialState> states) {
                               if (states.contains(MaterialState.selected)) {
-                                return theme
-                                    .navigationRailTheme.selectedIconTheme?.color;
+                                return theme.navigationRailTheme
+                                    .selectedIconTheme?.color;
                               }
                               return theme.navigationRailTheme
                                   .unselectedLabelTextStyle?.color;
                             },
                           ),
                         ),
-                        segments: <ButtonSegment<SearchScope>>[
-                          const ButtonSegment<SearchScope>(
+                        segments: const <ButtonSegment<SearchScope>>[
+                          ButtonSegment<SearchScope>(
                               value: SearchScope.currentDocument,
                               label: Text('В текущем')),
                           ButtonSegment<SearchScope>(
@@ -154,11 +154,7 @@ class SearchViewState extends ViewState<SearchView, SearchPageController> {
                             label: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                const Text('Во всех'),
-                                if (!controller.isSubscribed) ...[
-                                  const SizedBox(width: 4),
-                                  const Icon(Icons.lock, size: 16),
-                                ]
+                                Text('Во всех'),
                               ],
                             ),
                           ),
@@ -166,13 +162,7 @@ class SearchViewState extends ViewState<SearchView, SearchPageController> {
                         selected: <SearchScope>{controller.searchScope},
                         onSelectionChanged: (Set<SearchScope> newSelection) {
                           final newScope = newSelection.first;
-                          if (newScope == SearchScope.allDocuments &&
-                              !controller.isSubscribed) {
-                            FocusScope.of(context).unfocus();
-                            Navigator.of(context).pushNamed('/subscription');
-                          } else {
-                            controller.setSearchScope(newScope);
-                          }
+                          controller.setSearchScope(newScope);
                         },
                       ),
                     ),
