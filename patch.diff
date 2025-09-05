@@ -1,0 +1,34 @@
+diff --git a/lib/app/pages/library/library_controller.dart b/lib/app/pages/library/library_controller.dart
+index 0312604..3514781 100644
+--- a/lib/app/pages/library/library_controller.dart
++++ b/lib/app/pages/library/library_controller.dart
+@@ -126,22 +126,22 @@
+     };
+ 
+     _presenter.onDownloadComplete = () {
+-      dev.log(
+-          'Download complete for regulation ${_selectedRegulation!.id}. Proceeding.');
+-      _isDownloading = false;
+-      // Update the regulation in the list to mark it as downloaded
++      dev.log(
++          'Download complete for regulation ${_selectedRegulation?.id}. Proceeding.');
+       if (_selectedRegulation != null) {
++        _isDownloading = false;
+         final index =
+             _regulations.indexWhere((r) => r.id == _selectedRegulation!.id);
+         if (index != -1) {
+           _regulations[index] =
+               _regulations[index].copyWith(isDownloaded: true);
+-          // Re-cache the updated list of regulations to persist the downloaded state
+           _cacheRegulations(_regulations);
+         }
+         _selectedRegulation = _selectedRegulation!.copyWith(isDownloaded: true);
++        _proceedToSetActiveRegulation();
++      } else {
++        _isDownloading = false;
++        refreshUI();
+       }
+-      _proceedToSetActiveRegulation();
+     };
+ 
+     _presenter.onDownloadError = (e) {

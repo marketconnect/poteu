@@ -125,10 +125,8 @@ class LibraryController extends Controller {
     };
 
     _presenter.onDownloadComplete = () {
-      dev.log(
-          'Download complete for regulation ${_selectedRegulation!.id}. Proceeding.');
-      _isDownloading = false;
       // Update the regulation in the list to mark it as downloaded
+      _isDownloading = false;
       if (_selectedRegulation != null) {
         final index =
             _regulations.indexWhere((r) => r.id == _selectedRegulation!.id);
