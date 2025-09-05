@@ -238,12 +238,12 @@ class LibraryController extends Controller {
     dev.log('Subscription status updated: isActive=${status.isActive}');
 
     // If subscription has expired, handle it
-    if (!status.isActive && status.expirationDate != null) {
-      if (status.expirationDate!.isBefore(DateTime.now())) {
-        dev.log('Subscription expired. Handling cleanup...');
-        _handleExpiredSubscriptionUseCase.execute(_HandleExpiredObserver(this));
-      }
-    }
+    // if (!status.isActive && status.expirationDate != null) {
+    //   if (status.expirationDate!.isBefore(DateTime.now())) {
+    //     dev.log('Subscription expired. Handling cleanup...');
+    //     _handleExpiredSubscriptionUseCase.execute(_HandleExpiredObserver(this));
+    //   }
+    // }
 
     refreshUI();
   }

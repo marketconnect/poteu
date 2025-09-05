@@ -155,3 +155,5 @@ class FlutterRegulationTheme {
     );
   }
 }
+
+// 924
