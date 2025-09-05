@@ -7,7 +7,7 @@ import 'package:poteu/domain/usecases/check_subscription_usecase.dart';
 import 'package:poteu/domain/usecases/handle_expired_subscription_usecase.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 import '../../../domain/entities/regulation.dart';
-import 'package:poteu/config.dart';
+// import 'package:poteu/config.dart';
 import 'library_presenter.dart';
 import 'dart:developer' as dev;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -308,14 +308,14 @@ class _CheckSubscriptionObserver extends Observer<Subscription> {
       ._onSubscriptionStatusChecked(response ?? Subscription.inactive());
 }
 
-class _HandleExpiredObserver extends Observer<void> {
-  final LibraryController _controller;
-  _HandleExpiredObserver(this._controller);
+// class _HandleExpiredObserver extends Observer<void> {
+//   final LibraryController _controller;
+//   _HandleExpiredObserver(this._controller);
 
-  @override
-  void onComplete() => _controller.refreshRegulations();
-  @override
-  void onError(e) => dev.log('Error handling expired subscription: $e');
-  @override
-  void onNext(void response) {}
-}
+//   @override
+//   void onComplete() => _controller.refreshRegulations();
+//   @override
+//   void onError(e) => dev.log('Error handling expired subscription: $e');
+//   @override
+//   void onNext(void response) {}
+// }
